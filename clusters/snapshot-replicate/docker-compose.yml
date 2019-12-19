@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  pg-repl:
+    image: snapshot-replicate
+
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - pg-stage:/pg-stage
+    ports:
+      - 5434:5432
+    environment: 
+      - PG_MASTER_HOST=${PG_MASTER_HOST}
+      - PG_MASTER_PORT=${PG_MASTER_PORT}
+      - PG_REP_USER=${PG_REP_USER}
+      - PG_REP_PASSWORD=${PG_REP_PASSWORD}
+
+  pgr:
+    image: postgrest/postgrest
+    environment:
+      - PGRST_DB_URI=postgres://${PGR_USER}:${PGR_PASSWORD}@pg:5432/postgres
+      - PGRST_DB_SCHEMA=${PGR_SCHEMA}
+      - PGRST_DB_ANON_ROLE=anon
+    depends_on:
+      - pg
+
+volumes:
+  pg-data:
+    driver: local
+  pg-stage:
+    driver: local
