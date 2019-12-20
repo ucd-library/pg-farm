@@ -1,5 +1,5 @@
 FROM postgres:10
-MAINTAINER Justin Merz <jrmerz@ucdavis.edu>
+LABEL maintainer="jrmerz@ucdavis.edu"
 
 RUN apt-get update \
       && apt-get install -y --no-install-recommends \

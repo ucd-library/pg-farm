@@ -2,12 +2,12 @@ version: '3'
 
 services:
   pg-repl:
-    image: streaming-replicate
+    image: ucdlib/pg-farm-streaming-replicate:0.0.1
 
     volumes:
       - pg-data:/var/lib/postgresql/data
     ports:
-      - 5434:5432
+      - ${PG_FARM_REPL_PORT}:5432
     environment: 
       - PG_MASTER_HOST=${PG_MASTER_HOST}
       - PG_MASTER_PORT=${PG_MASTER_PORT}
@@ -15,13 +15,15 @@ services:
       - PG_REP_PASSWORD=${PG_REP_PASSWORD}
 
   pgr:
-    image: postgrest/postgrest
+    image: postgrest/postgrest:v6.0.2
     environment:
       - PGRST_DB_URI=postgres://${PGR_USER}:${PGR_PASSWORD}@pg:5432/postgres
       - PGRST_DB_SCHEMA=${PGR_SCHEMA}
       - PGRST_DB_ANON_ROLE=anon
     depends_on:
-      - pg
+      - pg-repl
+    ports:
+      - ${PG_FARM_PGR_PORT}:3000
 
 volumes:
   pg-data:
