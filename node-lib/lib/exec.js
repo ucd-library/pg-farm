@@ -1,20 +1,11 @@
-const { spawn } = require('child_process');
+const { exec } = require('child_process');
 
-const defaultOptions = {
-  shell : '/bin/bash',
-  stdio: [ 'inherit', 'inherit', 'inherit']
-}
-
-module.exports = (cmd, args=[], options={}) => {
+module.exports = (cmd, args) => {
+  if( !args.shell ) shell = '/bin/bash';
   return new Promise((resolve, reject) => {
-    let dopts = Object.assign({}, defaultOptions);
-    options = Object.assign(dopts, options);
-
-    let stdout = '';
-    cmd = spawn(cmd, args, options)
-      .on('close', (code) => {
-        if( code === 0 ) resolve({stdout, code});
-        else reject(code);
-      });
+    exec(cmd, args, (error, stdout, stderr) => {
+      if( error ) reject(error);
+      else resolve({stdout, stderr});
+    });
   });
 }

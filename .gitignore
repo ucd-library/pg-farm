@@ -1,3 +1,6 @@
 tests
 farm
 node_modules
+.conf
+.env
+config.json

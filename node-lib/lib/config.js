@@ -1,36 +1,39 @@
-const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const fs = require('fs-extra');
 
-const defaults = {
+// default config
+let config = {
   rootDir : '/opt/pg-farm'
 }
 
-module.exports = (opts={}) => {
-  let tmp = {};
-  for( let key in opts ) {
-    tmp[toCamelCase(key)] = opts[key];
-  }
-  opts = tmp;
-
-  let configFile = opts.configFile;
-  if( !configFile ) {
-    configFile = path.join(os.homedir(), '.pg-farm')
-  }
-
-  if( !fs.existsSync(configFile) ) {
-    configFile = path.join('etc', 'pg-farm', 'setup.json')
-  }
-
-  let fileOpts = {};
-  if( fs.existsSync(configFile) ) {
-    fileOpts = JSON.parse(fs.readFileSync(configFile, 'utf-8'));
-  }
-
-  return Object.assign({}, defaults, fileOpts, opts);
+let externalConfigFile = '';
+if( process.env['PG_FARM_ROOT'] && fs.existsSync(path.join(process.env['PG_FARM_ROOT'], '.conf')) ) {
+  externalConfigFile = path.join(process.env['PG_FARM_ROOT'], '.conf');
+} else if( fs.existsSync('/etc/pg-farm/.conf') ) {
+  externalConfigFile = fs.existsSync('/etc/pg-farm/.conf');
 }
 
+let userConfigFile = ''
+if( fs.existsSync(path.join(os.homedir(), '.pg-farm')) ) {
+  userConfigFile = path.join(os.homedir(), '.pg-farm');
+}
+
+let userConfig = userConfigFile ? JSON.parse(fs.readFileSync(userConfigFile, 'utf-8')) : {};
+let externalConfig = externalConfigFile ? JSON.parse(fs.readFileSync(externalConfigFile, 'utf-8')) : {};
+
+config = Object.assign(config, externalConfig, userConfig);
+config.externalConfigFile = externalConfigFile;
+config.userConfigFile = userConfigFile;
+
+config.assign = opts => {
+  for( let key in opts ) {
+    config[toCamelCase(key)] = opts[key];
+  }
+}
 
 function toCamelCase(str) {
   return str.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
 }
+
+module.exports = config;

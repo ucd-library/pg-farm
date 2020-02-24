@@ -1,25 +1,245 @@
 const fs = require('fs-extra');
 const path = require('path'); 
 const config = require('../lib/config');
+const exec = require('../lib/exec');
 
 class Cluster {
 
-  dockerCompose(args) {
-
+  /**
+   * @method getRootDir
+   * @description get the root director for a pg-farm docker-compose cluster
+   * 
+   * @return {String} directory path
+   */
+  getRootDir() {
+    return path.join(config.rootDir, 'farm');
   }
 
+  /**
+   * @method list
+   * @description list all pg-farm docker-compose clusters
+   * 
+   * @returns {Array}
+   */
+  list() {
+    return fs.readdirSync(this.getRootDir());
+  }
+
+  /**
+   * @method exits
+   * @description does a pg-farm docker-compose cluster exist?
+   * 
+   * @returns {Boolean}
+   */
+  exists(clusterName) {
+    return this.list().includes(clusterName);
+  }
+
+  /**
+   * @method getDockerComposeCmd
+   * @description return the docker-compose base command for pg-farm docker-compose cluster
+   * 
+   * @param {String} clusterName 
+   * 
+   * @returns {String}
+   */
+  getDockerComposeCmd(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+    return `docker-compose -f ${this.getRootDir()}/${clusterName}/docker-compose.yml`;
+  }
+
+  /**
+   * @method create
+   * @description create a pg-farm docker-compose cluster
+   * 
+   * @param {Object} args
+   * @param {String} args.name
+   * 
+   * @returns {Object}
+   */
   async create(args) {
-    let c = config();
-    
-    let rootDir = path.join(c.rootDir, args.name);
-    if( fs.existsSync(rootDir) ) {
+    if( this.exists(args.name) ) {
       throw new Error('Cluster already exists: '+args.name);
     }
+    let rootDir = path.join(config.rootDir, args.name);
 
     await fs.mkdirp(rootDir);
+  }
 
-    
+  /**
+   * @method up
+   * @description bring a pg-farm docker-compose cluster up.  
+   * runs `docker-compose up -d` for cluster
+   * 
+   * @param {String} clusterName
+   * 
+   * @returns {Promise} resolves to {stdout, stderr} object 
+   */
+  up(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
 
+    return exec(this.getDockerComposeCmd(clusterName)+' up -d');
+  }
+
+  /**
+   * @method up
+   * @description bring a pg-farm docker-compose cluster down.  
+   * runs `docker-compose down` for cluster
+   * 
+   * @param {String} clusterName
+   * 
+   * @returns {Promise} resolves to {stdout, stderr} object 
+   */
+  down(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+
+    return exec(this.getDockerComposeCmd(clusterName)+' down');
+  }
+
+  /**
+   * @method getEnvFile
+   * @description returns the file path for a pg-farm docker-compose cluster
+   * .env file
+   * 
+   * @param {String} clusterName
+   * 
+   * @return {String} file path 
+   */
+  getEnvFile(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+    return `${this.getRootDir()}/${clusterName}/.env`;
+  }
+
+  /**
+   * @method getEnv
+   * @description get cluster env information
+   * 
+   * @param {String} clusterName Optional.  If not provided returns all cluster env file information
+   * Otherwise return env file information for specific cluster as Object.
+   * 
+   * @returns {Object|Array}
+   */
+  getEnv(clusterName) {
+    if( !clusterName ) {
+      return this.list().map(cluster => ({
+        cluster,
+        env : this.getEnv(cluster)
+      }));
+    }
+
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+
+    let env = {};
+    if( fs.existsSync(this.getEnvFile(clusterName)) ) {
+      fs.readFileSync(this.getEnvFile(clusterName), 'utf-8')
+        .split('\n')
+        .map(line => line.replace(/#.*/, '').split('='))
+        .filter(line => line.length >= 2)
+        .forEach(line => {
+          env[line.shift()] = line.join('=')
+                                  .trim()
+                                  .replace(/^"/, '')
+                                  .replace(/"$/, '')
+        });
+    }
+
+    return env;
+  }
+
+  /**
+   * @method getPort
+   * @description returns the bound port for a pg-farm docker-compose cluster.
+   * By default is returns the postgres port unless the pgr parameter is set to
+   * true, then the pgr port is returned.
+   * 
+   * @param {String} clusterName 
+   * @param {Boolean} pgr 
+   * 
+   * @returns {Number}
+   */
+  getPort(clusterName, pgr=false) {
+    let env = this.getEnv(clusterName);
+    if( pgr ) return parseInt(env[PG_FARM_PGR_PORT]);
+    return parseInt(env[PG_FARM_REPL_PORT]);
+  }
+
+  /**
+   * @method setAwsKeys
+   * @description helper function to set the aws cli key id and secret.
+   * It's a good idea to keep these rotated.  This function rotates keys
+   * for all pg-farm clusters
+   * 
+   * @param {String} id aws access key id 
+   * @param {String} secret aws secret access key
+   */
+  setAwsKeys(id, secret) {
+    this.list().forEach(cluster => {
+      let file = `${this.getRootDir()}/${cluster}/.aws-credentials`;
+      fs.writeFileSync(file, `[default]
+aws_access_key_id=${id}
+aws_secret_access_key=${secret}`)
+    });
+  }
+
+  /**
+   * @method setEnv
+   * @description set the .env file contents for a pg-farm docker-compose cluster
+   * 
+   * @param {String} clusterName name of cluster
+   * @param {Object} params key/value pairs to set in .env file
+   * @param {Boolean} partial Defaults to false.  Is this a partial update or complete replacement? 
+   * 
+   * @returns {Object} new env object
+   */
+  setEnv(clusterName, params, partial=false) {
+    if( partial ) {
+      let env = this.getEnv(clusterName);
+      params = Object.assign(env, params);
+    }
+
+    let content = '';
+    for( let key in params ) {
+      content += key+'='+params[key]+'\n';
+    }
+
+    fs.writeFileSync(this.getEnvFile(), content);
+
+    return this.getEnv(clusterName);
+  }
+
+  /**
+   * @method destroy
+   * @description completely remove a pg-farm docker-compose cluster.  will run:
+   * docker-compose down -v
+   * rm -r cluster-dir 
+   * 
+   * @param {String} clusterName
+   * 
+   * @returns {Promise} 
+   */
+  async destroy(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+
+    // kill all docker bits
+    await exec(this.getDockerComposeCmd(clusterName)+' down -v');
+
+    // remove all files
+    let rootDir = path.join(config.rootDir, args.name);
+    await exec(`rm -rf ${rootDir}`);
   }
 
 }
+
+module.exports = new Cluster();

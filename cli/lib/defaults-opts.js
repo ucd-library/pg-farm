@@ -1,4 +1,4 @@
-let config = require('../config');
+let config = require('../../node-lib/lib/config');
 
 class DefaultOpts {
 
