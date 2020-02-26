@@ -86,8 +86,14 @@ host    db_name         library_user           0.0.0.0/0        md5
 
 https://www.postgresql.org/docs/12/monitoring-stats.html
 
-Currently tracking; track_activities, track_counts, track_functions for snapshot and
+Currently tracking; ```track_activities```, ```track_counts```, ```track_functions``` for snapshot and
 streaming replicate.
+
+Example:
+
+```
+ select * from pg_stat_user_functions;
+```
 
 # SSL
 
