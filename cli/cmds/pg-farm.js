@@ -7,6 +7,7 @@ program
   .command('dc <name>', 'get docker-compose command for a pg-farm cluster')
   .command('ls', 'list all pg-farm clusters')
   .command('config', 'show/edit cli config')
+  .command('rotate-keys', 'rotate AWS s3 keys for entire farm')
   .command('create <name>', 'create a pg-farm docker-compose cluster')
   .command('destroy <name>', 'destroy a pg-farm docker-compose cluster')
   .command('up <name>', 'start a pg-farm docker-compose cluster')

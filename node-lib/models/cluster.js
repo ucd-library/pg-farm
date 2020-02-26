@@ -95,7 +95,7 @@ class Cluster {
     );
 
     let farmConfig = farm.getConfig();
-    this.setAwsKeys(farmConfig.aws.key_id, farmConfig.aws.key_secret);
+    this.setClusterAwsKeys(name, farmConfig.aws.key_id, farmConfig.aws.key_secret);
 
     let env = {
       CLUSTER_NAME : name,
@@ -280,16 +280,30 @@ class Cluster {
    * 
    * @param {String} id aws access key id 
    * @param {String} secret aws secret access key
+   * @param {String} clusterName Optional.  Only set keys for this cluster.  Used by create()
+   * 
    */
   setAwsKeys(id, secret) {
-    farm.setAwsKeys(id, secret);
+    if( !id || !secret ) throw new Error('AWS access id and secret required');
 
-    this.list().forEach(cluster => {
-      let file = `${this.getRootDir(cluster)}/.aws-credentials`;
-      fs.writeFileSync(file, `[default]
+    farm.setAwsKeys(id, secret);
+    this.list()
+      .forEach(cluster => this.setClusterAwsKeys(id, secret, cluster));
+  }
+
+  /**
+   * @method setClusterAwsKeys
+   * @description set the aws keys for a cluster
+   * 
+   * @param {String} clusterName docker-compose cluster name to set keys for
+   * @param {String} id aws access key id 
+   * @param {String} secret aws secret access key
+   */
+  setClusterAwsKeys(clusterName, id, secret) {
+    let file = `${this.getRootDir(clusterName)}/.aws-credentials`;
+    fs.writeFileSync(file, `[default]
 aws_access_key_id=${id}
 aws_secret_access_key=${secret}`)
-    });
   }
 
   /**

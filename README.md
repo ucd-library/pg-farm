@@ -103,8 +103,25 @@ The [library user role](#create-libary_user-role) should be user to access the p
 
 # AWS S3 Backups
 
-AWS S3 backups will be created (nightly?).  These backups use the aws cli.  All pg containers have a /pg-stage mount point where database dumbs can be stored when backuping up/restoring the database.  A local .aws-credentials file will be mounted to /root/.aws/credentials provided the container access to the S3 bucket.
+AWS S3 backups will be created (nightly?).  These backups are used by the aws cli.  All pg containers have a /pg-stage mount point where database dumbs can be stored when backuping up/restoring the database.  A local .aws-credentials file will be mounted to /root/.aws/credentials provided the container access to the S3 bucket.
 
+Database backups will be stored in the S3 bucket defined the in [farms config.json](#farm-setup) file.  Inside the bucket, backups will be stored in the folder with the same name as the farms cluster name.  Each cluster folder will have two files: data.Fc and global.sql
+
+Example location: s3://pg-farm/my-project/data.Fc
+
+  - data.Fc
+    - a ```pg_dump -F c``` dump of the postgres database containing all data which you wish to store in the pg-farm replicate. 
+  - global.sql
+    - a ```pg_dumpall --globals-only``` dump of the postgres database containing all user/roles to be stored in the pg-farm replicate.
+    - Note.  this file should contain the library_user role!
+
+## AWS CLI key rotation
+
+The clusters access S3 buckets via the AWS CLI which use Service Accounts associated ```access key id``` and ```access key secret``` to authenticate.  It is recommended you rotate these keys every month or so.  The PG Farm CLI as a built in helper function to rotate the access keys for the entire farm.
+
+```
+pg-farm rotate-keys --key-id [id] --key-secret [secret]
+```
 
 # Setup
 
