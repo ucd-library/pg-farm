@@ -17,9 +17,9 @@ services:
     env_file:
       - .env
     environment:
-      - PGRST_DB_URI=postgres://${PGR_USER}:${PGR_PASSWORD}@pg:5432/postgres
+      - PGRST_DB_URI=postgres://${PGR_USER_PASSWORD}@pg-repl:5432/${PGR_DATABASE}
       - PGRST_DB_SCHEMA=${PGR_SCHEMA}
-      - PGRST_DB_ANON_ROLE=anon
+      - PGRST_DB_ANON_ROLE=${PGR_ANON_ROLE}
     depends_on:
       - pg-repl
     ports:

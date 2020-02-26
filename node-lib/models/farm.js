@@ -15,7 +15,7 @@ class Farm {
    * @return {String} directory path
    */
   getRootDir() {
-    return path.join(config.rootDir, 'farm');
+    return path.join(config.rootDir);
   }
 
   getConfig() {

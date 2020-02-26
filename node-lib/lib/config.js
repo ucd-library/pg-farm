@@ -28,11 +28,10 @@ if( process.argv.includes('--root-dir') ) {
   config.rootDir = process.argv[process.argv.indexOf('--root-dir')+1];
 } else if( process.env['PG_FARM_ROOT'] ) {
   config.rootDir = process.env['PG_FARM_ROOT']
-} 
+}
 
 if( !fs.existsSync(path.join(config.rootDir, 'config.json')) ) {
-  console.error(`Unknown farm location: ${path.resolve(config.rootDir, 'config.json')} not found.`);
-  process.exit(-1);
+  throw new Error(`Unknown farm location: ${path.resolve(config.rootDir, 'config.json')} not found.`);
 }
 
 config.assign = opts => {

@@ -18,9 +18,9 @@ class Cluster {
    */
   getRootDir(clusterName) {
     if( clusterName ) {
-      return path.join(config.rootDir, 'farm', clusterName);
+      return path.join(config.rootDir, clusterName);
     }
-    return path.join(config.rootDir, 'farm');
+    return config.rootDir;
   }
 
   /**
@@ -75,6 +75,11 @@ class Cluster {
     if( this.exists(name) ) {
       throw new Error('Cluster already exists: '+name);
     }
+    if( !['snapshot', 'streaming'].includes(args.type) ) {
+      throw new Error('Unknown cluster type: '+args.type);
+    }
+
+
     let rootDir = path.join(this.getRootDir(), name);
     await fs.mkdirp(rootDir);
 
@@ -100,9 +105,11 @@ class Cluster {
       PG_FARM_PGR_PORT : ports[1],
       PGR_SCHEMA : args.schema || 'public',
       PGR_DATABASE : args.database || 'postgres',
-      PGR_USER : 'library_user',
-      PGR_PASSWORD : 'library_user'
+      PGR_USER : args.pgrUser || 'library_user',
+      PGR_PASSWORD : args.pgrPassword || 'library_user',
+      PGR_ANON_ROLE : 'library_user'
     };
+    env.PGR_USER_PASSWORD = env.PGR_USER + (env.PGR_PASSWORD ? ':'+env.PGR_PASSWORD : '');
 
     this.setEnv(name, env);
 
@@ -301,10 +308,14 @@ aws_secret_access_key=${secret}`)
     }
 
     // kill all docker bits
-    await exec(this.getDockerComposeCmd(clusterName)+' down -v');
+    try {
+      await exec(this.getDockerComposeCmd(clusterName)+' down -v');
+    } catch(e) {}
 
     // remove all files
-    await exec(`rm -rf ${this.getRootDir(clusterName)}`);
+    try {
+      await exec(`rm -rf ${this.getRootDir(clusterName)}`);
+    } catch(e) {}
   }
 
 }

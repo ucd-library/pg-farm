@@ -41,20 +41,24 @@ CREATE ROLE library_replicate WITH REPLICATION PASSWORD 'password' LOGIN
 Then create the [library user role](#create-libary_user-role)
 
 Additional Notes:
-https://scalegrid.io/blog/getting-started-with-postgresql-streaming-replication/,
-https://www.postgresql.org/docs/12/warm-standby.html#STANDBY-SERVER-OPERATION
+  - https://scalegrid.io/blog/getting-started-with-postgresql-streaming-replication/
+  - https://www.postgresql.org/docs/12/warm-standby.html#STANDBY-SERVER-OPERATION
 
 ## pg_hba.conf
 
+```
 host    replication     library_replicate      pg.farm.ip/32    md5
+```
 
 ## postgresql.conf
 
+```
 wal_level = replica
 wal_log_hints = on
 max_wal_senders = 3
 wal_keep_segments = 8
 hot_standby = on
+```
 
 # Snapshot Setup
 
@@ -151,6 +155,8 @@ In ```/opt/pg-farm``` create a ```config.json``` file.  It should have the follo
 npm install -g @ucd-lib/pg-farm
 ```
 
+### Configure
+
 Now create a ```.pg-farm``` options file in your home directory and set:
 
 ```javascript
@@ -161,7 +167,7 @@ Now create a ```.pg-farm``` options file in your home directory and set:
 
 This will set the default location for the farm.  You can override this location in the CLI by:
   - providing the ```--root-dir``` option
-  - setting the ```PG_FARM_ROOT``` environment variable;
+  - setting the ```PG_FARM_ROOT``` environment variable
 
 Additonaly you can create an options file ```/etc/pg-farm/conf```.  These options will always be used
 when you run the CLI on your system.  Though a local file in your home directory will override any options 
