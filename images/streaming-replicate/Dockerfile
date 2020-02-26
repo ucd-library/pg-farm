@@ -1,9 +1,11 @@
-FROM postgres:10
+ARG VERSION
+FROM ucdlib/pg-farm-base:${VERSION}
 
-RUN apt-get update
-RUN apt-get install -y iputils-ping
+COPY postgresql.conf /etc/postgresql/postgresql.conf
+COPY pg_hba.conf /etc/postgresql/pg_hba.conf
+RUN chown postgres:postgres /etc/postgresql/postgresql.conf
+RUN chown postgres:postgres /etc/postgresql/pg_hba.conf
 
-RUN mv docker-entrypoint.sh docker-entrypoint-org.sh
 COPY docker-entrypoint.sh docker-entrypoint.sh
 
-CMD /docker-entrypoint.sh
+CMD docker-entrypoint.sh -c 'config_file=/etc/postgresql/postgresql.conf'

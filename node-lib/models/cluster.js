@@ -2,6 +2,9 @@ const fs = require('fs-extra');
 const path = require('path'); 
 const config = require('../lib/config');
 const exec = require('../lib/exec');
+const farm = require('./farm');
+
+const TEMPLATES_DIR = path.resolve(__dirname, '..', '..', 'docker-compose-templates');
 
 class Cluster {
 
@@ -9,9 +12,14 @@ class Cluster {
    * @method getRootDir
    * @description get the root director for a pg-farm docker-compose cluster
    * 
+   * @param {String} clusterName Optional
+   * 
    * @return {String} directory path
    */
-  getRootDir() {
+  getRootDir(clusterName) {
+    if( clusterName ) {
+      return path.join(config.rootDir, 'farm', clusterName);
+    }
     return path.join(config.rootDir, 'farm');
   }
 
@@ -22,7 +30,8 @@ class Cluster {
    * @returns {Array}
    */
   list() {
-    return fs.readdirSync(this.getRootDir());
+    return fs.readdirSync(this.getRootDir())
+      .filter(file => file !== 'config.json');
   }
 
   /**
@@ -47,7 +56,9 @@ class Cluster {
     if( !this.exists(clusterName) ) {
       throw new Error('Unknown cluster: '+clusterName);
     }
-    return `docker-compose -f ${this.getRootDir()}/${clusterName}/docker-compose.yml`;
+    // HACK. Below isn't working as of docker-compose version 1.25.4, build 8d51620a
+    // return `docker-compose --project-directory ${this.getRootDir()}/${clusterName}`;
+    return `docker-compose --env-file ${this.getRootDir()}/${clusterName}/.env --file ${this.getRootDir()}/${clusterName}/docker-compose.yml`;
   }
 
   /**
@@ -60,12 +71,42 @@ class Cluster {
    * @returns {Object}
    */
   async create(args) {
-    if( this.exists(args.name) ) {
-      throw new Error('Cluster already exists: '+args.name);
+    let name = args.name.trim().toLowerCase().replace(/( |-)/g, '-');
+    if( this.exists(name) ) {
+      throw new Error('Cluster already exists: '+name);
     }
-    let rootDir = path.join(config.rootDir, args.name);
-
+    let rootDir = path.join(this.getRootDir(), name);
     await fs.mkdirp(rootDir);
+
+    let ports = farm.allocatePorts(name);
+
+    // let dc = fs.readFileSync(path.join(TEMPLATES_DIR, args.type+'-replicate', 'docker-compose.yml'), 'utf-8');
+    // dc = dc.replace(/\$\{ROOT_DIR\}/g, rootDir);
+    // fs.writeFile(path.join(rootDir, 'docker-compose.yml'), dc);
+
+    await fs.copy(
+      path.join(TEMPLATES_DIR, args.type+'-replicate', 'docker-compose.yml'),
+      path.join(rootDir, 'docker-compose.yml')
+    );
+
+    let farmConfig = farm.getConfig();
+    this.setAwsKeys(farmConfig.aws.key_id, farmConfig.aws.key_secret);
+
+    let env = {
+      CLUSTER_NAME : name,
+      COMPOSE_PROJECT_NAME : 'pg-farm-'+name,
+      AWS_BUCKET : farmConfig.aws.bucket || 'pg-farm',
+      PG_FARM_REPL_PORT : ports[0],
+      PG_FARM_PGR_PORT : ports[1],
+      PGR_SCHEMA : args.schema || 'public',
+      PGR_DATABASE : args.database || 'postgres',
+      PGR_USER : 'library_user',
+      PGR_PASSWORD : 'library_user'
+    };
+
+    this.setEnv(name, env);
+
+    return env;
   }
 
   /**
@@ -86,7 +127,7 @@ class Cluster {
   }
 
   /**
-   * @method up
+   * @method down
    * @description bring a pg-farm docker-compose cluster down.  
    * runs `docker-compose down` for cluster
    * 
@@ -100,6 +141,31 @@ class Cluster {
     }
 
     return exec(this.getDockerComposeCmd(clusterName)+' down');
+  }
+
+  /**
+   * @method ps
+   * @description return the process status for a cluster
+   * 
+   * @param {String} clusterName
+   * 
+   * @returns {Promise} resolves to ${String} stdout 
+   */
+  async ps(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+
+    let {stdout} = await exec(this.getDockerComposeCmd(clusterName)+' ps');
+    return stdout;
+  }
+
+  restore(clusterName) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+
+    return exec(this.getDockerComposeCmd(clusterName)+' exec -T pg-repl bash -c "/scripts/restore.sh; exit 0"');
   }
 
   /**
@@ -157,41 +223,6 @@ class Cluster {
   }
 
   /**
-   * @method getPort
-   * @description returns the bound port for a pg-farm docker-compose cluster.
-   * By default is returns the postgres port unless the pgr parameter is set to
-   * true, then the pgr port is returned.
-   * 
-   * @param {String} clusterName 
-   * @param {Boolean} pgr 
-   * 
-   * @returns {Number}
-   */
-  getPort(clusterName, pgr=false) {
-    let env = this.getEnv(clusterName);
-    if( pgr ) return parseInt(env[PG_FARM_PGR_PORT]);
-    return parseInt(env[PG_FARM_REPL_PORT]);
-  }
-
-  /**
-   * @method setAwsKeys
-   * @description helper function to set the aws cli key id and secret.
-   * It's a good idea to keep these rotated.  This function rotates keys
-   * for all pg-farm clusters
-   * 
-   * @param {String} id aws access key id 
-   * @param {String} secret aws secret access key
-   */
-  setAwsKeys(id, secret) {
-    this.list().forEach(cluster => {
-      let file = `${this.getRootDir()}/${cluster}/.aws-credentials`;
-      fs.writeFileSync(file, `[default]
-aws_access_key_id=${id}
-aws_secret_access_key=${secret}`)
-    });
-  }
-
-  /**
    * @method setEnv
    * @description set the .env file contents for a pg-farm docker-compose cluster
    * 
@@ -212,9 +243,46 @@ aws_secret_access_key=${secret}`)
       content += key+'='+params[key]+'\n';
     }
 
-    fs.writeFileSync(this.getEnvFile(), content);
+    fs.writeFileSync(this.getEnvFile(clusterName), content);
 
     return this.getEnv(clusterName);
+  }
+
+  /**
+   * @method getPort
+   * @description returns the bound port for a pg-farm docker-compose cluster.
+   * By default is returns the postgres port unless the pgr parameter is set to
+   * true, then the pgr port is returned.
+   * 
+   * @param {String} clusterName 
+   * @param {Boolean} pgr 
+   * 
+   * @returns {Number}
+   */
+  getPort(clusterName, pgr=false) {
+    let env = this.getEnv(clusterName);
+    if( pgr ) return parseInt(env['PG_FARM_PGR_PORT']);
+    return parseInt(env['PG_FARM_REPL_PORT']);
+  }
+
+  /**
+   * @method setAwsKeys
+   * @description helper function to set the aws cli key id and secret.
+   * It's a good idea to keep these rotated.  This function rotates keys
+   * for all pg-farm clusters
+   * 
+   * @param {String} id aws access key id 
+   * @param {String} secret aws secret access key
+   */
+  setAwsKeys(id, secret) {
+    farm.setAwsKeys(id, secret);
+
+    this.list().forEach(cluster => {
+      let file = `${this.getRootDir(cluster)}/.aws-credentials`;
+      fs.writeFileSync(file, `[default]
+aws_access_key_id=${id}
+aws_secret_access_key=${secret}`)
+    });
   }
 
   /**
@@ -236,8 +304,7 @@ aws_secret_access_key=${secret}`)
     await exec(this.getDockerComposeCmd(clusterName)+' down -v');
 
     // remove all files
-    let rootDir = path.join(config.rootDir, args.name);
-    await exec(`rm -rf ${rootDir}`);
+    await exec(`rm -rf ${this.getRootDir(clusterName)}`);
   }
 
 }

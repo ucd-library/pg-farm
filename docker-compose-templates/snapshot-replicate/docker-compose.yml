@@ -11,11 +11,6 @@ services:
       - ${PG_FARM_REPL_PORT}:5432
     env_file:
         - .env
-    environment: 
-      - PG_MASTER_HOST=${PG_MASTER_HOST}
-      - PG_MASTER_PORT=${PG_MASTER_PORT}
-      - PG_REP_USER=${PG_REP_USER}
-      - PG_REP_PASSWORD=${PG_REP_PASSWORD}
 
   pgr:
     image: postgrest/postgrest:v6.0.2
@@ -27,8 +22,8 @@ services:
       - PGRST_DB_ANON_ROLE=anon
     depends_on:
       - pg-repl
-  ports:
-    - ${PG_FARM_PGR_PORT}:3000
+    ports:
+      - ${PG_FARM_PGR_PORT}:3000
 
 volumes:
   pg-data:

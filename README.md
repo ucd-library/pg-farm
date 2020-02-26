@@ -7,6 +7,10 @@
   - [Statistics](#statistics)
   - [SSL](#ssl)
   - [Rest API](#rest-api)
+  - [AWS S3 Backups](#aws-s3-backups)
+  - [Setup](#setup)
+    - [Farm Setup](#farm-setup)
+    - [CLI Setup](#cli-setup)
 
 # Replicate Types
 
@@ -96,3 +100,70 @@ The [library user role](#create-libary_user-role) should be user to access the p
 # AWS S3 Backups
 
 AWS S3 backups will be created (nightly?).  These backups use the aws cli.  All pg containers have a /pg-stage mount point where database dumbs can be stored when backuping up/restoring the database.  A local .aws-credentials file will be mounted to /root/.aws/credentials provided the container access to the S3 bucket.
+
+
+# Setup
+
+This section contains information on setting up pg-farm and accessing via CLI.
+
+## Farm Setup
+
+Setting up pg-farm requires Docker, Docker Compose and the pg-farm cli.
+
+
+### Install
+
+  - [Docker](https://docs.docker.com/install/)
+  - [Docker Compose](https://docs.docker.com/compose/install/)
+  - [pg-farm CLI](#cli-setup)
+
+### Configure
+
+Choose a root directory to host the farm.  For this example we will use ```/opt/pg-farm```.
+
+```bash
+mkdir /opt/pg-farm
+```
+
+In ```/opt/pg-farm``` create a ```config.json``` file.  It should have the following properties
+
+```javascript
+{ 
+  "name": "test-farm", // give the farm a name
+  "domain": "localhost", // domain the farm will be hosted at
+  "aws": {
+    "bucket": "pg-farm" // aws s3 bucket for the farm to use
+  },
+  "options": {
+    "startingPort": 6000, // port number pg-farm will start allocating ports at
+    "apache": false // should pg-farm create apache config files for clusters in /etc/apache2/site-available
+  }
+}
+```
+
+## CLI Setup
+
+### Install
+
+[NodeJS](https://nodejs.org/en/download/) is required.
+
+```bash
+npm install -g @ucd-lib/pg-farm
+```
+
+Now create a ```.pg-farm``` options file in your home directory and set:
+
+```javascript
+{
+  "rootDir" : "/opt/pg-farm"
+}
+```
+
+This will set the default location for the farm.  You can override this location in the CLI by:
+  - providing the ```--root-dir``` option
+  - setting the ```PG_FARM_ROOT``` environment variable;
+
+Additonaly you can create an options file ```/etc/pg-farm/conf```.  These options will always be used
+when you run the CLI on your system.  Though a local file in your home directory will override any options 
+set in the global file.  ```PG_FARM_ROOT``` and ```--root-dir``` will overwrite the ```rootDir``` variable
+in any config file.  Use ```pg-farm config list``` to see which files/options are in use.

@@ -1,15 +1,5 @@
-FROM postgres:10
-LABEL maintainer="jrmerz@ucdavis.edu"
-
-RUN apt-get update \
-      && apt-get install -y --no-install-recommends \
-        postgis \
-        postgresql-10-postgis-2.5 \
-        postgresql-10-postgis-scripts \
-      && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /docker-entrypoint-initdb.d
-COPY ./initdb-postgis.sql /docker-entrypoint-initdb.d/postgis.sql
+ARG VERSION
+FROM ucdlib/pg-farm-base:${VERSION}
 
 COPY postgresql.conf /etc/postgresql/postgresql.conf
 COPY pg_hba.conf /etc/postgresql/pg_hba.conf

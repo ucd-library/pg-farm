@@ -9,8 +9,6 @@ services:
       - ./.aws-credentials:/root/.aws/credentials
     ports:
       - ${PG_FARM_REPL_PORT}:5432
-    env_file:
-      - .env
     environment: 
       - PG_MASTER_HOST=${PG_MASTER_HOST}
       - PG_MASTER_PORT=${PG_MASTER_PORT}
@@ -23,8 +21,6 @@ services:
       - PGRST_DB_URI=postgres://${PGR_USER}:${PGR_PASSWORD}@pg:5432/postgres
       - PGRST_DB_SCHEMA=${PGR_SCHEMA}
       - PGRST_DB_ANON_ROLE=anon
-    env_file:
-      - .env
     depends_on:
       - pg-repl
     ports:

@@ -1,16 +1,18 @@
 let config = require('../../node-lib/lib/config');
+const fs = require('fs-extra');
 
 class DefaultOpts {
 
   wrap(program) {
     program
-      .option('-f, --config-file <file>', 'config file to use')
-      .option('-d, --root-dir <dir>', 'root directory of the farm');
+      .option('--root-dir <dir>', 'root directory of the farm');
     return program;
   }
 
   handle(cmdOpts) {
-    return config(cmdOpts);
+    if( cmdOpts.rootDir ) {
+      config.rootDir = cmdOpts.rootDir;
+    }
   }
 
 }
