@@ -2,22 +2,23 @@ version: '3'
 
 services:
   pg-repl:
-    image: ucdlib/pg-farm-snapshot-replicate:0.0.1
+    image: ucdlib/pg-farm-streaming-replicate:0.0.2
     volumes:
       - pg-data:/var/lib/postgresql/data
       - pg-stage:/pg-stage
       - ./.aws-credentials:/root/.aws/credentials
     ports:
       - ${PG_FARM_REPL_PORT}:5432
-    env_file:
-        - .env
+    environment: 
+      - PG_MASTER_HOST=${PG_MASTER_HOST}
+      - PG_MASTER_PORT=${PG_MASTER_PORT}
+      - PG_REP_USER=${PG_REP_USER}
+      - PG_REP_PASSWORD=${PG_REP_PASSWORD}
 
   pgr:
     image: postgrest/postgrest:v6.0.2
-    env_file:
-      - .env
     environment:
-      - PGRST_DB_URI=postgres://${PGR_USER_PASSWORD}@pg-repl:5432/${PGR_DATABASE}
+      - PGRST_DB_URI=postgres://${PGR_USER_PASSWORD}@pg:5432/postgres
       - PGRST_DB_SCHEMA=${PGR_SCHEMA}
       - PGRST_DB_ANON_ROLE=${PGR_ANON_ROLE}
     depends_on:

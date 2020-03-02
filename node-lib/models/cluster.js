@@ -3,8 +3,11 @@ const path = require('path');
 const config = require('../lib/config');
 const exec = require('../lib/exec');
 const farm = require('./farm');
+const ssl = require('../lib/ssl');
 
-const TEMPLATES_DIR = path.resolve(__dirname, '..', '..', 'docker-compose-templates');
+const TEMPLATES_DIR = path.resolve(__dirname, '..', '..', 'templates');
+const DC_TEMPLATES_DIR = path.resolve(TEMPLATES_DIR, 'docker-compose');
+const APACHE_TEMPLATES_DIR = path.resolve(TEMPLATES_DIR, 'apache');
 
 class Cluster {
 
@@ -83,19 +86,26 @@ class Cluster {
     let rootDir = path.join(this.getRootDir(), name);
     await fs.mkdirp(rootDir);
 
-    let ports = farm.allocatePorts(name);
-
-    // let dc = fs.readFileSync(path.join(TEMPLATES_DIR, args.type+'-replicate', 'docker-compose.yml'), 'utf-8');
-    // dc = dc.replace(/\$\{ROOT_DIR\}/g, rootDir);
-    // fs.writeFile(path.join(rootDir, 'docker-compose.yml'), dc);
+    // set the certs
+    let certType = '';
+    if( args.serverCrt && args.serverKey ) {
+      await fs.copy(path.join(args.serverCrt), path.join(rootDir, 'server.crt'));
+      await fs.copy(path.join(args.serverKey), path.join(rootDir, 'server.key'));
+      certType = 'server';
+    } else {
+      await ssl.generateSelfSignedCert(rootDir);
+      certType = 'self-signed';
+    }
 
     await fs.copy(
-      path.join(TEMPLATES_DIR, args.type+'-replicate', 'docker-compose.yml'),
+      path.join(DC_TEMPLATES_DIR, args.type+'-replicate', 'docker-compose.yml'),
       path.join(rootDir, 'docker-compose.yml')
     );
 
     let farmConfig = farm.getConfig();
     this.setClusterAwsKeys(name, farmConfig.aws.key_id, farmConfig.aws.key_secret);
+
+    let ports = farm.allocatePorts(name);
 
     let env = {
       CLUSTER_NAME : name,
@@ -103,11 +113,12 @@ class Cluster {
       AWS_BUCKET : farmConfig.aws.bucket || 'pg-farm',
       PG_FARM_REPL_PORT : ports[0],
       PG_FARM_PGR_PORT : ports[1],
-      PGR_SCHEMA : args.schema || 'public',
-      PGR_DATABASE : args.database || 'postgres',
+      PGR_SCHEMA : args.pgrSchema || 'public',
+      PGR_DATABASE : args.pgrDatabase || 'postgres',
       PGR_USER : args.pgrUser || 'library_user',
       PGR_PASSWORD : args.pgrPassword || 'library_user',
-      PGR_ANON_ROLE : 'library_user'
+      PGR_ANON_ROLE : 'library_user',
+      SSL_CERT_TYPE : certType
     };
     env.PGR_USER_PASSWORD = env.PGR_USER + (env.PGR_PASSWORD ? ':'+env.PGR_PASSWORD : '');
 
@@ -270,6 +281,45 @@ class Cluster {
     let env = this.getEnv(clusterName);
     if( pgr ) return parseInt(env['PG_FARM_PGR_PORT']);
     return parseInt(env['PG_FARM_REPL_PORT']);
+  }
+
+  async upgradeImage(clusterName, version) {
+    if( !this.exists(clusterName) ) {
+      throw new Error('Unknown cluster: '+clusterName);
+    }
+    if( typeof version !== 'string') version = '';
+    if( !version ) throw new Error('Version number required');
+
+    let versions = await farm.listImageVersions();
+    if( !versions.includes(version) ) {
+      throw new Error('Unknown pg-farm image version: '+version);
+    }
+
+    let dcFilePath = path.join(this.getRootDir(clusterName), 'docker-compose.yml');
+    let currentVersion = await this.listImageVersion(clusterName);
+
+    let contents = fs.readFileSync(dcFilePath, 'utf-8');
+    contents = contents.replace(new RegExp('-replicate:'+currentVersion), '-replicate:'+version);
+    fs.writeFileSync(dcFilePath, contents);
+
+    return {
+      dockerCompose : contents,
+      oldVersion : currentVersion,
+      newVersion : version
+    }
+  }
+
+  async listImageVersion(clusterName) {
+    let dc = this.getDockerComposeCmd(clusterName)+' images pg-repl';
+    let {stdout, stderr} = await exec(dc);
+
+    return stdout.split('\n')
+      .filter(row => row !== '')
+      .map(row => row.replace(/ +/, ' '))
+      .pop()
+      .split(' ')
+      .filter(row => row !== '')[2]
+      .trim();
   }
 
   /**

@@ -89,6 +89,14 @@ https://www.postgresql.org/docs/12/monitoring-stats.html
 Currently tracking; ```track_activities```, ```track_counts```, ```track_functions``` for snapshot and
 streaming replicate.
 
+Required flags posgtesql.conf
+
+```
+track_activities = on
+track_counts = on
+track_functions = all	
+```
+
 Example:
 
 ```
@@ -98,6 +106,19 @@ Example:
 # SSL
 
 Need to create certs for domains.  Then follow: https://www.postgresql.org/docs/12/ssl-tcp.html
+
+Required flags posgtesql.conf
+
+```
+ssl = on
+ssl_prefer_server_ciphers = on
+ssl_cert_file = 'server.crt'
+ssl_key_file = 'server.key'
+```
+
+Using PG SSL without Letsencrypt
+https://medium.com/@pavelevstigneev/postgresql-ssl-with-letsencrypt-b53051eacc22
+
 
 # Rest API
 

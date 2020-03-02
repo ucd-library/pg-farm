@@ -3,7 +3,7 @@ LABEL maintainer="jrmerz@ucdavis.edu"
 
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends \
-  iputils-ping curl zip unzip ca-certificates \
+  iputils-ping curl zip unzip ca-certificates vim \
   postgis \
   postgresql-10-postgis-2.5 \
   postgresql-10-postgis-2.5-scripts

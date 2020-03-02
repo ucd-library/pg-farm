@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const config = require('../lib/config');
+const exec = require('../lib/exec');
 
 class Farm {
 
@@ -44,14 +45,14 @@ class Farm {
       return ports;
     }
 
-    let usedPorts = Object.keys(config.ports);
+    let usedPorts = Object.keys(config.ports).map(v => parseInt(v));
 
     let ports;
     if( !usedPorts.length ) {
       ports = [this.startPort, this.startPort+1];
     } else {
       usedPorts.sort((a,b) => a > b ? -1 : 1);
-      ports = [usedPorts[0]+1, usedPorts[0]+1]
+      ports = [usedPorts[0]+1, usedPorts[0]+2]
     }
 
     config.ports[ports[0]] = clusterName;
@@ -71,6 +72,12 @@ class Farm {
 
   getDomainName() {
     return this.getConfig().domain;
+  }
+
+
+  async listImageVersions(type='snapshot') {
+    let {stdout, stderr} = await exec(`docker image ls ucdlib/pg-farm-${type}-replicate --format "{{.Tag}}"`);
+    return stdout.split('\n').map(v => v.trim()).filter(v => v !== '');
   }
 
 }
