@@ -20,8 +20,10 @@ COPY ./aws-config /root/.aws/config
 RUN mkdir -p /docker-entrypoint-initdb.d
 COPY ./initdb-postgis.sql /docker-entrypoint-initdb.d/postgis.sql
 
+RUN cp /docker-entrypoint.sh /docker-entrypoint-org.sh
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
 RUN mkdir scripts
 WORKDIR /scripts
 COPY backup.sh .
 COPY restore.sh .
-

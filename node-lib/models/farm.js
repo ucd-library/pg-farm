@@ -2,6 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const config = require('../lib/config');
 const exec = require('../lib/exec');
+const fetch = require('node-fetch');
 
 class Farm {
 
@@ -76,8 +77,9 @@ class Farm {
 
 
   async listImageVersions(type='snapshot') {
-    let {stdout, stderr} = await exec(`docker image ls ucdlib/pg-farm-${type}-replicate --format "{{.Tag}}"`);
-    return stdout.split('\n').map(v => v.trim()).filter(v => v !== '');
+    let response = await fetch('https://registry.hub.docker.com/v1/repositories/ucdlib/pg-farm-snapshot-replicate/tags');
+    let data = await response.json();
+    return data.map(item => item.name);
   }
 
 }
