@@ -193,7 +193,9 @@ In ```/opt/pg-farm``` create a ```config.json``` file.  It should have the follo
 
 ### Install
 
-[NodeJS](https://nodejs.org/en/download/) is required.
+  - [NodeJS](https://nodejs.org/en/download/) is required.
+  - [OpenSSL](https://www.openssl.org/)
+    - OpenSSL is only required when creating a new cluster and not provided SSL certs.  The CLI will generate a self-signed cert using OpenSSL in this case.
 
 ```bash
 npm install -g @ucd-lib/pg-farm

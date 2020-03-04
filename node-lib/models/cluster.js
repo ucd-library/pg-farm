@@ -82,8 +82,7 @@ class Cluster {
       throw new Error('Unknown cluster type: '+args.type);
     }
 
-
-    let rootDir = path.join(this.getRootDir(), name);
+    let rootDir = this.getRootDir(name);
     await fs.mkdirp(rootDir);
 
     // set the certs
@@ -93,8 +92,12 @@ class Cluster {
       await fs.copy(path.join(args.serverKey), path.join(rootDir, 'server.key'));
       certType = 'server';
     } else {
-      await ssl.generateSelfSignedCert(rootDir);
-      certType = 'self-signed';
+      try {
+        await ssl.generateSelfSignedCert(rootDir);
+        certType = 'self-signed';
+      } catch(e) {
+        certType = 'self-signed-failed';
+      }
     }
 
     await fs.copy(

@@ -1,6 +1,6 @@
 {
   "name": "@ucd-lib/pg-farm",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "PG-Farm node library and cli",
   "bin": {
     "pg-farm": "./cli/cmds/pg-farm.js"
