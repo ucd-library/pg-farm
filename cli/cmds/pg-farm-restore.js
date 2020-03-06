@@ -4,21 +4,13 @@ const prompts = require('prompts');
 
 program
   .arguments('<name>')
-  // .option('-f --force [schema]', 'Force restore without a confirm prompt')
-  .action(async (name, args) => {
-    // if( !args.force ) {
-    //   const response = await prompts({
-    //     type: 'confirm',
-    //     name: 'value',
-    //     message: `Are you sure you want to restore cluster ${name}? This will clean the database and restore from data in S3 bucket.`,
-    //     initial: false
-    //   });
-
-    //   if( !response.value ) return;
-    // }
-
+  .action(async (name) => {
     try {
-      console.log(model.getDockerComposeCmd(name)+' exec -T pg-repl /scripts/restore.sh');
+      let stop = model.getDockerComposeCmd(name)+' stop pg-repl';
+      let restore = model.getDockerComposeCmd(name)+' exec -T controller /scripts/restore.sh';
+      let start = model.getDockerComposeCmd(name)+' start pg-repl';
+
+      console.log(`${stop} ; ${restore} ; ${start}`);
     } catch(e) {
       console.error(e.message);
     }

@@ -6,6 +6,12 @@ set -e
 cd /pg-stage
 rm -rf *
 
-zip -r /var/lib/postgres/data /pg-stage/backup.zip
+cd /var/lib/postgresql
+zip -r /pg-stage/backup.zip data
 cp -r /etc/postgres /pg-stage/etc
-zip -r /pg-stage/etc /pg-stage/backup.zip
+cd /pg-stage
+zip -r /pg-stage/backup.zip etc
+
+aws s3 cp /pg-stage/backup.zip s3://$AWS_BUCKET/$CLUSTER_NAME/backup.zip
+
+rm -rf /pg-stage/*

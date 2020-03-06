@@ -17,3 +17,5 @@ RUN mkdir scripts
 WORKDIR /scripts
 COPY backup.sh .
 COPY restore.sh .
+
+CMD tail -f /dev/null

@@ -2,7 +2,7 @@ version: '3'
 
 services:
   pg-repl:
-    image: ucdlib/pg-farm-snapshot-replicate:0.0.2
+    image: ucdlib/pg-farm-snapshot-replicate:0.0.4
     volumes:
       - pg-data:/var/lib/postgresql/data
       - ./server.crt:/etc/postgres/server.crt
@@ -13,7 +13,7 @@ services:
         - .env
 
   controller:
-    image: ucdlib/pg-farm-controller:0.0.2
+    image: ucdlib/pg-farm-controller:0.0.4
     volumes:
       - pg-data:/var/lib/postgresql/data
       - pg-stage:/pg-stage

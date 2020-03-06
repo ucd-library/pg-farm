@@ -50,14 +50,15 @@ class Farm {
 
     let ports;
     if( !usedPorts.length ) {
-      ports = [this.startPort, this.startPort+1];
+      ports = [this.startPort, this.startPort+1, this.startPort+2];
     } else {
       usedPorts.sort((a,b) => a > b ? -1 : 1);
-      ports = [usedPorts[0]+1, usedPorts[0]+2]
+      ports = [usedPorts[0]+1, usedPorts[0]+2, usedPorts[0]+3]
     }
 
     config.ports[ports[0]] = clusterName;
     config.ports[ports[1]] = clusterName;
+    config.ports[ports[2]] = clusterName;
 
     this.writeConfig(config);
 

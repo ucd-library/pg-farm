@@ -1,8 +1,8 @@
 FROM postgres:10
 LABEL maintainer="jrmerz@ucdavis.edu"
 
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
   ca-certificates vim \
   postgis \
   postgresql-10-postgis-2.5 \

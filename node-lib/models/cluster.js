@@ -116,6 +116,7 @@ class Cluster {
       AWS_BUCKET : farmConfig.aws.bucket || 'pg-farm',
       PG_FARM_REPL_PORT : ports[0],
       PG_FARM_PGR_PORT : ports[1],
+      PG_FARM_CONTROLLER_PORT : ports[2],
       PGR_SCHEMA : args.pgrSchema || 'public',
       PGR_DATABASE : args.pgrDatabase || 'postgres',
       PGR_USER : args.pgrUser || 'library_user',
@@ -181,12 +182,19 @@ class Cluster {
     return stdout;
   }
 
+  /**
+   * @method restore
+   * @description restore a cluster from a S3 backup.
+   * 
+   * @param {String} clusterName
+   * 
+   */
   restore(clusterName) {
     if( !this.exists(clusterName) ) {
       throw new Error('Unknown cluster: '+clusterName);
     }
 
-    return exec(this.getDockerComposeCmd(clusterName)+' exec -T pg-repl bash -c "/scripts/restore.sh; exit 0"');
+    return exec(this.getDockerComposeCmd(clusterName)+' exec -T controller bash -c "/scripts/restore.sh; exit 0"');
   }
 
   /**
