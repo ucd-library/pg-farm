@@ -4,7 +4,7 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $DIR
 
-VERSION=$(cat ../package.json | jq -r .version)
+VERSION=$(cat .version)
 ORG=ucdlib
 PREFIX=$ORG/pg-farm-
 
@@ -21,3 +21,7 @@ docker build \
   --build-arg VERSION=$VERSION \
   -t $PREFIX"streaming-replicate:"$VERSION \
   ./streaming-replicate 
+
+docker build \
+  -t $PREFIX"controller:"$VERSION \
+   ./controller

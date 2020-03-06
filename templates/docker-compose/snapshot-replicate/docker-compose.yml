@@ -5,12 +5,21 @@ services:
     image: ucdlib/pg-farm-snapshot-replicate:0.0.2
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - pg-stage:/pg-stage
-      - ./.aws-credentials:/root/.aws/credentials
       - ./server.crt:/etc/postgres/server.crt
       - ./server.key:/etc/postgres/server.key
     ports:
       - ${PG_FARM_REPL_PORT}:5432
+    env_file:
+        - .env
+
+  controller:
+    image: ucdlib/pg-farm-controller:0.0.2
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - pg-stage:/pg-stage
+      - ./.aws-credentials:/root/.aws/credentials
+    ports:
+      - ${PG_FARM_CONTROLLER_PORT}:3000
     env_file:
         - .env
 
