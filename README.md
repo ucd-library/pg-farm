@@ -7,7 +7,8 @@
   - [Statistics](#statistics)
   - [SSL](#ssl)
   - [Rest API](#rest-api)
-  - [AWS S3 Backups](#aws-s3-backups)
+  - [Backups](#backups)
+    - [AWS S3 Backups](aws-s3-backups)
   - [Setup](#setup)
     - [Farm Setup](#farm-setup)
     - [CLI Setup](#cli-setup)
@@ -15,18 +16,15 @@
 # Replicate Types
 
 ## [Streaming replication](#streaming-replicate-setup)
-  - Entire Database replicated
-  - PGR roles need to be added on Master
-  - Master database modifications required
-    - replicate user must be created on master
-    - library user must be create on master
+  - Entire Database replicated using replicate role
+  - PGR `library_user` role need to be added on Master
 
 ## Nightly Replication
- - Need sync mechanism
- - Can limit to certain tables (white/black list)
+  - Need sync mechanism
+  - Can limit to certain tables (white/black list)
 
 ## [Standalone/Snapshot](#snapshot-setup)
- - Access control to psql
+  - Access control to psql
 
 # Streaming Replicate Setup
 
@@ -128,19 +126,24 @@ https://medium.com/@pavelevstigneev/postgresql-ssl-with-letsencrypt-b53051eacc22
 
 The [library user role](#create-libary_user-role) should be user to access the posgrest instance.
 
-# AWS S3 Backups
+# Backups
 
-AWS S3 backups will be created (nightly?).  These backups are used by the aws cli.  All pg containers have a /pg-stage mount point where database dumbs can be stored when backuping up/restoring the database.  A local .aws-credentials file will be mounted to /root/.aws/credentials provided the container access to the S3 bucket.
+Two different backups will be performed.  The first will be a full snapshot of `/var/lib/postgres/data` capturing the entire state of the database.  Because this might contain private (but still S2 level) data, a secondary backup will be generated using the `library_user` account.  This `library_user` snapshot will be fully accessible to the public.
 
-Database backups will be stored in the S3 bucket defined the in [farms config.json](#farm-setup) file.  Inside the bucket, backups will be stored in the folder with the same name as the farms cluster name.  Each cluster folder will have two files: data.Fc and global.sql
+Backups will be created (nightly for streaming replicates?) by the `controller` container.  All `controller` containers have a /pg-stage mount point where database dumbs can be stored when backuping up/restoring the database.
 
-Example location: s3://pg-farm/my-project/data.Fc
+## AWS S3 Backups
 
-  - data.Fc
-    - a ```pg_dump -F c``` dump of the postgres database containing all data which you wish to store in the pg-farm replicate. 
-  - global.sql
-    - a ```pg_dumpall --globals-only``` dump of the postgres database containing all user/roles to be stored in the pg-farm replicate.
-    - Note.  this file should contain the library_user role!
+AWS S3 will be used to store backups.  A local .aws-credentials file will be mounted to /root/.aws/credentials provided the container access to the S3 bucket.
+
+Database backups will be stored in the S3 bucket defined the in [farms config.json](#farm-setup) file.  Inside the bucket, backups will be stored in the folder with the same name as the farms cluster name.  Each cluster folder will have two files: backup.zip and public.zip
+
+Example location: s3://pg-farm/my-project/backup.zip
+
+  - backup.zip
+    - zip of all `/var/lib/postgres/data`
+  - public.zip
+    - dump from the `library_user` crawl
 
 ## AWS CLI key rotation
 
