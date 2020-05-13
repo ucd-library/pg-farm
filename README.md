@@ -188,7 +188,7 @@ In ```/opt/pg-farm``` create a ```config.json``` file.  It should have the follo
     "bucket": "pg-farm" // aws s3 bucket for the farm to use
   },
   "options": {
-    "startingPort": 6000, // port number pg-farm will start allocating ports at
+    "startPort": 6000, // port number pg-farm will start allocating ports at
     "apache": false // should pg-farm create apache config files for clusters in /etc/apache2/site-available
   }
 }

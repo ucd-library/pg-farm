@@ -4,6 +4,7 @@ const prompts = require('prompts');
 
 program
   .arguments('<name>')
+  .description('Restore pg-farm cluster from AWS S3 bucket.  Run as: eval `pg-farm restore [custer name]`')
   .action(async (name) => {
     try {
       let stop = model.getDockerComposeCmd(name)+' stop pg-repl';

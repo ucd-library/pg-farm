@@ -7,7 +7,7 @@ const fetch = require('node-fetch');
 class Farm {
 
   constructor() {
-    this.startPort = 6000;
+    this.startPort = (this.getConfig().options || {}).startPort || 6000;
   }
 
   /**
