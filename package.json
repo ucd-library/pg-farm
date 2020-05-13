@@ -1,6 +1,6 @@
 {
   "name": "@ucd-lib/pg-farm",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "PG-Farm node library and cli",
   "bin": {
     "pg-farm": "./cli/cmds/pg-farm.js"
@@ -12,9 +12,11 @@
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",
   "dependencies": {
+    "bson": "^4.0.4",
     "commander": "^4.0.1",
     "fs-extra": "^8.1.0",
     "node-fetch": "^2.6.0",
+    "pg": "^8.0.3",
     "prompts": "^2.3.0"
   }
 }

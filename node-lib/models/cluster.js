@@ -349,7 +349,7 @@ class Cluster {
 
     farm.setAwsKeys(id, secret);
     this.list()
-      .forEach(cluster => this.setClusterAwsKeys(id, secret, cluster));
+      .forEach(cluster => this.setClusterAwsKeys(cluster, id, secret));
   }
 
   /**

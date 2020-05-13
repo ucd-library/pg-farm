@@ -11,7 +11,7 @@ defaultOpts
   .option('-s --pgr-schema <schema>', 'Schema for PGR to use. Defaults to public.')
   .option('-d --pgr-database <database>', 'Database for PGR to use. Defaults to postgres.')
   .option('-u --pgr-user <username>', 'Connection user for PGR to use. Defaults to postgres.')
-  .option('-p --pgr-password <password>', 'Connection password for PGR to use. Defaults to empty.')
+  .option('-p --pgr-password <password>', 'Connection password for PGR to use. Defaults to library_user.')
   .option('-a --pgr-anon-user <anon>', 'Anonymous user for PGR to use. Defaults to library_user.')
   .option('-k --server-key <path>', 'Path to server SSL key. If not provided generic cert will be generated')
   .option('-a --server-crt <path>', 'Path to server SSL cert. If not provided generic cert will be generated')

@@ -8,7 +8,6 @@ rm -rf *
 
 FILES=$(aws s3 ls s3://$AWS_BUCKET/$CLUSTER_NAME/)
 
-# install global tables ... ie users/roles
 if [[ "$FILES" =~ [backup.zip] ]]; then
   mkdir -p /var/lib/postgres/data
   mkdir -p /etc/postgres

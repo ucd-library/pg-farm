@@ -10,3 +10,4 @@ PREFIX=$ORG/pg-farm-
 
 docker push $PREFIX"snapshot-replicate:"$VERSION
 docker push $PREFIX"streaming-replicate:"$VERSION
+docker push $PREFIX"controller:"$VERSION

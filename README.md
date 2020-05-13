@@ -183,6 +183,8 @@ In ```/opt/pg-farm``` create a ```config.json``` file.  It should have the follo
   "name": "test-farm", // give the farm a name
   "domain": "localhost", // domain the farm will be hosted at
   "aws": {
+    "key_id": "", // aws service account id
+    "key_secret": "", // aws service account secret
     "bucket": "pg-farm" // aws s3 bucket for the farm to use
   },
   "options": {
