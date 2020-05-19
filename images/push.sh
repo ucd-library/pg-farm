@@ -6,6 +6,7 @@ cd $DIR
 
 source ./config.sh
 
+IFS='-'
 for version in "${PG_VERSIONS[@]}" ; do
   read -ra va <<< "$version"
   PG_VERSION=${va[0]}
@@ -14,5 +15,5 @@ for version in "${PG_VERSIONS[@]}" ; do
   docker push "${PREFIX}base:$PG_FARM_VERSION-$PG_VERSION"
   docker push "${PREFIX}snapshot-replicate:$PG_FARM_VERSION-$PG_VERSION"
   docker push "${PREFIX}streaming-replicate:$PG_FARM_VERSION-$PG_VERSION"
-  docker push "${PREFIX}controller-replicate:$PG_FARM_VERSION-$PG_VERSION"
+  docker push "${PREFIX}controller:$PG_FARM_VERSION-$PG_VERSION"
 done
