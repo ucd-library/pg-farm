@@ -2,14 +2,12 @@ FROM node:12
 
 RUN wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add -
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ stretch-pgdg main" | tee /etc/apt/sources.list.d/postgresql.list
+
+ENV PGF_PG_VERSION ${PGF_PG_VERSION}
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
   iputils-ping curl zip unzip ca-certificates vim \
-  postgresql-client-10
-
-#
-# 
-# RUN apt-get update && get install -y postgresql-client-10
+  postgresql-client-${PGF_PG_VERSION}
 
 RUN rm -rf /var/lib/apt/lists/*
 

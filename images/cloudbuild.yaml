@@ -1,0 +1,23 @@
+
+steps:
+
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: 'bash'
+    args: [ '-c', 'gcloud secrets versions access latest --secret=libosdev-dockerhub-secret > pass.txt' ]
+    env: 
+      - 'REPO_NAME=$REPO_NAME'
+      - 'BRANCH_NAME=$BRANCH_NAME'
+      - 'SHORT_SHA=$SHORT_SHA'
+      - 'TAG_NAME=$TAG_NAME'
+
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args: ["-c", "docker login --username=libosdev --password-stdin < pass.txt"]
+  
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: "bash"
+    args: ["-c", "export GCLOUD_BUILD=true ; ./images/build.sh"]
+
+  - name: gcr.io/cloud-builders/docker
+    entrypoint: 'bash'
+    args: [ '-c', './images/push.sh' ]

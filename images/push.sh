@@ -4,10 +4,15 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $DIR
 
-VERSION=$(cat ../package.json | jq -r .version)
-ORG=ucdlib
-PREFIX=$ORG/pg-farm-
+source ./config.sh
 
-docker push $PREFIX"snapshot-replicate:"$VERSION
-docker push $PREFIX"streaming-replicate:"$VERSION
-docker push $PREFIX"controller:"$VERSION
+for version in "${PG_VERSIONS[@]}" ; do
+  read -ra va <<< "$version"
+  PG_VERSION=${va[0]}
+  POSTGIS_VERSION=${va[1]}
+
+  docker push "${PREFIX}base:$PG_FARM_VERSION-$PG_VERSION"
+  docker push "${PREFIX}snapshot-replicate:$PG_FARM_VERSION-$PG_VERSION"
+  docker push "${PREFIX}streaming-replicate:$PG_FARM_VERSION-$PG_VERSION"
+  docker push "${PREFIX}controller-replicate:$PG_FARM_VERSION-$PG_VERSION"
+done

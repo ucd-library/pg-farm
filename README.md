@@ -60,7 +60,26 @@ hot_standby = on
 
 # Snapshot Setup
 
-First import the data.  Then create the [library user role](#create-libary_user-role).
+  - On the database to be snapshotted, create the [library user role](#create-libary_user-role).
+  - Zip the the root PostgreSQL data and config into a single archive called `backup.zip`
+    - `mkdir ~/stage`
+    - Zip the root postgresql data folder, normally `/var/lib/postgresl/data`
+      - ```cd /var/lib/postgresql && zip -r ~/stage/backup.zip data```
+    - Zip the root postgresql config folder (this contains the cert files), normally `/etc/postgres`, as etc
+      - ```cp -r /etc/postgres ~/stage/etc; cd ~/stage/; zip -r ~/stage/backup.zip etc```
+  - Copy backup to PG-Farm S3 bucket
+    - ```aws s3 cp ~/stage/backup.zip s3://$AWS_BUCKET/$CLUSTER_NAME/backup.zip```
+  - Cleanup stage for upload
+    - ```rm -rf ~/stage```
+  - Create the snapshot farm instance
+    - ```pg-farm create -t snapshot -s $PGR_SCHEMA_TO_USE -d $PGR_DATABASE_TO_USE $CLUSTER_NAME```
+  - Start the cluster.  Note, pgr will die on first start because the empty database will not contain the library_user role, amoung other possible issues.  We will restart pgr in two steps.
+    - ```pg-farm up $CLUSTER_NAME```
+  - Restore the cluster from S3
+    - ```eval `pg-farm restore $CLUSTER_NAME` ```
+  - Start the cluster (bring pgr back up)
+    - ```pg-farm up $CLUSTER_NAME```
+
 
 # Create libary_user role
 
@@ -116,6 +135,12 @@ ssl_key_file = 'server.key'
 
 Using PG SSL without Letsencrypt
 https://medium.com/@pavelevstigneev/postgresql-ssl-with-letsencrypt-b53051eacc22
+
+The short:
+```bash
+cp -L /etc/letsencrypt/live/$DOMAIN/fullchain.pem $FARM_DIR/server.crt
+cp -L /etc/letsencrypt/live/$DOMAIN/privkey.pem   $FARM_DIR/server.key
+```
 
 
 # Rest API

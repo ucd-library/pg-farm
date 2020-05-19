@@ -91,6 +91,9 @@ class Cluster {
       await fs.copy(path.join(args.serverCrt), path.join(rootDir, 'server.crt'));
       await fs.copy(path.join(args.serverKey), path.join(rootDir, 'server.key'));
       certType = 'server';
+
+    // TODO: add check for server cert location in dir
+
     } else {
       try {
         await ssl.generateSelfSignedCert(rootDir);
