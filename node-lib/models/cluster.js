@@ -35,7 +35,7 @@ class Cluster {
    */
   list() {
     return fs.readdirSync(this.getRootDir())
-      .filter(file => file !== 'config.json');
+      .filter(file => fs.lstatSync(path.join(this.getRootDir(),file)).isDirectory());
   }
 
   /**

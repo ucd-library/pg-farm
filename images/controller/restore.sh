@@ -19,7 +19,9 @@ if [[ "$FILES" =~ [backup.zip] ]]; then
   rm -rf /var/lib/postgres/data/*
   
   cp -r backup/data/* /var/lib/postgresql/data/
-  cp -r backup/etc/* /etc/postgres/
+  if [ -f "backup/etc" ]; then
+    cp -r backup/etc/* /etc/postgres/
+  fi
 else
   echo "No backup file found"
 fi

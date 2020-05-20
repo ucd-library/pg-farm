@@ -9,7 +9,7 @@ defaultOpts
   .wrap(program)
   .arguments('<name>')
   .option('-t --type <type>', 'Cluster type: '+CLUSTER_TYPES.join(', '))
-  .option('-v --version <version>', 'PostgreSQL version: '+VERSIONS.join(', '))
+  .option('-g --pg-version <version>', 'PostgreSQL version: '+VERSIONS.join(', '))
   .option('-s --pgr-schema <schema>', 'Schema for PGR to use. Defaults to public.')
   .option('-d --pgr-database <database>', 'Database for PGR to use. Defaults to postgres.')
   // TODO: we need to support updated the pg_hba.conf file before we can do this... and it's kinda a antipattern
@@ -26,7 +26,7 @@ async function action(name, args) {
     let resp = await model.create({
       name,
       type : args.type,
-      version : args.version,
+      version : args.pgrSchema,
       pgrSchema : args.pgrSchema,
       pgrDatabase : args.pgrDatabase
       // pgrUser : args.pgrUser,
