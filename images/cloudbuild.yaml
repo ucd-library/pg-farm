@@ -16,8 +16,8 @@ steps:
   
   - name: gcr.io/cloud-builders/docker
     entrypoint: "bash"
-    args: ["-c", "export GCLOUD_BUILD=true ; ./images/build.sh"]
+    args: ["-c", "export GCLOUD_BUILD=true; export TAG_NAME=$TAG_NAME ; ./images/build.sh"]
 
   - name: gcr.io/cloud-builders/docker
     entrypoint: 'bash'
-    args: [ '-c', './images/push.sh' ]
+    args: [ '-c', 'export TAG_NAME=$TAG_NAME ; ./images/push.sh' ]

@@ -16,4 +16,9 @@ for version in "${PG_VERSIONS[@]}" ; do
   docker push "${PREFIX}snapshot-replicate:$PG_FARM_VERSION-$PG_VERSION"
   docker push "${PREFIX}streaming-replicate:$PG_FARM_VERSION-$PG_VERSION"
   docker push "${PREFIX}controller:$PG_FARM_VERSION-$PG_VERSION"
+
+  docker push "${PREFIX}base:build-cache"
+  docker push "${PREFIX}snapshot-replicate:build-cache"
+  docker push "${PREFIX}streaming-replicate:build-cache"
+  docker push "${PREFIX}controller:build-cache"
 done

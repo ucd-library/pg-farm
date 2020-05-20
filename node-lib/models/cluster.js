@@ -140,6 +140,7 @@ class Cluster {
       PGR_USER : args.pgrUser || 'library_user',
       PGR_PASSWORD : args.pgrPassword || 'library_user',
       PGR_ANON_ROLE : 'library_user',
+      PGR_URL : `https://${name}.${farmConfig.domain}`,
       SSL_CERT_TYPE : certType
     };
     env.PGR_USER_PASSWORD = env.PGR_USER + (env.PGR_PASSWORD ? ':'+env.PGR_PASSWORD : '');

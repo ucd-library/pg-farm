@@ -4,3 +4,4 @@ node_modules
 .conf
 .env
 config.json
+.git
