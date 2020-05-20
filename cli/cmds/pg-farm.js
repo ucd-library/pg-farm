@@ -16,5 +16,6 @@ program
   .command('down <name>', 'stop a pg-farm docker-compose cluster')
   .command('ps <name>', 'show pg-farm docker-compose cluster process status')
   .command('psql <name>', 'Connect to pg-farm docker-compose cluster postgres instance with psql')
+  .command('backup <name>', 'backup pg-farm cluster to AWS S3 bucket.')
   .command('restore <name>', 'restore pg-farm cluster from AWS S3 backup.')
   .parse(process.argv);
