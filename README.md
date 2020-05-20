@@ -212,6 +212,10 @@ In ```/opt/pg-farm``` create a ```config.json``` file.  It should have the follo
     "key_secret": "", // aws service account secret
     "bucket": "pg-farm" // aws s3 bucket for the farm to use
   },
+  "certs": {
+    "crt" : "", // path to server certificate file
+    "key" : "", // path to server key file
+  },
   "options": {
     "startPort": 6000, // port number pg-farm will start allocating ports at
     "apache": false // should pg-farm create apache config files for clusters in /etc/apache2/site-available

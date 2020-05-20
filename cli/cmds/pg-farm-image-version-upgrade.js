@@ -6,11 +6,14 @@ program
   .option('-v --image-version <version>', 'PG Farm image version to set for cluster')
   .action(async (name, args) => {
     try {
-      let resp = await model.upgradeImage(name, args.imageVersion);
-      console.log(`${name} docker image changed from ${resp.oldVersion} to ${resp.newVersion}
+      let newVersion = await model.upgradeImage(name, args.imageVersion);
+      console.log(`Farm ${name} updated to ${newVersion}
 
--------- Docker Compose Contents --------
-${resp.dockerCompose}`);
+To complete the image version update run:
+> pg-farm down ${name}
+> $(pg-farm dc ${name}) pull
+> pg-farm up ${name}
+`);
     } catch(e) {
       console.error(e.message);
     }

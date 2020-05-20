@@ -4,6 +4,7 @@ const config = require('../lib/config');
 const exec = require('../lib/exec');
 const farm = require('./farm');
 const ssl = require('../lib/ssl');
+const fetch = require('node-fetch');
 
 const TEMPLATES_DIR = path.resolve(__dirname, '..', '..', 'templates');
 const DC_TEMPLATES_DIR = path.resolve(TEMPLATES_DIR, 'docker-compose');
@@ -81,9 +82,14 @@ class Cluster {
     if( !['snapshot', 'streaming'].includes(args.type) ) {
       throw new Error('Unknown cluster type: '+args.type);
     }
+    if( !['9.6', '10', '11', '12'].includes(args.version) ) {
+      throw new Error('Unsupported PostgreSQL version: '+args.version);
+    }
 
     let rootDir = this.getRootDir(name);
     await fs.mkdirp(rootDir);
+
+    let farmConfig = farm.getConfig();
 
     // set the certs
     let certType = '';
@@ -92,7 +98,14 @@ class Cluster {
       await fs.copy(path.join(args.serverKey), path.join(rootDir, 'server.key'));
       certType = 'server';
 
-    // TODO: add check for server cert location in dir
+    // Check for farm default certs
+    } else if ( farmConfig.certs && farmConfig.certs.crt && farmConfig.certs.key ) {
+      
+      await fs.copy(path.join(farmConfig.certs.crt), path.join(rootDir, 'server.crt'));
+      await fs.chmod(path.join(rootDir, 'server.crt'), 0o400);
+      await fs.copy(path.join(farmConfig.certs.key), path.join(rootDir, 'server.key'));
+      await fs.chmod(path.join(rootDir, 'server.key'), 0o400);
+      certType = 'server';
 
     } else {
       try {
@@ -108,13 +121,15 @@ class Cluster {
       path.join(rootDir, 'docker-compose.yml')
     );
 
-    let farmConfig = farm.getConfig();
     this.setClusterAwsKeys(name, farmConfig.aws.key_id, farmConfig.aws.key_secret);
 
     let ports = farm.allocatePorts(name);
+    let farmVersion = (await farm.listImageVersions())[0];
 
     let env = {
       CLUSTER_NAME : name,
+      PG_VERSION : args.version,
+      PG_FARM_VERSION : farmVersion,
       COMPOSE_PROJECT_NAME : 'pg-farm-'+name,
       AWS_BUCKET : farmConfig.aws.bucket || 'pg-farm',
       PG_FARM_REPL_PORT : ports[0],
@@ -297,43 +312,30 @@ class Cluster {
     return parseInt(env['PG_FARM_REPL_PORT']);
   }
 
+  /**
+   * @method upgradeImage
+   * @description upgrade pg-farm image versions.  Defaults to latest
+   * 
+   * @param {String} clusterName 
+   * @param {String} version Optional. image version, defaults to latest
+   */
   async upgradeImage(clusterName, version) {
     if( !this.exists(clusterName) ) {
       throw new Error('Unknown cluster: '+clusterName);
     }
-    if( typeof version !== 'string') version = '';
-    if( !version ) throw new Error('Version number required');
-
     let versions = await farm.listImageVersions();
+
+    if( typeof version !== 'string') version = '';
+    if( !version ) version = versions[0];
+
+    
     if( !versions.includes(version) ) {
       throw new Error('Unknown pg-farm image version: '+version);
     }
 
-    let dcFilePath = path.join(this.getRootDir(clusterName), 'docker-compose.yml');
-    let currentVersion = await this.listImageVersion(clusterName);
+    this.setEnv(clusterName, {'PG_FARM_VERSION': version}, true);
 
-    let contents = fs.readFileSync(dcFilePath, 'utf-8');
-    contents = contents.replace(new RegExp('-replicate:'+currentVersion), '-replicate:'+version);
-    fs.writeFileSync(dcFilePath, contents);
-
-    return {
-      dockerCompose : contents,
-      oldVersion : currentVersion,
-      newVersion : version
-    }
-  }
-
-  async listImageVersion(clusterName) {
-    let dc = this.getDockerComposeCmd(clusterName)+' images pg-repl';
-    let {stdout, stderr} = await exec(dc);
-
-    return stdout.split('\n')
-      .filter(row => row !== '')
-      .map(row => row.replace(/ +/, ' '))
-      .pop()
-      .split(' ')
-      .filter(row => row !== '')[2]
-      .trim();
+    return version
   }
 
   /**

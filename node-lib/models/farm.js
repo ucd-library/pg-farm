@@ -76,11 +76,19 @@ class Farm {
     return this.getConfig().domain;
   }
 
-
   async listImageVersions(type='snapshot') {
-    let response = await fetch('https://registry.hub.docker.com/v1/repositories/ucdlib/pg-farm-snapshot-replicate/tags');
-    let data = await response.json();
-    return data.map(item => item.name);
+    let response = await fetch(`https://registry.hub.docker.com/api/content/v1/repositories/public/ucdlib/pg-farm-${type}-replicate/tags?page=1&size=1000`);
+    let data = (await response.json()).results;
+
+    data.forEach(item => item.updated = new Date(item.last_updated).getTime());
+    data.sort((a, b) => a.updated < b.updated ? 1 : -1);
+
+    let versions = data.map(item => item.name)
+      .filter(name => name.match(/^v\d+\.\d+\.\d+-\d+$/))
+      .map(name => name.replace(/-\d+$/, ''))
+
+    // remove duplicates
+    return Array.from(new Set(versions));
   }
 
 }
