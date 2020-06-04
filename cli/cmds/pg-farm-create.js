@@ -26,7 +26,7 @@ async function action(name, args) {
     let resp = await model.create({
       name,
       type : args.type,
-      version : args.pgrSchema,
+      version : args.pgVersion,
       pgrSchema : args.pgrSchema,
       pgrDatabase : args.pgrDatabase
       // pgrUser : args.pgrUser,
