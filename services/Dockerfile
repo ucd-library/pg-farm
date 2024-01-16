@@ -1,7 +1,7 @@
 FROM node:20
 
-RUN mkdir /proxy
-WORKDIR /proxy
+RUN mkdir /services
+WORKDIR /services
 
 COPY package.json .
 COPY package-lock.json .
@@ -9,4 +9,16 @@ RUN npm install
 
 COPY . .
 
-CMD [ "node", "lib/proxy.js" ]
+ARG PG_FARM_VERSION
+ENV PG_FARM_VERSION=${PG_FARM_VERSION}
+ARG PG_FARM_REPO_BRANCH
+ENV PG_FARM_REPO_BRANCH=${PG_FARM_REPO_BRANCH}
+ARG PG_FARM_REPO_TAG
+ENV PG_FARM_REPO_TAG=${PG_FARM_REPO_TAG}
+ARG PG_FARM_REPO_HASH
+ENV PG_FARM_REPO_HASH=${PG_FARM_REPO_HASH}
+ARG BUILD_DATETIME
+ENV BUILD_DATETIME=${BUILD_DATETIME}
+
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD "tail -f /dev/null"

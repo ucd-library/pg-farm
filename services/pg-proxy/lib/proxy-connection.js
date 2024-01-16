@@ -61,7 +61,6 @@ class ProxyConnection {
       }
 
       // intercept the password message and handle it
-      console.log(data[0], this.MESSAGE_CODES.PASSWORD);
       if( data[0] === this.MESSAGE_CODES.PASSWORD ) {
         this.debug('client', 'handling jwt auth');
         this.handleJwt(data);
@@ -214,7 +213,6 @@ class ProxyConnection {
     }
 
     let jwtUsername = resp.user.username || resp.user.preferred_username;
-    jwtUsername = 'badness';
 
     // provide pg username does not match jwt username
     if( jwtUsername !== this.startupProperties.user ) {
