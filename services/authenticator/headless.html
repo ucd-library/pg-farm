@@ -1,0 +1,37 @@
+<html>
+  <head>
+    <title>PG Farm - Headless Login</title>
+    <style>
+      input {
+        width: 400px;
+        margin: 10px 0;
+        padding: 5px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PG Farm - Login Successfull!</h1>
+
+    <div id="username"></div><br />
+    <div>Copy and paste code below into your shell:</div>
+    <div><input type="text" id="code"/></div>
+
+    <div>
+      If you are using a application or library that supports PGPASSWORD environment variable,
+      you can set the above token as the value of PGPASSWORD and use the following command to login:
+      <pre>export PGPASSWORD=[token]</pre>
+    </div>
+
+    <script>
+      let jwt = "{{JWT_TOKEN}}";
+
+      document.querySelector('#code').value = jwt;
+      if( jwt ) {
+        let user = JSON.parse(atob(jwt.split('.')[1]));
+        document.querySelector('#username').innerHTML = (user.username || user.preferred_username)+',';
+      }
+
+    </script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 const env = process.env;
 
-const PORT = parseInt(env.PORT || 3000);
+const PORT = parseInt(env.PORT || env.SERVICE_PORT || 3000);
 let SERVICE_URL = env.SERVICE_URL || 'http://localhost:'+PORT;
 if( PORT !== 80 && !SERVICE_URL.match(new RegExp(':'+PORT+'$'))  ) {
   SERVICE_URL = SERVICE_URL+':'+PORT;
@@ -43,7 +43,7 @@ const config = {
 
     // port: env.PROXY_PORT || 5432, // Port to listen on
     // targetHost: env.PROXY_TARGET_HOST || 'postgres', // Host to listen on
-    // targetPort: env.PROXY_TARGET_PORT || 5432, // Port to listen on
+    targetPort: env.PROXY_TARGET_PORT || 5432, // Port to listen on
     password : {
       type : env.PROXY_PASSWORD_TYPE || 'static', // 'static' or 'pg'
       static : env.PROXY_PASSWORD_STATIC || 'postgres', // Static password to use

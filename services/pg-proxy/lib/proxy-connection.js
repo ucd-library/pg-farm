@@ -1,6 +1,9 @@
 import PG from 'pg';
+import net from 'net';
 import keycloak from '../../lib/keycloak.js';
 import config from '../../lib/config.js';
+import waitUntil from '../../administration/src/lib/wait-util.js';
+import adminModel from '../../administration/src/models/admin.js';
 
 let pgPassConnection = null;
 if( config.proxy.password.type === 'pg' ) {
@@ -20,10 +23,13 @@ class ProxyConnection {
     this.clientSocket = clientSocket;
     this.serverSocket = serverSocket;
     this.firstMessage = true;
+    this.targetPort = config.proxy.targetPort;
+
+    this.SSL_REQUEST = 0x04D2162F;
 
     this.MESSAGE_CODES = {
       PASSWORD : 0x70,
-      ERROR : 0x45,
+      ERROR : 0x45
     }
     this.ERROR_CODES = {
       // https://www.postgresql.org/docs/current/protocol-error-fields.html
@@ -50,13 +56,22 @@ class ProxyConnection {
     this.debug('proxy', 'handling new connection');
 
     // When the client sends data, forward it to the target server
-    this.clientSocket.on('data', data => {
+    this.clientSocket.on('data', async data => {
       this.debug('client', data);
+
+      // check for SSL message
+      if( data.readInt32BE(4) === this.SSL_REQUEST ) {
+        this.debug('client', 'handling ssl request');
+        let resp = Buffer.from('N', 'utf8');
+        this.clientSocket.write(resp);
+        return;
+      }
    
       // first message provides the connection properties
       if( this.firstMessage ) {
         this.debug('client', 'handling first message');
         this.parseStartupMessage(data);
+        await this.initServerSocket();
         this.debug('client', this.startupProperties);
       }
 
@@ -71,26 +86,11 @@ class ProxyConnection {
       this.serverSocket.write(data);
     });
 
-    // When the target server sends data, forward it to the client
-    this.serverSocket.on('data', data => {
-      this.debug('server', data);
-
-      // always a direct proxy
-      this.clientSocket.write(data);
-    });
-
     // Handle client socket closure
     this.clientSocket.on('end', () => {
       console.log('Client socket closed');
       this.serverSocket.end();
       this.serverSocket = null;
-    });
-
-    // Handle target socket closure
-    this.serverSocket.on('end', () => {
-      console.log('Target socket closed');
-      this.clientSocket.end();
-      this.clientSocket = null;
     });
 
     // Handle errors
@@ -99,12 +99,63 @@ class ProxyConnection {
       this.serverSocket.end();
       this.serverSocket = null;
     });
+  }
+
+  testPort(host, port) {
+    return new Promise((resolve, reject) => {
+      client.connect(port, host, function() {
+        resolve(true);
+        client.destroy();
+      });
+      client.on('error', function(e) {
+        resolve(false);
+        client.destroy(); 
+      });
+    });
+  }
+
+  async initServerSocket() {
+    if( !this.startupProperties ) return;
+    if( !this.startupProperties.database ) return;
+
+    let dbName = this.startupProperties.database;
+
+    let isPortAlive = await this.testPort(
+      dbName,
+      this.targetPort
+    );
+
+    if( !isPortAlive ) {
+      await adminModel.startInstance(dbName);
+      await waitUntil(dbName, this.targetPort);
+    }
+
+    this.serverSocket = net.createConnection({ 
+      host: dbName, 
+      port: this.targetPort 
+    });
+
+    // When the target server sends data, forward it to the client
+    this.serverSocket.on('data', data => {
+      this.debug('server', data);
+
+      // always a direct proxy
+      this.clientSocket.write(data);
+    });
 
     this.serverSocket.on('error', err => {
       console.error('Target socket error:', err);
       this.clientSocket.end();
       this.clientSocket = null;
     });
+
+    // Handle target socket closure
+    this.serverSocket.on('end', () => {
+      console.log('Target socket closed');
+      this.clientSocket.end();
+      this.clientSocket = null;
+    });
+    
   }
 
   /**
@@ -201,6 +252,10 @@ class ProxyConnection {
 
     // user is not logged (token expired or invalid)
     if( resp.active !== true ) {
+      this.debug('invalid jwt token', {
+        tokenResponse : resp,
+        jwt
+      })
       this.sendError(
         'ERROR',
         '28P01',

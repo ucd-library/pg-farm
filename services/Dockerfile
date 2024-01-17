@@ -20,5 +20,4 @@ ENV PG_FARM_REPO_HASH=${PG_FARM_REPO_HASH}
 ARG BUILD_DATETIME
 ENV BUILD_DATETIME=${BUILD_DATETIME}
 
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD "tail -f /dev/null"
+CMD bash -c 'tail -f /dev/null'

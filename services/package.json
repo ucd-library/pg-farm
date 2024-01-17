@@ -8,7 +8,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "authenticator": "node authenticator/index.js"
+    "authenticator": "node authenticator/index.js",
+    "proxy": "node pg-proxy/lib/proxy.js"
   },
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",

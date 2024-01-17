@@ -24,4 +24,5 @@ class PGInstance {
 
 }
 
-export default PGInstance;
+let inst = new PGInstance();
+export default inst;
