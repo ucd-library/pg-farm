@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: postgres
+  name: 
 spec:
   selector:
     matchLabels:
-      app:  postgres
+      app:  
   replicas: 1
-  serviceName: postgres
+  serviceName: 
   template:
     metadata:
       labels:
-        app:  postgres
+        app:  
     spec:
       containers:
-      - name: postgres
+      - name: 
         image: 
         args: ["-c", "max_connections=100"]
         imagePullPolicy: always
@@ -33,7 +33,7 @@ spec:
         ports:
         - containerPort: 5432
         volumeMounts:
-        - name: postgres-persistent-storage
+        - name: 
           mountPath: /var/lib/postgresql/data
       nodeSelector:
         intendedfor: instance-pool

@@ -6,7 +6,10 @@ export default function (command, args={}, options={}) {
   }
 
   return new Promise((resolve, reject) => {
+    console.log('executing', command, args);
     let proc = exec(command, args, (error, stdout, stderr) => {
+      console.log('exec complete', command);
+
       if (error) {
         reject(error);
         return;

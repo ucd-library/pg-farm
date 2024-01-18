@@ -1,5 +1,6 @@
 import PG from 'pg';
 import net from 'net';
+import { EventEmitter } from 'node:events';
 import keycloak from '../../lib/keycloak.js';
 import config from '../../lib/config.js';
 import waitUntil from '../../administration/src/lib/wait-util.js';
@@ -17,9 +18,11 @@ if( config.proxy.password.type === 'pg' ) {
 }
 
 
-class ProxyConnection {
+class ProxyConnection extends EventEmitter {
 
   constructor(clientSocket, serverSocket) {
+    super();
+
     this.clientSocket = clientSocket;
     this.serverSocket = serverSocket;
     this.firstMessage = true;
@@ -29,7 +32,8 @@ class ProxyConnection {
 
     this.MESSAGE_CODES = {
       PASSWORD : 0x70,
-      ERROR : 0x45
+      ERROR : 0x45,
+      QUERY : 0x51
     }
     this.ERROR_CODES = {
       // https://www.postgresql.org/docs/current/protocol-error-fields.html
@@ -72,6 +76,7 @@ class ProxyConnection {
         this.debug('client', 'handling first message');
         this.parseStartupMessage(data);
         await this.initServerSocket();
+        this.emitStat('socket-connect', this.startupProperties);
         this.debug('client', this.startupProperties);
       }
 
@@ -82,6 +87,11 @@ class ProxyConnection {
         return;
       }
 
+      // check for query message, if so, emit stats
+      if( data[0] === this.MESSAGE_CODES.QUERY ) {
+        this.emitStat('query', 1);
+      }
+
       // else, just proxy message
       this.serverSocket.write(data);
     });
@@ -89,6 +99,7 @@ class ProxyConnection {
     // Handle client socket closure
     this.clientSocket.on('end', () => {
       console.log('Client socket closed');
+      this.emitStat('socket-closed', 1);
       this.serverSocket.end();
       this.serverSocket = null;
     });
@@ -96,6 +107,7 @@ class ProxyConnection {
     // Handle errors
     this.clientSocket.on('error', err => {
       console.error('Client socket error:', err);
+      this.emitStat('socket-error', 1);
       this.serverSocket.end();
       this.serverSocket = null;
     });
@@ -103,6 +115,7 @@ class ProxyConnection {
 
   testPort(host, port) {
     return new Promise((resolve, reject) => {
+      let client = new net.Socket();
       client.connect(port, host, function() {
         resolve(true);
         client.destroy();
@@ -118,20 +131,28 @@ class ProxyConnection {
     if( !this.startupProperties ) return;
     if( !this.startupProperties.database ) return;
 
-    let dbName = this.startupProperties.database;
+    this.dbName = this.startupProperties.database;
 
     let isPortAlive = await this.testPort(
-      dbName,
+      this.dbName,
       this.targetPort
     );
 
     if( !isPortAlive ) {
-      await adminModel.startInstance(dbName);
-      await waitUntil(dbName, this.targetPort);
+      console.log('Port test failed, starting instance', this.dbName);
+      let startTime = Date.now();
+      await adminModel.startInstance(this.dbName);
+      await waitUntil(this.dbName, this.targetPort);
+
+      this.emitStat('instance-start', {
+        database : this.dbName, 
+        port : this.targetPort,
+        time : Date.now() - startTime
+      });
     }
 
     this.serverSocket = net.createConnection({ 
-      host: dbName, 
+      host: this.dbName, 
       port: this.targetPort 
     });
 
@@ -144,6 +165,7 @@ class ProxyConnection {
     });
 
     this.serverSocket.on('error', err => {
+      this.emitStat('socket-error', 1);
       console.error('Target socket error:', err);
       this.clientSocket.end();
       this.clientSocket = null;
@@ -151,11 +173,12 @@ class ProxyConnection {
 
     // Handle target socket closure
     this.serverSocket.on('end', () => {
+      this.emitStat('socket-closed', 1);
       console.log('Target socket closed');
       this.clientSocket.end();
       this.clientSocket = null;
     });
-    
+
   }
 
   /**
@@ -312,6 +335,12 @@ class ProxyConnection {
   }
 
   sendError(severity, code, message, detail='', hint='', socket) {
+    this.emitStat('error', {
+      severity,
+      code,
+      message
+    });
+
     // two extra bytes.  one for the message code and one for the ending null
     let mLen = Buffer.byteLength(severity) + 2 +
       Buffer.byteLength(code) + 2 +
@@ -372,6 +401,13 @@ class ProxyConnection {
         message: data
       });
     }
+  }
+
+  emitStat(type, data) {
+    this.emit('stat', {
+      type,
+      data
+    });
   }
 
 }

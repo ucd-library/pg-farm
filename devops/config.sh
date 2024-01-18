@@ -47,3 +47,6 @@ PG_FARM_SERVICE_IMAGE=$REG_HOST/pg-farm-service
 
 # Google Cloud
 GC_PROJECT_ID=digital-ucdavis-edu
+GKE_CLUSTER_NAME=pg-farm
+GKE_CLUSTER_ZONE=us-central1-c
+GKE_EXTERNAL_IP=34.170.150.232

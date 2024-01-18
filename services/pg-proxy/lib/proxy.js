@@ -1,11 +1,12 @@
 import net from 'net';
 import config from '../../lib/config.js';
 import ProxyConnection from './proxy-connection.js';
+import proxyStatus from './status.js';
 
 // Create a server that acts as a TCP proxy
 config.proxy.definitions.forEach(def => {
   const proxyServer = net.createServer(clientSocket => 
-    new ProxyConnection(clientSocket)
+    proxyStatus.register(new ProxyConnection(clientSocket))
   );
 
   // Start the proxy server

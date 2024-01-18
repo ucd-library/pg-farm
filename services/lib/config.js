@@ -29,7 +29,7 @@ const config = {
 
   // Keycloak configuration
   oidc : {
-    tokenCacheTTL : env.OIDC_TOKEN_CACHE_TTL || 1000*30,
+    tokenCacheTTL : env.OIDC_TOKEN_CACHE_TTL || 1000*60*5,
     baseUrl : env.OIDC_BASE_URL || 'https://sandbox.auth.library.ucdavis.edu/realms/pg-farm',
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',

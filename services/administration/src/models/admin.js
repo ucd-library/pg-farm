@@ -41,7 +41,7 @@ class AdminModel {
     return k8sConfig;
   }
 
-  startInstance(name) {
+  async startInstance(name) {
     if( !name.startsWith('pg-') ) name = 'pg-'+name;
     let k8sConfig = this.getTemplate('postgres');
     k8sConfig.metadata.name = name;
@@ -59,10 +59,37 @@ class AdminModel {
 
     spec.volumeClaimTemplates[0].metadata.name = name+'-ps';
 
-    return kubectl.apply(k8sConfig, {
+    let pgResult = await kubectl.apply(k8sConfig, {
       stdin:true,
       isJson: true
     });
+
+    k8sConfig = this.getTemplate('postgres-service');
+    k8sConfig.metadata.name = name+'-service';
+    k8sConfig.spec.selector.app = name;
+
+    let pgServiceResult = await kubectl.apply(k8sConfig, {
+      stdin:true,
+      isJson: true
+    });
+
+    return {pgResult, pgServiceResult};
+  }
+
+  /**
+   * @method removeInstance
+   * @description Removes a postgres instance and service.  
+   * Note, this does not remove the persistent volume claim.
+   * 
+   * @param {*} name 
+   */
+  async removeInstance(name) {
+    if( !name.startsWith('pg-') ) name = 'pg-'+name;
+
+    let pgResult = await kubectl.delete('statefulset', name);
+    let pgServiceResult = await kubectl.delete('service', name+'-service');
+
+    return {pgResult, pgServiceResult};
   }
 
 

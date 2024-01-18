@@ -8,29 +8,42 @@ class KubectlWrapper {
     this.initalized = false;
   }
 
-  init() {
+  async init() {
     if( this.initalized ) return;
     if( this.initializing ) return this.initializing;
 
     this.initializing = new Promise(async (resolve, reject) => {  
       if( config.k8s.platform === 'gke' ) {
-        await this._initGke();
+        try {
+          await this._initGke();
+        } catch(e) {
+          return reject(e);
+        }
       } else {
         return reject('Unsupported kubernetes platform: '+config.k8s.platform);
       }
 
+      console.log('kubectl initialized');
       this.initalized = true;
       this.initializing = null;
       resolve();
     });
+
+    await this.initializing;
   }
 
-  _initGke() {
-    return this.exec(`
+  async _initGke() {
+    console.log('initializing kubectl for gke');
+
+    let resp = await exec(`gcloud auth login --cred-file=${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
+    console.log(resp);
+
+    resp = await exec(`
       gcloud container clusters get-credentials ${config.k8s.cluster} \
         --zone ${config.gc.gke.region} \
         --project ${config.gc.projectId}
     `);
+    console.log(resp);
   }
 
   async getClusters() {
@@ -78,8 +91,9 @@ class KubectlWrapper {
    */
   async apply(file, opts={}  ) {
     await this.init();
+
     if( opts.isJson || typeof file === 'object' ) {
-      file = yaml.safeDump(file);
+      file = yaml.dump(file);
     }
 
     let output = '';
@@ -98,6 +112,11 @@ class KubectlWrapper {
       throw new Error(stderr);
     }
     return stdout;
+  }
+
+  async delete(type, name) {
+    await this.init();
+    return this.exec(`kubectl delete ${type} ${name}`);
   }
 
 }
