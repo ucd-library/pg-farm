@@ -3,3 +3,4 @@ node_modules
 test.yaml
 devops/k8s
 secrets
+service-account.json

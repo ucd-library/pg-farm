@@ -1,4 +1,5 @@
 import {exec} from 'child_process';
+import logger from './logger.js';
 
 export default function (command, args={}, options={}) {
   if( !args.shell ) {
@@ -6,9 +7,9 @@ export default function (command, args={}, options={}) {
   }
 
   return new Promise((resolve, reject) => {
-    console.log('executing', command, args);
+    logger.debug('executing', command, args);
     let proc = exec(command, args, (error, stdout, stderr) => {
-      console.log('exec complete', command);
+      logger.debug('exec complete', command);
 
       if (error) {
         reject(error);

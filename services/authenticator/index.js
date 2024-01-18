@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import keycloak from '../lib/keycloak.js';
 import config from '../lib/config.js';
+import logger from '../lib/logger.js';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,12 +51,7 @@ app.use(auth({
     response_type: 'code',
     scope : config.oidc.scopes
   },
-  idpLogout: true,
-  // afterCallback : (req, res, session, decodedState) => {
-  //   console.log(req.query);
-  //   res.set('PG-FARM-AUTHORIZED-TOKEN', session.access_token);
-  //   return session
-  // }
+  idpLogout: true
 }));
 
 app.get('/login', (req, res) => { 
@@ -79,5 +75,5 @@ app.get('/success', async (req, res) => {
 });
 
 app.listen(config.service.port, () => {
-  console.log('oidc service listening on port '+config.service.port);
+  logger.info('oidc service listening on port '+config.service.port);
 });

@@ -1,65 +1,44 @@
-import utils from  '../lib/utils.js'
-import pgInstClient from '../lib/pg-client.js';
-import client from '../lib/pg-admin-client.js';
-import config from '../config.js';
+import utils from  '../../../lib/utils.js'
+import pgInstClient from '../../../lib/pg-client.js';
+import adminClient from '../../../lib/pg-admin-client.js';
+import config from '../../../config.js';
+import waitUntil from '../../../lib/wait-util.js';
 
 
 class PgInstance {
 
+  setAdminModel(adminModel) {
+    this.adminModel = adminModel;
+  }
+
   async getConnection(id) {
-    let res = await client.query(`
-    SELECT * FROM ${config.pg.views.INSTANCE_USERS()}
-    WHERE 
-      (instance_database_id = $1 OR database_name = $1)
-      AND username = 'postgres'
-    `, [id]);
+    let user = await adminClient.getUser(id, 'postgres');
 
-    if( res.rows.length > 0 ) {
-      let instance = res.rows[0];
-      return {
-        id : instance.instance_database_id,
-        host : instance.hostname,
-        port : instance.port,
-        user : instance.username,
-        database : instance.database_name,
-        password : instance.password
-      };
-    }
-
-    res = await client.query(`
-    SELECT * FROM ${config.pg.tables.INSTANCE()}
-    WHERE 
-      instance_id = $1 OR 
-      name = $1'
-    `, [id]);
-
-    if( res.rows.length === 0 ) {
-      throw new Error('Instance not found: '+id);
-    }
-
-    let instance = res.rows[0];
-
-    // hope the password is the default
     return {
-      id : instance.instance_id,
-      host : instance.hostname,
-      port : instance.port,
-      user : config.pg.username,
-      database : instance.name,
-      password : config.pg.password
+      id : user.database_id,
+      host : user.database_hostname,
+      port : user.database_port,
+      user : user.username,
+      database : user.database_name,
+      password : user.password
     };
   }
 
-  async createUser(id, user) {
+  async createUser(id, user, type='USER') {
     let con = await this.getConnection(id);
+
     let password = utils.generatePassword();
 
     await client.query(
       `INSERT INTO ${config.pg.tables.DATABASE_USERS()} 
-      (username, password, type, instance_database_id) VALUES 
-      ($1, $2, 'PG')`, 
-      [user, password, con.id]
+      (username, password, type, instance_id) VALUES 
+      ($1, $2, $3, $4)`, 
+      [user, password, type, con.id]
     );
+
+    // TODO: check if instance is running 
+    await this.adminModel.startInstance(id);
+    await waitUntil(con.host, con.port);
 
     resp = await pgInstClient.query(
       con, 
@@ -78,7 +57,7 @@ class PgInstance {
     await client.query(
       `UPDATE ${config.pg.tables.DATABASE_USERS()} 
       SET password = $2 
-      WHERE username = $1 AND instance_database_id = $3`, 
+      WHERE username = $1 AND instance_id = $3`, 
       [user, password, con.id]
     );
 

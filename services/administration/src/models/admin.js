@@ -1,7 +1,9 @@
-import client from '../lib/pg-admin-client.js';
-import waitUntil from '../lib/wait-util.js';
-import kubectl from '../lib/kubectl.js';
-import config from '../config.js';
+import client from '../../../lib/pg-admin-client.js';
+import waitUntil from '../../../lib/wait-util.js';
+import kubectl from '../../../lib/kubectl.js';
+import config from '../../../lib/config.js';
+import instanceModel from './instance.js';
+import waitUntil from '../../../lib/wait-util.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import yaml from 'js-yaml';
@@ -16,6 +18,7 @@ class AdminModel {
 
   constructor() {
     this.PG_IMAGE = 'postgres:14';
+    instanceModel.setAdminModel(this);
   }
 
   async initSchema() {
@@ -41,23 +44,49 @@ class AdminModel {
     return k8sConfig;
   }
 
+  async addInstance(name, opts={}) {
+    let hostname = opts.hostname || 'pg-'+name;
+    let description = opts.description || '';
+    let port = opts.port || 5432;
+
+    let id = await client.addInstance(name, hostname, description, port);
+
+    await this.startInstance(name);
+
+    await waitUntil(hostname, port);
+
+    await this.addUser(id, 'postgres');
+    await instanceModel.resetPassword(id, 'postgres');
+  }
+
+  async addUser(instNameOrId, username) {
+    let password = utils.generatePassword();
+    return client.addUser(instNameOrId, username, password);
+  }
+
   async startInstance(name) {
-    if( !name.startsWith('pg-') ) name = 'pg-'+name;
+    // check if instance is alive
+    
+
+    let instance = await client.getInstance(name);
+    let hostname = instance.hostname;
+
     let k8sConfig = this.getTemplate('postgres');
-    k8sConfig.metadata.name = name;
+    k8sConfig.metadata.name = hostname;
     
     let spec = k8sConfig.spec;
-    spec.selector.matchLabels.app = name;
-    spec.serviceName = name;
+    spec.selector.matchLabels.app = hostname;
+    spec.serviceName = hostname;
 
     let template = spec.template;
-    template.metadata.labels.app = name;
+    template.metadata.labels.app = hostname;
 
     let container = template.spec.containers[0];
     container.image = this.PG_IMAGE;
-    container.volumeMounts[0].name = name+'-ps';
+    container.name = hostname;
+    container.volumeMounts[0].name = hostname+'-ps';
 
-    spec.volumeClaimTemplates[0].metadata.name = name+'-ps';
+    spec.volumeClaimTemplates[0].metadata.name = hostname+'-ps';
 
     let pgResult = await kubectl.apply(k8sConfig, {
       stdin:true,
@@ -65,8 +94,8 @@ class AdminModel {
     });
 
     k8sConfig = this.getTemplate('postgres-service');
-    k8sConfig.metadata.name = name+'-service';
-    k8sConfig.spec.selector.app = name;
+    k8sConfig.metadata.name = hostname;
+    k8sConfig.spec.selector.app = hostname;
 
     let pgServiceResult = await kubectl.apply(k8sConfig, {
       stdin:true,

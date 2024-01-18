@@ -1,11 +1,13 @@
 import exec from './exec.js'
 import yaml from 'js-yaml';
-import config from '../config.js';
+import config from './config.js';
+import logger from './logger.js';
 
 class KubectlWrapper {
 
   constructor() {
     this.initalized = false;
+    this.init();
   }
 
   async init() {
@@ -23,7 +25,7 @@ class KubectlWrapper {
         return reject('Unsupported kubernetes platform: '+config.k8s.platform);
       }
 
-      console.log('kubectl initialized');
+      logger.info('kubectl initialized');
       this.initalized = true;
       this.initializing = null;
       resolve();
@@ -33,17 +35,15 @@ class KubectlWrapper {
   }
 
   async _initGke() {
-    console.log('initializing kubectl for gke');
+    logger.info('initializing kubectl for gke');
 
-    let resp = await exec(`gcloud auth login --cred-file=${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
-    console.log(resp);
+    await exec(`gcloud auth login --quiet --cred-file=${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
 
-    resp = await exec(`
+    await exec(`
       gcloud container clusters get-credentials ${config.k8s.cluster} \
-        --zone ${config.gc.gke.region} \
+        --zone ${config.gc.gke.zone} \
         --project ${config.gc.projectId}
     `);
-    console.log(resp);
   }
 
   async getClusters() {

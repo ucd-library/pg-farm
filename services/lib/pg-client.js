@@ -1,6 +1,10 @@
 import { Client } from 'pg';
 
-
+/**
+ * @class PGInstance
+ * @description A class for interacting with postgres instances.  Each query
+ * will open and close a connection to the database.
+ */
 class PGInstance {
 
   async getConnection(opts={}) {

@@ -1,22 +1,30 @@
 import PG from 'pg';
 import net from 'net';
+import tls from 'tls';
 import { EventEmitter } from 'node:events';
 import keycloak from '../../lib/keycloak.js';
 import config from '../../lib/config.js';
-import waitUntil from '../../administration/src/lib/wait-util.js';
+import waitUntil from '../../lib/wait-util.js';
+import adminClient from '../../lib/pg-admin-client.js';
 import adminModel from '../../administration/src/models/admin.js';
 
-let pgPassConnection = null;
-if( config.proxy.password.type === 'pg' ) {
-  pgPassConnection = new PG.Pool({
-    user : config.proxy.password.user,
-    host : config.proxy.password.host,
-    database : config.proxy.password.database,
-    password : config.proxy.password.password,
-    port : config.proxy.password.port
-  });
-}
+// let pgPassConnection = null;
+// if( config.proxy.password.type === 'pg' ) {
+//   pgPassConnection = new PG.Pool({
+//     user : config.proxy.password.user,
+//     host : config.proxy.password.host,
+//     database : config.proxy.password.database,
+//     password : config.proxy.password.password,
+//     port : config.proxy.password.port
+//   });
+// }
 
+const tlsOptions = {
+  // Your TLS options go here, such as key, cert, etc.
+  // For example:
+  key: '',
+  cert: ''
+};
 
 class ProxyConnection extends EventEmitter {
 
@@ -64,10 +72,19 @@ class ProxyConnection extends EventEmitter {
       this.debug('client', data);
 
       // check for SSL message
-      if( data.readInt32BE(4) === this.SSL_REQUEST ) {
+      if( this.firstMessage &&
+          data.length >= 4 && 
+          data.readInt32BE(4) === this.SSL_REQUEST ) {
+
         this.debug('client', 'handling ssl request');
-        let resp = Buffer.from('N', 'utf8');
-        this.clientSocket.write(resp);
+
+        if( !config.proxy.tls.enabled ) {
+          this.clientSocket.write(Buffer.from('N', 'utf8'));
+        } else {
+          this.clientSocket.write(Buffer.from('S', 'utf8'));
+          new tls.TLSSocket(this.clientSocket, tlsOptions);
+        }
+
         return;
       }
    
@@ -75,20 +92,33 @@ class ProxyConnection extends EventEmitter {
       if( this.firstMessage ) {
         this.debug('client', 'handling first message');
         this.parseStartupMessage(data);
-        await this.initServerSocket();
+
+        try {
+          let success = await this.initServerSocket();
+          if( !success ) {
+            this.closeClientSocket();
+            return;
+          }
+        } catch(e) {
+          logger.error('Error initializing server socket', e);
+          this.closeClientSocket();
+          this.closeServerSocket();
+          return;
+        }
+
         this.emitStat('socket-connect', this.startupProperties);
         this.debug('client', this.startupProperties);
       }
 
       // intercept the password message and handle it
-      if( data[0] === this.MESSAGE_CODES.PASSWORD ) {
+      if( data.length && data[0] === this.MESSAGE_CODES.PASSWORD ) {
         this.debug('client', 'handling jwt auth');
         this.handleJwt(data);
         return;
       }
 
       // check for query message, if so, emit stats
-      if( data[0] === this.MESSAGE_CODES.QUERY ) {
+      if( data.length && data[0] === this.MESSAGE_CODES.QUERY ) {
         this.emitStat('query', 1);
       }
 
@@ -98,22 +128,34 @@ class ProxyConnection extends EventEmitter {
 
     // Handle client socket closure
     this.clientSocket.on('end', () => {
-      console.log('Client socket closed');
+      logger.info('Client socket closed');
       this.emitStat('socket-closed', 1);
-      this.serverSocket.end();
-      this.serverSocket = null;
+      this.closeServerSocket();
     });
 
     // Handle errors
     this.clientSocket.on('error', err => {
-      console.error('Client socket error:', err);
+      logger.error('Client socket error:', err);
       this.emitStat('socket-error', 1);
-      this.serverSocket.end();
-      this.serverSocket = null;
+      this.closeServerSocket();
     });
   }
 
+  closeServerSocket() {
+    if( !this.serverSocket ) return;
+    this.serverSocket.end();
+    this.serverSocket = null;
+  }
+
+  closeClientSocket() {
+    if( !this.clientSocket ) return;
+    this.clientSocket.end();
+    this.clientSocket = null;
+  }
+
   testPort(host, port) {
+    port = parseInt(port);
+
     return new Promise((resolve, reject) => {
       let client = new net.Socket();
       client.connect(port, host, function() {
@@ -131,29 +173,51 @@ class ProxyConnection extends EventEmitter {
     if( !this.startupProperties ) return;
     if( !this.startupProperties.database ) return;
 
-    this.dbName = this.startupProperties.database;
+    // before attempt connection, check user is registered with database
+    let user;
+    try {
+      user = await adminClient.getUser(
+        this.startupProperties.database, 
+        this.startupProperties.user
+      );
+    } catch(e) {}
+
+    if( !user ) {
+      this.sendError(
+        'ERROR',
+        '28P01',
+        'Invalid Username',
+        `The username provided (${this.startupProperties.user}) is not registered with the database (${this.startupProperties.database}).`,
+        'Make sure you are using the correct username and that your account has been registered with PG Farm.',
+        this.clientSocket
+      );
+      return false;
+    }
+
+    this.instance = await adminClient.getInstance(this.startupProperties.database);
 
     let isPortAlive = await this.testPort(
-      this.dbName,
-      this.targetPort
+      this.instance.hostname,
+      this.instance.port
     );
 
     if( !isPortAlive ) {
-      console.log('Port test failed, starting instance', this.dbName);
+      logger.info('Port test failed, starting instance', this.instance.name);
       let startTime = Date.now();
-      await adminModel.startInstance(this.dbName);
-      await waitUntil(this.dbName, this.targetPort);
+      await adminModel.startInstance(this.instance.name);
+      await waitUntil(this.instance.hostname, this.instance.port);
 
       this.emitStat('instance-start', {
-        database : this.dbName, 
-        port : this.targetPort,
+        database : this.instance.name, 
+        hostname : this.instance.hostname,
+        port : this.instance.port,
         time : Date.now() - startTime
       });
     }
 
     this.serverSocket = net.createConnection({ 
-      host: this.dbName, 
-      port: this.targetPort 
+      host: this.instance.hostname, 
+      port: this.instance.port
     });
 
     // When the target server sends data, forward it to the client
@@ -166,19 +230,18 @@ class ProxyConnection extends EventEmitter {
 
     this.serverSocket.on('error', err => {
       this.emitStat('socket-error', 1);
-      console.error('Target socket error:', err);
-      this.clientSocket.end();
-      this.clientSocket = null;
+      logger.error('Target socket error:', err);
+      this.closeClientSocket();
     });
 
     // Handle target socket closure
     this.serverSocket.on('end', () => {
       this.emitStat('socket-closed', 1);
-      console.log('Target socket closed');
-      this.clientSocket.end();
-      this.clientSocket = null;
+      logger.info('Target socket closed');
+      this.closeClientSocket();
     });
 
+    return true;
   }
 
   /**
@@ -307,16 +370,8 @@ class ProxyConnection extends EventEmitter {
 
     let password = config.proxy.password.static;
     if( config.proxy.password.type === 'pg' ) {
-      let resp = await pgPassConnection.query(
-        `SELECT 
-          password 
-        FROM ${config.proxy.password.pg.table} 
-        WHERE 
-          username = $1 AND
-          database = $2`,
-        [resp.user.username, this.startupProperties.database]
-      );
-      password = resp.rows[0].password;
+      let user = await adminClient.getUser(this.instance.name, resp.user.username);
+      password = user.password;
     }
 
     this.sendPassword(password, this.serverSocket);
@@ -390,13 +445,13 @@ class ProxyConnection extends EventEmitter {
     if( !this.debugEnabled ) return;
 
     if( data instanceof Buffer ) {
-      console.log({
+      logger.debug({
         socket, 
         data : '0x'+data.toString('hex'),
         string : data.toString('utf8')
       });
     } else {
-      console.log({
+      logger.debug({
         socket,
         message: data
       });

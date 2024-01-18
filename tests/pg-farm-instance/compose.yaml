@@ -2,21 +2,23 @@ version: '3'
 
 services:
   proxy:
-    build: ../../services
+    image: localhost/local-dev/pg-farm-service:main  
     ports:
       - "5432:5432"
     environment:
       - PROXY_DEBUG=true
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
     env_file:
       - .env
     volumes:
       - ../../services/lib:/services/lib
       - ../../services/pg-proxy:/services/pg-proxy
       - ../../services/administration:/services/administration
+      - ./service-account.json:/etc/google/service-account.json
     command: npm run proxy
 
   auth:
-    build: ../../services
+    image: localhost/local-dev/pg-farm-service:main  
     ports:
       - "3001:3001"
     environment:
@@ -40,7 +42,7 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql/data
 
-  test:
+  pg-test:
     build: ../../pg-instance
     environment:
       - POSTGRES_USER=postgres
