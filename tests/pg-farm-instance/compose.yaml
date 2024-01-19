@@ -17,20 +17,22 @@ services:
       - ./service-account.json:/etc/google/service-account.json
     command: npm run proxy
 
-  auth:
+  admin:
     image: localhost/local-dev/pg-farm-service:main  
     ports:
-      - "3001:3001"
+      - "3000:3000"
     environment:
-      - SERVICE_PORT=3001
+      - SERVICE_PORT=3000
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
     env_file:
       - .env
     volumes:
+      - ./service-account.json:/etc/google/service-account.json
       - ../../services/lib:/services/lib
       - ../../services/pg-proxy:/services/pg-proxy
       - ../../services/authenticator:/services/authenticator
       - ../../services/administration:/services/administration
-    command: npm run authenticator
+    command: npm run administration
     # command: bash -c "tail -f /dev/null"
 
   admin-db:

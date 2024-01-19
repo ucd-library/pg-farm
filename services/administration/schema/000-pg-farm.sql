@@ -12,7 +12,7 @@ CREATE TYPE pgfarm.instance_user_type AS ENUM (
   'PUBLIC',
   'USER',
   'ADMIN',
-  'PGREST'
+  'PGREST' -- TODO: Remove this.  Should just be the public role.
 );
 
 -- Organization

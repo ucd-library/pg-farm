@@ -1,9 +1,7 @@
 import client from '../../../lib/pg-admin-client.js';
-import waitUntil from '../../../lib/wait-util.js';
+import utils from '../../../lib/utils.js';
 import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
-import instanceModel from './instance.js';
-import waitUntil from '../../../lib/wait-util.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import yaml from 'js-yaml';
@@ -17,12 +15,11 @@ let k8sTemplatePath = path.join(__dirname, '..', '..', 'k8s');
 class AdminModel {
 
   constructor() {
-    this.PG_IMAGE = 'postgres:14';
-    instanceModel.setAdminModel(this);
+    this.instancesStarting = {};
   }
 
   async initSchema() {
-    await waitUntil(config.pg.host, config.pg.port);
+    await utils.waitUntil(config.pg.host, config.pg.port);
     await client.connect();
   
     // TODO: add migrations
@@ -38,37 +35,119 @@ class AdminModel {
     }
   }
 
+  /**
+   * @method getConnection
+   * @description Returns a postgres user connection object for a postgres instance
+   * 
+   * @param {String} instNameOrId PG Farm instance name or ID 
+   * @returns 
+   */
+  async getConnection(instNameOrId) {
+    let user = await adminClient.getUser(instNameOrId, 'postgres');
+
+    return {
+      id : user.database_id,
+      host : user.database_hostname,
+      port : user.database_port,
+      user : user.username,
+      database : user.database_name,
+      password : user.password
+    };
+  }
+
+  /**
+   * @method getTemplate
+   * @description Returns a k8s template object
+   * 
+   * @param {String} template
+   *  
+   * @returns {Object}
+   */
   getTemplate(template) {
     let templatePath = path.join(k8sTemplatePath, template+'.yaml');
     let k8sConfig = yaml.load(fs.readFileSync(templatePath, 'utf-8'));
     return k8sConfig;
   }
 
-  async addInstance(name, opts={}) {
+  /**
+   * @method createInstance
+   * @description Creates a new postgres instance
+   * 
+   * @param {String} name
+   * @param {Object} opts
+   * 
+   * @returns {Promise}
+   **/
+  async createInstance(name, opts={}) {
+    if( !name ) throw new Error('Instance name required');
+
     let hostname = opts.hostname || 'pg-'+name;
     let description = opts.description || '';
     let port = opts.port || 5432;
 
-    let id = await client.addInstance(name, hostname, description, port);
+    // add instance to database
+    let id = await client.createInstance(name, hostname, description, port);
 
-    await this.startInstance(name);
+    // create k8s statefulset and service
+    // using ensure instance here in case the instance is already running
+    // possibly manually created or running docker compose environment
+    await this.ensureInstanceRunning(name);
 
-    await waitUntil(hostname, port);
+    // wait for instance to be ready
+    await utils.waitUntil(hostname, port);
 
-    await this.addUser(id, 'postgres');
-    await instanceModel.resetPassword(id, 'postgres');
+    // create postgres user to database
+    await this.addUser(id, 'postgres', 'ADMIN');
+
+    // create admin user to database
+    await this.resetPassword(id, 'postgres');
+
+    return id;
   }
 
-  async addUser(instNameOrId, username) {
+  /**
+   * @method addUser
+   * @description Adds a user to a postgres instance
+   * 
+   * @param {String} instNameOrId  PG Farm instance name or ID 
+   * @param {String} user username 
+   * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER. 
+   * 
+   * @returns {Promise}
+   */
+  async createUser(instNameOrId, user, type='USER') {
+    // get instance connection information
+    let con = await this.getConnection(instNameOrId);
+
+    // create new random password
     let password = utils.generatePassword();
-    return client.addUser(instNameOrId, username, password);
+
+    // add user to database
+    await client.createUser(instNameOrId, user, password, type);
+
+    // make sure pg is running
+    await this.ensureInstanceRunning(instNameOrId);
+
+    // add user to postgres
+    resp = await pgInstClient.query(
+      con, 
+      `CREATE USER $1 WITH PASSWORD $2`, 
+      [user, password]
+    );
+
+    return resp;
   }
 
-  async startInstance(name) {
-    // check if instance is alive
-    
-
-    let instance = await client.getInstance(name);
+  /**
+   * @method startInstance
+   * @description Starts a postgres instance and service in k8s
+   * 
+   * @param {String} instNameOrId PG Farm instance name or ID 
+   * 
+   * @returns {Promise}
+   */
+  async startInstance(instNameOrId) {
+    let instance = await client.getInstance(instNameOrId);
     let hostname = instance.hostname;
 
     let k8sConfig = this.getTemplate('postgres');
@@ -82,7 +161,7 @@ class AdminModel {
     template.metadata.labels.app = hostname;
 
     let container = template.spec.containers[0];
-    container.image = this.PG_IMAGE;
+    container.image = config.pgInstance.image;
     container.name = hostname;
     container.volumeMounts[0].name = hostname+'-ps';
 
@@ -121,7 +200,88 @@ class AdminModel {
     return {pgResult, pgServiceResult};
   }
 
+  /**
+   * @method resetUserPassword
+   * @description Resets a user's password to a random password
+   * 
+   * @param {String} instNameOrId PG Farm instance name or ID
+   * @param {String} user 
+   * @param {String} password 
+   * 
+   * @returns {Promise}
+   */
+  async resetPassword(instNameOrId, user, password) {
+    let con = await this.getConnection(instNameOrId);
 
+    // generate random password if not provided
+    if( !password ) password = utils.generatePassword();
+
+    // update database
+    await client.query(
+      `UPDATE ${config.pg.tables.DATABASE_USERS()} 
+      SET password = $2 
+      WHERE username = $1 AND instance_id = $3`, 
+      [user, password, con.id]
+    );
+
+    // make sure pg is running
+    await this.ensureInstanceRunning(instNameOrId);
+
+    // update postgres instance users password
+    let resp = await pgInstClient.query(
+      con, 
+      `ALTER USER $1 WITH PASSWORD $2`, 
+      [user, password]
+    );
+
+    return resp;
+  }
+
+  /**
+   * @method ensureInstanceRunning
+   * @description Ensures an instance is running.  If the instance is not running,
+   * it will be started.  If the instance is starting, the promise will wait until
+   * the instance is running.
+   * 
+   * @param {String} instNameOrId
+   *  
+   * @returns {Promise}
+   */
+  async ensureInstanceRunning(instNameOrId) {
+    // get instance information
+    let instance = await client.getInstance(instNameOrId);
+    let hostname = instance.hostname;
+    let port = instance.port;
+
+    // check if already alive
+    let isAlive = await utils.isAlive(instance.hostname, instance.port);
+    if( isAlive ) return;
+
+    // check if already starting
+    if( this.instancesStarting[hostname] ) {
+      await utils.waitUntil(hostname, port);
+      return;
+    }
+
+    // create a promise for other possible callers to wait on
+    let state = {};
+    state.promise = new Promise((resolve, reject) => {
+      state.resolve = resolve;
+      state.reject = reject;
+    });
+
+    this.instancesStarting[instance.hostname] = state;
+
+    // start instance
+    await this.startInstance(instNameOrId);
+    
+    // wait for instance to be ready
+    await utils.waitUntil(hostname, port, 50);
+
+    // resolve promise
+    this.instancesStarting[instance.hostname].resolve();
+    delete this.instancesStarting[instance.hostname];
+  }
 
 }
 

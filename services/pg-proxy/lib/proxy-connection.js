@@ -4,7 +4,7 @@ import tls from 'tls';
 import { EventEmitter } from 'node:events';
 import keycloak from '../../lib/keycloak.js';
 import config from '../../lib/config.js';
-import waitUntil from '../../lib/wait-util.js';
+import utils from '../../lib/utils.js';
 import adminClient from '../../lib/pg-admin-client.js';
 import adminModel from '../../administration/src/models/admin.js';
 
@@ -153,22 +153,6 @@ class ProxyConnection extends EventEmitter {
     this.clientSocket = null;
   }
 
-  testPort(host, port) {
-    port = parseInt(port);
-
-    return new Promise((resolve, reject) => {
-      let client = new net.Socket();
-      client.connect(port, host, function() {
-        resolve(true);
-        client.destroy();
-      });
-      client.on('error', function(e) {
-        resolve(false);
-        client.destroy(); 
-      });
-    });
-  }
-
   async initServerSocket() {
     if( !this.startupProperties ) return;
     if( !this.startupProperties.database ) return;
@@ -196,7 +180,7 @@ class ProxyConnection extends EventEmitter {
 
     this.instance = await adminClient.getInstance(this.startupProperties.database);
 
-    let isPortAlive = await this.testPort(
+    let isPortAlive = await utils.isAlive(
       this.instance.hostname,
       this.instance.port
     );
@@ -205,7 +189,7 @@ class ProxyConnection extends EventEmitter {
       logger.info('Port test failed, starting instance', this.instance.name);
       let startTime = Date.now();
       await adminModel.startInstance(this.instance.name);
-      await waitUntil(this.instance.hostname, this.instance.port);
+      await utils.waitUntil(this.instance.hostname, this.instance.port);
 
       this.emitStat('instance-start', {
         database : this.instance.name, 

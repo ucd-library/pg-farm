@@ -35,7 +35,9 @@ const config = {
   },
 
   jwt : {
-    secret : env.JWT_SECRET || 'secretsecret'
+    secret : env.JWT_SECRET || 'secretsecret',
+    cookieName : env.JWT_COOKIE_NAME || 'pg-farm-token',
+    header : env.JWT_HEADER || 'x-pg-farm-token'
   },
 
   // Keycloak configuration
@@ -67,7 +69,7 @@ const config = {
   adminDb : {
     username : env.PG_USERNAME || 'postgres',
     password : env.PG_PASSWORD || 'postgres',
-    database : env.PG_DATABASE || 'pgfarm',
+    database : env.PG_DATABASE || 'postgres',
     schema : env.PG_SCHEMA || 'pgfarm', 
     port : env.PG_PORT || 5432,
     host : env.PG_HOST || 'admin-db',
@@ -81,12 +83,16 @@ const config = {
     }
   },
 
+  pgInstance : {
+    image : env.PG_INSTANCE_IMAGE || 'postgres:14',
+  },
+
   // Proxy configuration
   proxy: {
     definitions : PROXIES,
     autoStartInstances : (env.AUTO_START_INSTANCES === 'true'),
     tls : {
-      enabled : env.PROXY_TLS_ENABLED ? env.PROXY_TLS_ENABLED === 'true' ? true : false, // Enable TLS
+      enabled : env.PROXY_TLS_ENABLED === 'true', // Enable TLS
       key : env.PROXY_TLS_KEY || '/etc/pg-farm/proxy-tls-key.pem', // Path to TLS key
       cert : env.PROXY_TLS_CERT || '/etc/pg-farm/proxy-tls-cert.pem', // Path to TLS cert
     },

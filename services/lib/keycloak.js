@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import clone from 'clone';
 import config from './config.js';
+import adminClient from './pg-admin-client.js';
 
 class KeycloakUtils {
 
@@ -143,15 +144,40 @@ class KeycloakUtils {
     }
   }
 
-  async setUser(req, res, next) {
-    if( req.headers['x-fin-user'] ) {
-      req.user = JSON.parse(req.headers['x-fin-user']);
-      if( !req.user.roles ) req.user.roles = [];
+  /**
+   * @method getJwtFromRequest
+   * @description given a express request object, return a given jwt token.
+   * Method will first check the request cookies of the jwt token cookie then
+   * checks the Authorization header of the token.
+   * 
+   * @param {Object} req express request object
+   * 
+   * @returns {String|null} null if no token found.
+   */
+  getJwtFromRequest(req) {
+    if( !req.cookies ) return null;
 
-      return next();
+    let token = req.cookies[config.jwt.cookieName];
+    if( token ) return token;
+    
+    token = req.get('Authorization');
+    if( token && token.match(/^Bearer /i) ) {
+      return token.replace(/^Bearer /i, '');
     }
 
-    let token = jwt.getJwtFromRequest(req);
+    return null;
+  }
+
+  async setUser(req, res, next) {
+    // TODO: ensure x- headers are stripped first
+    // if( req.headers[config.jwt.header] ) {
+    //   req.user = JSON.parse(req.headers[config.jwt.header]);
+    //   if( !req.user.roles ) req.user.roles = [];
+
+    //   return next();
+    // }
+
+    let token = this.getJwtFromRequest(req);
     if( !token ) return next();
 
     let resp = await this.verifyActiveToken(token);
@@ -164,6 +190,10 @@ class KeycloakUtils {
     // override roles
     let roles = new Set();
 
+    if( !user.username && user.preferred_username ) {
+      user.username = user.preferred_username;
+    }
+
     if( user.username ) roles.add(user.username);
     if( user.preferred_username ) roles.add(user.preferred_username);
 
@@ -175,11 +205,20 @@ class KeycloakUtils {
       user.realmRoles.forEach(role => roles.add(role));
       delete user.realmRoles;
     }
+
+    // check for the instance name in the request. add role name if found
+    let instanceName = req.params.instance;
+    if( instanceName ) {
+      try {
+        let resp = await adminClient.getUser(instanceName, user.username);
+        roles.add(instanceName+'-'+resp.type.toLowerCase());
+      } catch(e) {}
+    }
   
     user.roles = Array.from(roles)
       .filter(role => config.oidc.roleIgnoreList.includes(role) === false);
 
-    req.headers['x-fin-user'] = JSON.stringify(user);
+    req.headers[config.jwt.header] = JSON.stringify(user);
 
     next();
   }
@@ -201,6 +240,12 @@ class KeycloakUtils {
 
         for( let role of roles ) {
           if( req.user.roles.includes(role) ) {
+            return next();
+          }
+
+          // check for instance role
+          // These are stored in the PG Farm database instance user table
+          if( req.params.instance && req.user.roles.includes(req.params.instance+'-'+role) ) {
             return next();
           }
         }

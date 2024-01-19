@@ -1,19 +1,49 @@
 import PG from 'pg';
-import config from '../administration/src/config.js';
+import config from './config.js';
+import logger from './logger.js';
 
 
 const client = new PG.Pool({
-  user : config.pg.username,
-  host : config.pg.host,
-  database : config.pg.database,
-  password : config.pg.password,
-  port : config.pg.port
+  user : config.adminDb.username,
+  host : config.adminDb.host,
+  database : config.adminDb.database,
+  password : config.adminDb.password,
+  port : config.adminDb.port
 });
 
 class PgFarmAdminClient {
 
   constructor() {
     this.client = client;
+
+    this.getEnumTypes();
+
+    this.enums = [
+      'instance_user_type'
+    ]
+  }
+
+  /**
+   * @method getEnumTypes
+   * @description need to set parser for custom enum types
+   */
+  async getEnumTypes() {
+    return;
+    let resp = await client.query('SELECT typname, oid, typarray FROM pg_type WHERE typname = \'text\'');
+    let text = resp.rows[0];
+
+    for( let type of this.enums ) {
+      resp = await client.query('SELECT typname, oid, typarray FROM pg_type WHERE typname = $1', [type]);
+      let eum = resp.rows[0];
+
+      if( !eum ) {
+        logger.warn('Unable to discover enum types, retrying in 2 sec');
+        setTimeout(() => this.getEnumTypes(), 2000);
+        return;
+      }
+
+      PG.types.setTypeParser(eum.typarray, PG.types.getTypeParser(text.typarray));
+    }
   }
 
   getInstance(nameOrId) {
@@ -29,7 +59,7 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
-  async addInstance(name, hostname, description, port) {
+  async createInstance(name, hostname, description, port) {
     let resp = await client.query(`
       INSERT INTO ${config.pg.tables.INSTANCE()}
       (name, hostname, description, port)
@@ -45,14 +75,14 @@ class PgFarmAdminClient {
     return resp.rows[0].instance_id;
   }
 
-  async addUser(nameOrId, username, password) {
+  async createUser(nameOrId, username, password, type) {
     let instance = await this.getInstance(nameOrId);
 
     return client.query(`
       INSERT INTO ${config.pg.tables.DATABASE_USERS()}
       (username, password, type, instance_id)
-      VALUES ($1, $2, 'USER', $3)
-    `, [username, password, instance.instance_id]);
+      VALUES ($1, $2, $3, $4)
+    `, [username, password, type, instance.instance_id]);
   }
 
   async getUser(instNameOrId, username) {

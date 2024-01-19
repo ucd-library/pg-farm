@@ -18,7 +18,7 @@ if( config.gc.serviceAccountExists ) {
   // create bunyan logger for stackdriver
   let loggingBunyan = new LoggingBunyan({
     projectId: config.gc.projectId,
-    keyFilename: config.gc.serviceAccountFile,
+    keyFilename: config.gc.keyFilename,
     resource : {type: 'project'}
   });
 
@@ -41,8 +41,8 @@ let info = {
   name: (process.env.FIN_LOGGER_NAME || global.LOGGER_NAME || 'pg-farm')+'-'+host,
   level: config.logging.level || 'info',
   googleCloudLogging : {
-    enabled : config.google.serviceAccountExists,
-    file : config.gc.serviceAccountFile
+    enabled : config.gc.serviceAccountExists,
+    file : config.gc.keyFilename
   }
 }
 
