@@ -155,10 +155,12 @@ class KeycloakUtils {
    * @returns {String|null} null if no token found.
    */
   getJwtFromRequest(req) {
-    if( !req.cookies ) return null;
+    let token;
 
-    let token = req.cookies[config.jwt.cookieName];
-    if( token ) return token;
+    if( req.cookies ) {
+      token = req.cookies[config.jwt.cookieName];
+      if( token ) return token;
+    }
     
     token = req.get('Authorization');
     if( token && token.match(/^Bearer /i) ) {
@@ -225,13 +227,13 @@ class KeycloakUtils {
 
   protect(roles=[]) {
     if( !Array.isArray(roles) ) {
-      roles = [];
+      roles = [roles];
     }
 
     let authorize = function (req, res, next)  {
       this.setUser(req, res, () => {
         // no user
-        if( !req.user ) return res.status(403).send();
+        if( !req.user ) return res.status(403).send('Unauthorized');
 
         // there is a user and no roles required, good to go
         if( roles.length === 0 ) {

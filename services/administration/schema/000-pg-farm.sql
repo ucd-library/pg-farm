@@ -8,12 +8,31 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 --   'HTTP_PG_REST'
 -- );
 
-CREATE TYPE pgfarm.instance_user_type AS ENUM (
-  'PUBLIC',
-  'USER',
-  'ADMIN',
-  'PGREST' -- TODO: Remove this.  Should just be the public role.
-);
+create or replace function public.try_cast_uuid(p_in text)
+   returns UUID
+as
+$$
+begin
+  begin
+    return $1::UUID;
+  exception 
+    when others then
+       return '00000000-0000-0000-0000-000000000000'::UUID;
+  end;
+end;
+$$
+language plpgsql;
+
+DO $$ BEGIN
+  CREATE TYPE pgfarm.instance_user_type AS ENUM (
+    'PUBLIC',
+    'USER',
+    'ADMIN',
+    'PGREST' -- TODO: Remove this.  Should just be the public role.
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- Organization
 CREATE TABLE IF NOT EXISTS pgfarm.organization (

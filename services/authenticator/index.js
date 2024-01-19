@@ -46,7 +46,8 @@ function register(app) {
       response_type: 'code',
       scope : config.oidc.scopes
     },
-    idpLogout: true
+    idpLogout: true,
+    authRequired: false
   }));
 
   app.get('/login', (req, res) => { 

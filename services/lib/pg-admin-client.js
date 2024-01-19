@@ -46,10 +46,10 @@ class PgFarmAdminClient {
     }
   }
 
-  getInstance(nameOrId) {
-    let res = client.query(`
-      SELECT * FROM ${config.pg.tables.INSTANCE()}
-      WHERE name = $1 OR instance_id = $1
+  async getInstance(nameOrId) {
+    let res = await client.query(`
+      SELECT * FROM ${config.adminDb.tables.INSTANCE}
+      WHERE name = $1 OR instance_id=try_cast_uuid($1)
     `, [nameOrId]);
 
     if( res.rows.length === 0 ) {
@@ -61,7 +61,7 @@ class PgFarmAdminClient {
 
   async createInstance(name, hostname, description, port) {
     let resp = await client.query(`
-      INSERT INTO ${config.pg.tables.INSTANCE()}
+      INSERT INTO ${config.adminDb.tables.INSTANCE}
       (name, hostname, description, port)
       VALUES ($1, $2, $3, $4)
       RETURNING instance_id
@@ -79,7 +79,7 @@ class PgFarmAdminClient {
     let instance = await this.getInstance(nameOrId);
 
     return client.query(`
-      INSERT INTO ${config.pg.tables.DATABASE_USERS()}
+      INSERT INTO ${config.adminDb.tables.DATABASE_USERS}
       (username, password, type, instance_id)
       VALUES ($1, $2, $3, $4)
     `, [username, password, type, instance.instance_id]);
@@ -87,8 +87,8 @@ class PgFarmAdminClient {
 
   async getUser(instNameOrId, username) {
     let resp = await client.query(`
-      SELECT * FROM ${config.pg.views.INSTANCE_USERS()}
-      WHERE (instance_id = $1 OR database_name = $1) AND username = $2
+      SELECT * FROM ${config.adminDb.views.INSTANCE_USERS}
+      WHERE (database_name = $1 OR instance_id=try_cast_uuid($1)) AND username = $2
     `, [instNameOrId, username]);
 
     if( resp.rows.length === 0 ) {

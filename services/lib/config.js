@@ -46,7 +46,7 @@ const config = {
     baseUrl : env.OIDC_BASE_URL || 'https://sandbox.auth.library.ucdavis.edu/realms/pg-farm',
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',
-    scopes : env.OIDC_SCOPES || 'openid profile email',
+    scopes : env.OIDC_SCOPES || 'roles openid profile email',
     roleIgnoreList : []
   },
 
@@ -75,11 +75,11 @@ const config = {
     host : env.PG_HOST || 'admin-db',
 
     tables : {
-      INSTANCE : () => this.pg.schema+'.instance',
-      DATABASE_USERS : () => this.pg.schema+'.database_user'
+      get INSTANCE() { return config.adminDb.schema+'.instance' },
+      get DATABASE_USERS() { return config.adminDb.schema+'.database_user'}
     },
     views : {
-      INSTANCE_USERS : () => this.pg.schema+'.instance_database_user'
+      get INSTANCE_USERS() { return config.adminDb.schema+'.instance_database_user' }
     }
   },
 

@@ -42,7 +42,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=pgfarm
     volumes:
-      - pg-data:/var/lib/postgresql/data
+      - pg-admin-data:/var/lib/postgresql/data
 
   pg-test:
     build: ../../pg-instance
@@ -54,4 +54,5 @@ services:
       - pg-data:/var/lib/postgresql/data
 
 volumes:
+  pg-admin-data:
   pg-data: 

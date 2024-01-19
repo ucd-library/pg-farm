@@ -1,4 +1,4 @@
-import { Client } from 'pg';
+import PG from 'pg';
 
 /**
  * @class PGInstance
@@ -8,7 +8,7 @@ import { Client } from 'pg';
 class PGInstance {
 
   async getConnection(opts={}) {
-    const client = new Client(opts);
+    const client = new PG.Client(opts);
     await client.connect()
     return client;
   }
@@ -17,6 +17,7 @@ class PGInstance {
     const client = await this.getConnection(connection);
     
     try {
+      console.log({query, args})
       let result = await client.query(query, args);
       await client.end();
       return result;

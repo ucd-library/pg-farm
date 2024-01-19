@@ -1,4 +1,5 @@
 import client from '../../../lib/pg-admin-client.js';
+import pgInstClient from '../../../lib/pg-client.js';
 import utils from '../../../lib/utils.js';
 import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
@@ -43,7 +44,7 @@ class AdminModel {
    * @returns 
    */
   async getConnection(instNameOrId) {
-    let user = await adminClient.getUser(instNameOrId, 'postgres');
+    let user = await client.getUser(instNameOrId, 'postgres');
 
     return {
       id : user.database_id,
@@ -96,8 +97,21 @@ class AdminModel {
     // wait for instance to be ready
     await utils.waitUntil(hostname, port);
 
+    // create instance database
+    // TODO: how do we add params???
+    await pgInstClient.query(
+      {
+        host : hostname,
+        port : port,
+        database : 'postgres',
+        user  : 'postgres',
+        password : 'postgres'
+      }, 
+      `CREATE DATABASE ${name}`
+    );
+
     // create postgres user to database
-    await this.addUser(id, 'postgres', 'ADMIN');
+    await this.createUser(id, 'postgres', 'ADMIN', 'postgres');
 
     // create admin user to database
     await this.resetPassword(id, 'postgres');
@@ -115,18 +129,20 @@ class AdminModel {
    * 
    * @returns {Promise}
    */
-  async createUser(instNameOrId, user, type='USER') {
-    // get instance connection information
-    let con = await this.getConnection(instNameOrId);
-
+  async createUser(instNameOrId, user, type='USER', password) {
     // create new random password
-    let password = utils.generatePassword();
+    if( !password ) {
+      password = utils.generatePassword();
+    }
 
     // add user to database
     await client.createUser(instNameOrId, user, password, type);
 
     // make sure pg is running
     await this.ensureInstanceRunning(instNameOrId);
+
+    // get instance connection information
+    let con = await this.getConnection(instNameOrId);
 
     // add user to postgres
     resp = await pgInstClient.query(
@@ -218,7 +234,7 @@ class AdminModel {
 
     // update database
     await client.query(
-      `UPDATE ${config.pg.tables.DATABASE_USERS()} 
+      `UPDATE ${config.adminDb.tables.DATABASE_USERS} 
       SET password = $2 
       WHERE username = $1 AND instance_id = $3`, 
       [user, password, con.id]
