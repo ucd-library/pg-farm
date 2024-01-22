@@ -23,12 +23,15 @@ class PgFarmAdminClient {
     ]
   }
 
+  query(query, args) {
+    return client.query(query, args);
+  }
+
   /**
    * @method getEnumTypes
    * @description need to set parser for custom enum types
    */
   async getEnumTypes() {
-    return;
     let resp = await client.query('SELECT typname, oid, typarray FROM pg_type WHERE typname = \'text\'');
     let text = resp.rows[0];
 
@@ -96,6 +99,24 @@ class PgFarmAdminClient {
     }
 
     return resp.rows[0];
+  }
+
+  async userExists(instNameOrId, username) {
+    try {
+      await this.getUser(instNameOrId, username);
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  async getInstanceUsers(instNameOrId) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.views.INSTANCE_USERS}
+      WHERE database_name = $1 OR instance_id=try_cast_uuid($1)
+    `, [instNameOrId]);
+
+    return resp.rows;
   }
 
 }

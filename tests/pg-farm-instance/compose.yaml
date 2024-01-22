@@ -6,7 +6,7 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - PROXY_DEBUG=true
+      - PROXY_DEBUG=false
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
     env_file:
       - .env
@@ -32,8 +32,8 @@ services:
       - ../../services/pg-proxy:/services/pg-proxy
       - ../../services/authenticator:/services/authenticator
       - ../../services/administration:/services/administration
-    command: npm run administration
-    # command: bash -c "tail -f /dev/null"
+    # command: npm run administration
+    command: bash -c "tail -f /dev/null"
 
   admin-db:
     build: ../../pg-instance

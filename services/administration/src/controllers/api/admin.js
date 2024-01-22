@@ -19,7 +19,7 @@ router.put('/:instance/:user', keycloak.protect('admin'), async (req, res) => {
   try {
     let instance = req.params.instance;
     let user = req.params.user.replace(/@.*$/, '');
-    let id = await model.addUser(instance, user);
+    let id = await model.createUser(instance, user);
     res.status(204).json({id});
   } catch(e) {
     handleError(res, e);

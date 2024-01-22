@@ -71,6 +71,10 @@ class PgFarmUtils {
     });
   }
 
+  sleep(ms=100) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
 }
 
 function attempt(host, port, opts) {

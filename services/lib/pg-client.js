@@ -17,7 +17,6 @@ class PGInstance {
     const client = await this.getConnection(connection);
     
     try {
-      console.log({query, args})
       let result = await client.query(query, args);
       await client.end();
       return result;

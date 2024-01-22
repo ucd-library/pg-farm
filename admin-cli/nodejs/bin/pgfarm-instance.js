@@ -13,8 +13,8 @@ program.command('create')
 
 program.command('add-user <instance> <user>')
   .description('Add a user to an instance (requires admin access to instance)')
-  .action((instance, user) => {
-    instance.addUser(instance, user);
+  .action((instanceName, user) => {
+    instance.addUser(instanceName, user);
   });
 
 program.parse(process.argv);

@@ -101,7 +101,7 @@ const config = {
     // targetHost: env.PROXY_TARGET_HOST || 'postgres', // Host to listen on
     targetPort: env.PROXY_TARGET_PORT || 5432, // Port to listen on
     password : {
-      type : env.PROXY_PASSWORD_TYPE || 'static', // 'static' or 'pg'
+      type : env.PROXY_PASSWORD_TYPE || 'pg', // 'static' or 'pg'
       static : env.PROXY_PASSWORD_STATIC || 'postgres', // Static password to use
       pg : {
         host : env.PROXY_PASSWORD_PG_HOST || 'postgres', // Host to connect to
@@ -112,7 +112,7 @@ const config = {
         table : env.PROXY_PASSWORD_PG_TABLE || 'users_auth', // Table to query
       }
     },
-    debug : env.PROXY_DEBUG || false // Enable debug logging
+    debug : env.PROXY_DEBUG === 'true' // Enable debug logging
   }
 
 }

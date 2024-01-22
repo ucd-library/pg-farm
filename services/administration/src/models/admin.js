@@ -3,10 +3,12 @@ import pgInstClient from '../../../lib/pg-client.js';
 import utils from '../../../lib/utils.js';
 import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
+import logger from '../../../lib/logger.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import yaml from 'js-yaml';
 import fs from 'fs';
+import pgFormat from 'pg-format';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,11 +19,12 @@ class AdminModel {
 
   constructor() {
     this.instancesStarting = {};
+
+    this.initSchema();
   }
 
   async initSchema() {
-    await utils.waitUntil(config.pg.host, config.pg.port);
-    await client.connect();
+    await utils.waitUntil(config.adminDb.host, config.adminDb.port);
   
     // TODO: add migrations
     logger.info('loading sql files from: '+schemaPath)
@@ -47,7 +50,7 @@ class AdminModel {
     let user = await client.getUser(instNameOrId, 'postgres');
 
     return {
-      id : user.database_id,
+      id : user.instance_id,
       host : user.database_hostname,
       port : user.database_port,
       user : user.username,
@@ -99,16 +102,21 @@ class AdminModel {
 
     // create instance database
     // TODO: how do we add params???
-    await pgInstClient.query(
-      {
-        host : hostname,
-        port : port,
-        database : 'postgres',
-        user  : 'postgres',
-        password : 'postgres'
-      }, 
-      `CREATE DATABASE ${name}`
-    );
+    try {
+      let formattedQuery = pgFormat('CREATE DATABASE %s', name);
+      let resp = await pgInstClient.query(
+        {
+          host : hostname,
+          port : port,
+          database : 'postgres',
+          user  : 'postgres',
+          password : 'postgres'
+        }, 
+        formattedQuery
+      );
+    } catch(e) {
+      logger.error(e);
+    }
 
     // create postgres user to database
     await this.createUser(id, 'postgres', 'ADMIN', 'postgres');
@@ -138,6 +146,9 @@ class AdminModel {
     // add user to database
     await client.createUser(instNameOrId, user, password, type);
 
+    // TODO: make this global
+    if( user === 'postgres' ) return;
+
     // make sure pg is running
     await this.ensureInstanceRunning(instNameOrId);
 
@@ -145,10 +156,10 @@ class AdminModel {
     let con = await this.getConnection(instNameOrId);
 
     // add user to postgres
-    resp = await pgInstClient.query(
+    let formattedQuery = pgFormat('CREATE USER %s WITH PASSWORD %L', user, password);
+    let resp = await pgInstClient.query(
       con, 
-      `CREATE USER $1 WITH PASSWORD $2`, 
-      [user, password]
+      formattedQuery,
     );
 
     return resp;
@@ -244,10 +255,10 @@ class AdminModel {
     await this.ensureInstanceRunning(instNameOrId);
 
     // update postgres instance users password
+    let formattedQuery = pgFormat('ALTER USER %s WITH PASSWORD %L', user, password);
     let resp = await pgInstClient.query(
       con, 
-      `ALTER USER $1 WITH PASSWORD $2`, 
-      [user, password]
+      formattedQuery
     );
 
     return resp;
@@ -297,6 +308,46 @@ class AdminModel {
     // resolve promise
     this.instancesStarting[instance.hostname].resolve();
     delete this.instancesStarting[instance.hostname];
+  }
+
+  /**
+   * @method syncInstanceUsers
+   * @description Syncs the database users with the postgres instance users.
+   * Ensures that the database users are created in postgres and that the
+   * pg farm password is set to the database user password.  This function
+   * can be used to rotate all passwords.
+   * 
+   * @param {String} instNameOrId 
+   * @param {Boolean} updatePassword update all user passwords
+   * 
+   * @returns {Promise}
+   */
+  async syncInstanceUsers(instNameOrId, updatePassword=false) {
+    let users = await client.getInstanceUsers(instNameOrId);
+    let con = await this.getConnection(instNameOrId);
+
+    for( let user of users ) {
+
+      // get db user
+      let result = await pgInstClient.query(
+        con,
+        `SELECT * FROM pg_catalog.pg_user WHERE usename=$1`,
+        [user.username]
+      );
+      let exists = (result.rows.length > 0);
+
+      if( exists ) {
+        if( updatePassword ) {
+          await this.resetPassword(instNameOrId, user.username);
+        } else {
+          let formattedQuery = pgFormat('ALTER USER %s WITH PASSWORD %L', user.username, user.password);
+          await pgInstClient.query(con, formattedQuery);
+        }
+      } else {
+        let formattedQuery = pgFormat('CREATE USER %s WITH PASSWORD %L', user.username, user.password);
+        await pgInstClient.query(con, formattedQuery);
+      }
+    }
   }
 
 }
