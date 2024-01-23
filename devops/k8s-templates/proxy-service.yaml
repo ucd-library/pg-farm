@@ -4,7 +4,6 @@ metadata:
   name: pg-proxy
 spec:
   type: LoadBalancer
-  loadBalancerIP: "{{GKE_EXTERNAL_IP}}"
   selector:
     app: pg-proxy
   ports:

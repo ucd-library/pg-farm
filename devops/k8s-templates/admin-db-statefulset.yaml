@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: admin-db
+spec:
+  selector:
+    matchLabels:
+      app: admin-db
+  replicas: 1
+  serviceName: admin-db
+  template:
+    metadata:
+      labels:
+        app: admin-db  
+    spec:
+      containers:
+      - name: admin-db
+        image: postgres:16
+        args: ["-c", "max_connections=100"]
+        imagePullPolicy: Always
+        env:
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        - name: POSTGRES_HOST_AUTH_METHOD
+          value: "password"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        resources:
+          limits:
+            memory: "2Gi"
+            cpu: "2"
+          requests:
+            memory: "500Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: admin-db-ps
+          mountPath: /var/lib/postgresql/data
+      nodeSelector:
+        intendedfor: services
+
+  volumeClaimTemplates:
+  - metadata:
+      name: admin-db-ps
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi

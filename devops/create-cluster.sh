@@ -15,7 +15,7 @@ gcloud beta container clusters create ${GKE_CLUSTER_NAME} \
   --num-nodes 3 \
   --disk-size 50GB \
   --release-channel=regular \
-  --machine-type e2-small \
+  --machine-type e2-standard-2 \
   --node-labels=intendedfor=services
 
 gcloud beta container node-pools create instance-pool \

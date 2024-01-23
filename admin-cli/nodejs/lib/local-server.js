@@ -37,6 +37,8 @@ class LocalLoginServer {
       config.token = jwt;
       saveConfig();
 
+      let hostname = new URL(config.host).hostname;
+
       console.log(`Logged in successfully!
       
    
@@ -44,7 +46,7 @@ You can access token at any time by using 'pgfarm auth token'.  Alternatively, c
 the password to the PGPASSWORD environment variable. For example:
 
 export PGPASSWORD=$(pgfarm auth token)
-psql -U [username] -h ${config.host} [database]
+psql -U [username] -h ${hostname} [database]
 ---------------------------------
 `);
 

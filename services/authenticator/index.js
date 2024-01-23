@@ -32,7 +32,7 @@ function register(app) {
 
   app.use(auth({
     issuerBaseURL: config.oidc.baseUrl,
-    baseURL: config.service.url,
+    baseURL: config.appUrl,
     clientID: config.oidc.clientId,
     clientSecret: config.oidc.secret,
     secret : config.jwt.secret,

@@ -25,6 +25,8 @@ if( env.GOOGLE_APPLICATION_CREDENTIALS ) {
 
 const config = {
 
+  appUrl : env.APP_URL || 'http://localhost:3000',
+
   logging : {
     level : env.LOG_LEVEL || 'info'
   },
@@ -38,6 +40,24 @@ const config = {
     secret : env.JWT_SECRET || 'secretsecret',
     cookieName : env.JWT_COOKIE_NAME || 'pg-farm-token',
     header : env.JWT_HEADER || 'x-pg-farm-token'
+  },
+
+  gateway : {
+    pg : {
+      host : env.GATEWAY_PG_PROXY_HOST || 'pg-proxy',
+      port : env.GATEWAY_PG_PROXY_PORT || 5432
+    },
+    http : {
+      targetHost : env.GATEWAY_HTTP_PROXY_TARGET_HOST || 'admin',
+      targetPort : env.GATEWAY_HTTP_PROXY_TARGET_PORT || 3000,
+      enabled : env.GATEWAY_HTTP_ENABLED === 'true',
+      port : 80
+    },
+    https : {
+      port : 443,
+      key : env.GATEWAY_HTTPS_KEY || '/etc/pg-farm/gateway-tls-key.pem',
+      cert : env.GATEWAY_HTTPS_CERT || '/etc/pg-farm/gateway-tls-cert.pem'
+    }
   },
 
   // Keycloak configuration

@@ -28,3 +28,38 @@ cork-template \
   -c ./config.sh \
   -t $TEMPLATE_ROOT/proxy-service.yaml \
   -o $DEPLOYMENT_DIR/proxy-service.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/admin-db-statefulset.yaml \
+  -o $DEPLOYMENT_DIR/admin-db-statefulset.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/admin-db-service.yaml \
+  -o $DEPLOYMENT_DIR/admin-db-service.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/admin-deployment.yaml \
+  -o $DEPLOYMENT_DIR/admin-deployment.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/admin-service.yaml \
+  -o $DEPLOYMENT_DIR/admin-service.yaml
+
+  cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/admin-deployment.yaml \
+  -o $DEPLOYMENT_DIR/admin-deployment.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/gateway-service.yaml \
+  -o $DEPLOYMENT_DIR/gateway-service.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/gateway-deployment.yaml \
+  -o $DEPLOYMENT_DIR/gateway-deployment.yaml

@@ -1,5 +1,5 @@
 {
-  "name": "pg-farm-admin-cli",
+  "name": "@ucd-lib/pg-farm-cli",
   "version": "0.0.1",
   "description": "PG Farm command line interface",
   "main": "index.js",

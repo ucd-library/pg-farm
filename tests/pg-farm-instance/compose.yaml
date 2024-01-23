@@ -1,10 +1,30 @@
 version: '3'
 
 services:
-  proxy:
+
+  gateway:
     image: localhost/local-dev/pg-farm-service:main  
     ports:
       - "5432:5432"
+      - "3000:80"
+    environment:
+      - GATEWAY_HTTP_ENABLED=true
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
+    env_file:
+      - .env
+    volumes:
+      - ./service-account.json:/etc/google/service-account.json
+      - ../../services/lib:/services/lib
+      - ../../services/pg-proxy:/services/pg-proxy
+      - ../../services/authenticator:/services/authenticator
+      - ../../services/administration:/services/administration
+      - ../../services/gateway:/services/gateway
+    command: npm run gateway
+
+  pg-proxy:
+    image: localhost/local-dev/pg-farm-service:main  
+    # ports:
+    #   - "5432:5432"
     environment:
       - PROXY_DEBUG=false
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
@@ -19,8 +39,8 @@ services:
 
   admin:
     image: localhost/local-dev/pg-farm-service:main  
-    ports:
-      - "3000:3000"
+    # ports:
+    #   - "3000:3000"
     environment:
       - SERVICE_PORT=3000
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json

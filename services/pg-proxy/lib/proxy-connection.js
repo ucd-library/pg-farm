@@ -161,6 +161,7 @@ class ProxyConnection extends EventEmitter {
     this.clientSocket.on('end', () => {
       logger.info('Client socket closed');
       this.emitStat('socket-closed', 1);
+      this.clientSocket = null;
       this.closeServerSocket();
     });
 
@@ -168,6 +169,7 @@ class ProxyConnection extends EventEmitter {
     this.clientSocket.on('error', err => {
       logger.error('Client socket error:', err);
       this.emitStat('socket-error', 1);
+      this.clientSocket = null;
       this.closeServerSocket();
     });
   }
@@ -284,6 +286,7 @@ class ProxyConnection extends EventEmitter {
     this.serverSocket.on('error', err => {
       this.emitStat('socket-error', 1);
       logger.error('Target socket error:', err);
+      this.serverSocket = null;
       this.closeClientSocket();
     });
 
@@ -291,6 +294,7 @@ class ProxyConnection extends EventEmitter {
     this.serverSocket.on('end', () => {
       this.emitStat('socket-closed', 1);
       logger.info('Target socket closed');
+      this.serverSocket = null;
 
       // if we still have a client socket, attempt reconnect
       if( this.clientSocket ) {
@@ -313,6 +317,10 @@ class ProxyConnection extends EventEmitter {
     logger.info('Attempting reconnect', this.instance.name, this.instance.port);
 
     try {
+      logger.info('Starting instance', this.instance.name);
+      await adminModel.startInstance(this.instance.name);
+
+      logger.info('Waiting for instance tcp port', this.instance.name);
       await utils.waitUntil(this.instance.hostname, this.instance.port, 20);
     } catch(e) {
       logger.fatal('Reconnect failed.  Killing client connection', this.instance.name, this.instance.port);
