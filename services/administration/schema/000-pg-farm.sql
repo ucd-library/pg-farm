@@ -120,5 +120,6 @@ CREATE TABLE IF NOT EXISTS pgfarm.k8s_config_property (
   k8s_config_property_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id),
   name text NOT NULL,
-  value text NOT NULL
+  value text NOT NULL,
+  UNIQUE(instance_id, name)
 );

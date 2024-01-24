@@ -88,9 +88,13 @@ class AdminModel {
     let hostname = opts.hostname || 'pg-'+name;
     let description = opts.description || '';
     let port = opts.port || 5432;
+    let imageName = opts.imageName || config.pgInstance.image;
 
     // add instance to database
     let id = await client.createInstance(name, hostname, description, port);
+
+    // add config
+    await client.setInstanceConfig(id, 'image', imageName);
 
     // create k8s statefulset and service
     // using ensure instance here in case the instance is already running
@@ -175,6 +179,9 @@ class AdminModel {
    */
   async startInstance(instNameOrId) {
     let instance = await client.getInstance(instNameOrId);
+    let customProps = await client.getInstanceConfig(instNameOrId);
+    let instanceImage = customProps.image || config.pgInstance.image;
+
     let hostname = instance.hostname;
 
     let k8sConfig = this.getTemplate('postgres');
@@ -188,7 +195,7 @@ class AdminModel {
     template.metadata.labels.app = hostname;
 
     let container = template.spec.containers[0];
-    container.image = config.pgInstance.image;
+    container.image = instanceImage;
     container.name = hostname;
     container.volumeMounts[0].name = hostname+'-ps';
 
@@ -348,6 +355,19 @@ class AdminModel {
         await pgInstClient.query(con, formattedQuery);
       }
     }
+  }
+
+  /**
+   * @method getInstances
+   * @description Returns a list of instances.  If username is provided, only
+   * instances that the user has access to will be returned.
+   * 
+   * @param {Object} opts
+   * @param {String} opts.username 
+   * @returns 
+   */
+  getInstances(opts={}) {
+    return client.getInstances(opts);
   }
 
 }

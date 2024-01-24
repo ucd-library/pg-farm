@@ -97,7 +97,8 @@ const config = {
     tables : {
       get INSTANCE() { return config.adminDb.schema+'.instance' },
       get DATABASE_USERS() { return config.adminDb.schema+'.database_user'},
-      get USER_TOKEN() { return config.adminDb.schema+'.user_token' }
+      get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
+      get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' },
     },
     views : {
       get INSTANCE_USERS() { return config.adminDb.schema+'.instance_database_user' }
@@ -105,7 +106,7 @@ const config = {
   },
 
   pgInstance : {
-    image : env.PG_INSTANCE_IMAGE || 'postgres:14',
+    image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
   },
 
   // Proxy configuration

@@ -64,3 +64,17 @@ $DOCKER_BUILD \
   --cache-from $PG_FARM_SERVICE_IMAGE:$PG_FARM_BRANCH \
   services
 push $PG_FARM_SERVICE_IMAGE
+
+get_tags $PG_FARM_PG_INSTANCE_IMAGE
+echo "Building $PG_FARM_PG_INSTANCE_IMAGE:$PG_FARM_BRANCH$TAG_LABEL"
+$DOCKER_BUILD \
+  $(echo $IMAGE_TAG_FLAGS) \
+  --build-arg PG_VERSION=${PG_VERSION} \
+  --build-arg PG_FARM_VERSION=${VERSION} \
+  --build-arg PG_FARM_REPO_TAG=${PG_FARM_TAG} \
+  --build-arg PG_FARM_REPO_BRANCH=${PG_FARM_BRANCH} \
+  --build-arg PG_FARM_REPO_HASH=${PG_FARM_SHA} \
+  --build-arg BUILD_DATETIME=${BUILD_DATETIME} \
+  --cache-from $PG_FARM_PG_INSTANCE_IMAGE:$PG_FARM_BRANCH \
+  pg-instance
+push $PG_FARM_PG_INSTANCE_IMAGE

@@ -17,4 +17,12 @@ program.command('add-user <instance> <user>')
     instance.addUser(instanceName, user);
   });
 
+program.command('list')
+  .description('List instances')
+  .option('-m, --mine', 'List only instances I have an account on')
+  .option('-i, --id', 'Include instance id in output')
+  .action(opts => {
+    instance.list(opts.mine, opts.id);
+  });
+
 program.parse(process.argv);

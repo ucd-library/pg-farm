@@ -15,6 +15,20 @@ router.post('/instance', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.get('/instance', keycloak.protect(), async (req, res) => {
+  try {
+    let opts = {};
+    if( req.query.onlyMine === 'true' ) {
+      opts.username = req.user.username;
+    }
+
+    let getUserInstances = await model.getInstances(opts);
+    res.json(getUserInstances);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.put('/:instance/:user', keycloak.protect('admin'), async (req, res) => {
   try {
     let instance = req.params.instance;

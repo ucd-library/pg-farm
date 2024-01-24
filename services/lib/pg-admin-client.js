@@ -79,6 +79,34 @@ class PgFarmAdminClient {
     return resp.rows[0].instance_id;
   }
 
+  async setInstanceConfig(nameOrId, name, value) {
+    let instance = await this.getInstance(nameOrId);
+
+    let resp = await client.query(`
+      INSERT INTO ${config.adminDb.tables.INSTANCE_CONFIG}
+      (instance_id, name, value)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (instance_id, name)
+      DO UPDATE SET value = EXCLUDED.value
+    `, [instance.instance_id, name, value]);
+  }
+
+  async getInstanceConfig(nameOrId) {
+    let instance = await this.getInstance(nameOrId);
+
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.tables.INSTANCE_CONFIG}
+      WHERE instance_id = $1
+    `, [instance.instance_id]);
+
+    let config = {};
+    for( let row of resp.rows ) {
+      config[row.name] = row.value;
+    }
+
+    return config;
+  }
+
   async createUser(nameOrId, username, password, type) {
     let instance = await this.getInstance(nameOrId);
 
@@ -109,6 +137,37 @@ class PgFarmAdminClient {
     } catch(e) {
       return false;
     }
+  }
+
+  async getInstances(opts={}) {
+
+    let type = '';
+    if( opts.username ) {
+      type = `, type`;
+    }
+
+    let SELECT = `SELECT database_name, instance_id${type} FROM ${config.adminDb.views.INSTANCE_USERS}`;
+    let args = [];
+
+    if( opts.username ) {
+      SELECT += ` WHERE username = $1`;
+      args.push(opts.username);
+    }
+
+    SELECT += ` GROUP BY database_name, instance_id${type} ORDER BY database_name`;
+
+    let resp = await client.query(SELECT, args);
+
+    return resp.rows.map(row => {
+      let v = {
+        name : row.database_name,
+        id : row.instance_id
+      }
+      if( opts.username ) {
+        v.role = row.type;
+      }
+      return v;
+    });
   }
 
   async getInstanceUsers(instNameOrId) {

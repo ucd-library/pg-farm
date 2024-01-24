@@ -18,7 +18,8 @@ const config = {
   host : env.PGFARM_HOST || localFile.host || 'http://localhost:3000',
   loginPath : env.PGFARM_LOGIN_PATH || localFile.loginPath || '/login',
   configFile : configFilePath,
-  token : localFile.token || null
+  token : localFile.token || null,
+  tokenHash : localFile.tokenHash || null
 }
 
 function save() {

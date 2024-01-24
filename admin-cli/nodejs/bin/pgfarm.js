@@ -15,7 +15,7 @@ const pkg = JSON.parse(
 program
   .name('pgfarm')
   .version(pkg.version)
-  .command('instance', 'manage instances (requires admin access)')
+  .command('instance', 'manage instances, view instances')
   .command('auth', 'log in/out of PG Farm')
   .command('config', 'setup cli');
 

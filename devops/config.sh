@@ -43,7 +43,12 @@ if [[ -z $REG_HOST ]]; then
   fi
 fi
 
+# Postgres Instance
+PG_VERSION=16
+
+# Image Names
 PG_FARM_SERVICE_IMAGE=$REG_HOST/pg-farm-service
+PG_FARM_PG_INSTANCE_IMAGE=$REG_HOST/pg-farm-instance
 
 # Google Cloud
 GC_PROJECT_ID=digital-ucdavis-edu
