@@ -12,7 +12,12 @@ program.command('login')
 
 program.command('token')
   .description('Print current user token')
-  .action(() => {
+  .option('-j, --jwt', 'Print full JWT token instead of the hash token')
+  .action(opts => {
+    if( opts.jwt ) {
+      console.log(config.token);
+      return;
+    }
     console.log(config.tokenHash);
   });
 

@@ -489,9 +489,22 @@ class ProxyConnection extends EventEmitter {
     }
 
     this.jwtUsername = this.parsedJwt.user.username || this.parsedJwt.user.preferred_username;
+    let roles = new Set();
+    (this.parsedJwt.roles || []).forEach(role => roles.add(role));
+    (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
+
+    let user = await adminClient.getUser(
+      this.startupProperties.database, 
+      this.startupProperties.user
+    );
+    
+    let isAdminAndPGuser = (
+      ( user.type === 'ADMIN' || roles.has('admin') ) && 
+      this.startupProperties.user === 'postgres'
+    );
 
     // provide pg username does not match jwt username
-    if( this.jwtUsername !== this.startupProperties.user ) {
+    if( !isAdminAndPGuser && this.jwtUsername !== this.startupProperties.user ) {
       this.sendError(
         'ERROR',
         this.ERROR_CODES.INVALID_PASSWORD,

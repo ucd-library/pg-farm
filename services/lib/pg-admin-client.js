@@ -99,12 +99,12 @@ class PgFarmAdminClient {
       WHERE instance_id = $1
     `, [instance.instance_id]);
 
-    let config = {};
+    let iconfig = {};
     for( let row of resp.rows ) {
-      config[row.name] = row.value;
+      iconfig[row.name] = row.value;
     }
 
-    return config;
+    return iconfig;
   }
 
   async createUser(nameOrId, username, password, type) {
