@@ -60,6 +60,7 @@ program.command('show')
       } else {
         console.log(`\n===============================================
 You can connect to your PG FARM Database using:\n
+export PGPASSWORD=$(pgfarm auth token)
 psql -U ${username} -h ${new URL(config.host).hostname} [database]
 
 or use the PGSERVICE environment variable:
