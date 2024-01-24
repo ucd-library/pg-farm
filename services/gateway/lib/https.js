@@ -16,6 +16,10 @@ function start() {
   const proxy = httpProxy.createProxyServer({
     // ignorePath : true
   });
+  proxy.on('error', (err, req, res) => {
+    logger.error('HTTP proxy error: '+err.message);
+    res.status(500).send('Internal server error');
+  });
 
   const certOpts = {
     key: fs.readFileSync(config.gateway.https.key),

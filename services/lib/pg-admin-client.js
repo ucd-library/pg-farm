@@ -1,4 +1,5 @@
 import PG from 'pg';
+import crypto from 'crypto';
 import config from './config.js';
 import logger from './logger.js';
 
@@ -118,6 +119,33 @@ class PgFarmAdminClient {
 
     return resp.rows;
   }
+
+  async setUserToken(token) {
+    const hash = 'urn:md5:'+crypto.createHash('md5').update(token).digest('base64');
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
+    const expires = new Date(payload.exp * 1000);
+
+    await client.query(`
+      INSERT INTO ${config.adminDb.tables.USER_TOKEN}
+      (token, hash, expires) VALUES ($1, $2, $3)
+    `, [token, hash, expires.toISOString()]);
+
+    return hash;
+  }
+
+  async getUserTokenFromHash(hash) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.tables.USER_TOKEN}
+      WHERE hash = $1
+    `, [hash]);
+
+    if( resp.rows.length === 0 ) {
+      return '';
+    }
+
+    return resp.rows[0].token;
+  }
+
 
 }
 

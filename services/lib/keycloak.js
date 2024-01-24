@@ -2,7 +2,6 @@ import fetch from 'node-fetch';
 import clone from 'clone';
 import config from './config.js';
 import adminClient from './pg-admin-client.js';
-
 class KeycloakUtils {
 
   constructor() {
@@ -54,6 +53,19 @@ class KeycloakUtils {
     this.initTls();
 
     token = token.replace(/^Bearer /i, '');
+
+    if( token.match(/^urn:/) ) {
+      token = await adminClient.getUserTokenFromHash(token);
+      if( !token ) {
+        return {
+          active : false,
+          status : 404,
+          user : null,
+          error : true,
+          message : 'Token not found from hash'
+        }
+      }
+    }
 
     // 30 second caching
     if( this.tokenCache.has(token) ) {

@@ -83,6 +83,15 @@ CREATE TABLE IF NOT EXISTS pgfarm.database_user (
 );
 CREATE INDEX IF NOT EXISTS database_user_username_idx ON pgfarm.database_user(username);
 
+CREATE TABLE IF NOT EXISTS pgfarm.user_token (
+    login_token_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    token text NOT NULL UNIQUE,
+    hash text NOT NULL,
+    expires timestamp NOT NULL,
+    created_at timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS user_token_hash_idx ON pgfarm.user_token(hash);
+
 CREATE OR REPLACE VIEW pgfarm.instance_database_user AS
   SELECT
     db.name as database_name,

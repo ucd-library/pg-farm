@@ -96,7 +96,8 @@ const config = {
 
     tables : {
       get INSTANCE() { return config.adminDb.schema+'.instance' },
-      get DATABASE_USERS() { return config.adminDb.schema+'.database_user'}
+      get DATABASE_USERS() { return config.adminDb.schema+'.database_user'},
+      get USER_TOKEN() { return config.adminDb.schema+'.user_token' }
     },
     views : {
       get INSTANCE_USERS() { return config.adminDb.schema+'.instance_database_user' }

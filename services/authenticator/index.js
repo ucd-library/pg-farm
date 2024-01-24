@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import keycloak from '../lib/keycloak.js';
 import config from '../lib/config.js';
+import pgAdminClient from '../lib/pg-admin-client.js';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -58,6 +59,8 @@ function register(app) {
 
   app.get('/auth/success', async (req, res) => { 
     let jwt = req.oidc.accessToken.access_token;
+
+    await pgAdminClient.setUserToken(jwt);
 
     res.set('PG-FARM-AUTHORIZED-TOKEN', jwt);
 

@@ -13,13 +13,19 @@ program.command('login')
 program.command('token')
   .description('Print current user token')
   .action(() => {
-    console.log(config.token);
+    console.log(config.tokenHash);
   });
 
 program.command('logout')
   .description('Logout current user')
   .action(() => {
     auth.logout();
+  });
+
+program.command('update-service')
+  .description('Update local .pg_service.conf file')
+  .action(() => {
+    auth.updateService();
   });
 
 program.parse(process.argv);

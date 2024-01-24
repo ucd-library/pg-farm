@@ -10,6 +10,10 @@ if( config.gateway.http.enabled ) {
   proxy = httpProxy.createProxyServer({
     // ignorePath : true
   });
+  proxy.on('error', (err, req, res) => {
+    logger.error('HTTP proxy error: '+err.message);
+    res.status(500).send('Internal server error');
+  });
 };
 
 if( config.gateway.http.enabled ) {

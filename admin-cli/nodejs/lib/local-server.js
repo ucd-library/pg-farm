@@ -4,6 +4,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import open from 'open';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import {config, save as saveConfig} from './config.js';
 
@@ -35,9 +36,19 @@ class LocalLoginServer {
       if( !jwt ) return;
 
       config.token = jwt;
+      const hash = 'urn:md5:'+crypto.createHash('md5').update(jwt).digest('base64');
+      config.tokenHash = hash;
+
       saveConfig();
 
       let hostname = new URL(config.host).hostname;
+
+      if( opts.onSuccess ) opts.onSuccess();
+
+      let parts = jwt.split('.');
+      let payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      let username = payload.username || payload.preferred_username;
+
 
       console.log(`Logged in successfully!
       
@@ -46,7 +57,7 @@ You can access token at any time by using 'pgfarm auth token'.  Alternatively, c
 the password to the PGPASSWORD environment variable. For example:
 
 export PGPASSWORD=$(pgfarm auth token)
-psql -U [username] -h ${hostname} [database]
+psql -U ${username} -h ${hostname} [database]
 ---------------------------------
 `);
 
