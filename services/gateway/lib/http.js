@@ -27,7 +27,7 @@ app.use((req, res) => {
     if( parseInt(config.gateway.http.targetPort) != 80 ) {
       target += ':'+config.gateway.http.targetPort;
     }
-    console.log('proxying to '+target)
+
     proxy.web(req, res, { target });
     return;
   }
