@@ -71,6 +71,15 @@ class PgFarmUtils {
     });
   }
 
+  closeSocket(socket) {
+    return new Promise((resolve, reject) => {
+      socket.end(() => {
+        socket.destroy();
+        resolve();
+      });
+    });
+  }
+
   sleep(ms=100) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

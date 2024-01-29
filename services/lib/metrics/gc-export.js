@@ -19,12 +19,11 @@ import resourceAttributes from "./resource-attributes.js";
 import fs from 'fs';
 
 const env = process.env;
-let serviceAccountFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || '/etc/fin/service-account.json';
-let serviceAccountExists = fs.existsSync(serviceAccountFile) && fs.lstatSync(serviceAccountFile).isFile();
+let serviceAccountFile = process.env.GOOGLE_APPLICATION_CREDENTIALS || '/etc/google/service-account.json';
+let serviceAccountExists = fs.existsSync(serviceAccountFile);
 if( serviceAccountExists && !env.GOOGLE_APPLICATION_CREDENTIALS ) {
   env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountFile;
 }
-
 
 function setup() {
 

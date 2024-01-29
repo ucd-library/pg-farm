@@ -27,6 +27,7 @@ services:
     #   - "5432:5432"
     environment:
       - PROXY_DEBUG=false
+      - LOG_LEVEL=info
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
     env_file:
       - .env

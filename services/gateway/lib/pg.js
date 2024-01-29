@@ -1,50 +1,107 @@
 import net from 'net';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
+import utils from '../../lib/utils.js';
+import PgFarmTcpServer from '../../lib/tcp-server/index.js';
 
-const proxyServer = net.createServer(clientSocket => {
-  let ip = clientSocket.remoteAddress;
-  logger.info('Gateway connection opened', ip);
-
-  clientSocket.on('error', err => {
-    logger.error('PG proxy client socket error', ip, err);
-    close(clientSocket, serverSocket);
-  });
-
-  clientSocket.on('end', () => {
-    logger.info('PG proxy client connection closed', ip);
-    close(clientSocket, serverSocket);
-  });
-
-  const serverSocket = net.createConnection({ 
-    host: config.gateway.pg.host, 
+let server = new PgFarmTcpServer({
+    name: 'gateway',
+    logging: true,
     port: config.gateway.pg.port
-  });
+  }, 
+  (clientSocket) => {
+    let serverSocket = server.createProxyConnection(
+      config.gateway.pg.host,
+      config.gateway.pg.port,
+      clientSocket
+    );
 
-  serverSocket.on('connect', () => {
-    serverSocket.pipe(clientSocket);
-    clientSocket.pipe(serverSocket);
-  });
+    serverSocket.on('connect', () => {
+      serverSocket.pipe(clientSocket);
+      clientSocket.pipe(serverSocket);
+    });
+  }
+);
 
-  serverSocket.on('error', err => {
-    logger.error('PG proxy server socket error', ip, err);
-    close(clientSocket, serverSocket);
-  });
+server.start();
 
-  serverSocket.on('end', () => {
-    logger.info('PG proxy server socket connection closed', ip);
-    close(clientSocket, serverSocket);
-  });
+// const proxyServer = net.createServer(clientSocket => {
+
+//   let ip = clientSocket.remoteAddress;
+//   logger.info('Gateway connection opened', ip);
+
+//   // TODO: this doesn't work when connecting to node client
+//   // let dataTimeout = setTimeout(() => {
+//   //   logger.info('Gateway connection data timed out', ip);
+//   //   close(clientSocket, serverSocket);
+//   // }, 5000);
+
+//   // clientSocket.once('data', () => {
+//   //   clearTimeout(dataTimeout);  
+//   //   console.log('ere');
+//   // });
+
+//   clientSocket.on('error', err => {
+//     logger.error('Gateway client socket on error event', ip, err);
+//     close(clientSocket, serverSocket);
+//   });
+
+//   clientSocket.on('end', () => {
+//     logger.info('Gateway client socket on end event', ip);
+//     close(clientSocket, serverSocket);
+//   });
+
+//   const serverSocket = net.createConnection({ 
+//     host: config.gateway.pg.host, 
+//     port: config.gateway.pg.port
+//   });
+
+//   serverSocket.on('connect', () => {
+//     logger.info('Gateway server socket connected', config.gateway.pg.host+':'+config.gateway.pg.port);
+//     serverSocket.pipe(clientSocket);
+//     clientSocket.pipe(serverSocket);
+//   });
+
+//   serverSocket.on('error', err => {
+//     logger.error('Gateway server socket on error event', ip, err);
+//     close(clientSocket, serverSocket);
+//   });
+
+//   serverSocket.on('end', () => {
+//     logger.info('Gateway server socket on end event', ip);
+//     close(clientSocket, serverSocket);
+//   });
+
+// });
+
+// metrics.registerServer(proxyServer);
 
 
-});
+// async function close(client, server) {
+//   try {
+//     await utils.closeSocket(client);
+//     logger.info('Closed client socket successfully');
+//   } catch(e) {
+//     logger.error('Failed to close client socket', e);
+//   }
 
-function close(client, server) {
-  client.end();
-  server.end();
-}
+//   try {
+//     await utils.closeSocket(server);
+//     logger.info('Closed server socket successfully');
+//   } catch(e) {
+//     logger.error('Failed to close server socket', e);
+//   }
+// }
 
-// Start the proxy server
-proxyServer.listen(config.gateway.pg.port, () => {
-  logger.info(`PG Farm Gateway PostgreSQL TCP proxy server is running on port ${config.gateway.pg.port}`);
-});
+// proxyServer.on('error', err => {
+//   logger.error('Proxy server on error event', err);
+// });
+
+// proxyServer.on('drop', e => {
+//   logger.error('Proxy server on drop event', e);
+// });
+
+// // Start the proxy server
+// proxyServer.listen(config.gateway.pg.port, () => {
+//   logger.info(`PG Farm Gateway PostgreSQL TCP proxy server is running on port ${config.gateway.pg.port}`);
+// });

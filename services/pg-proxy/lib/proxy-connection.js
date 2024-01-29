@@ -30,11 +30,11 @@ const tlsOptions = {
 
 class ProxyConnection extends EventEmitter {
 
-  constructor(clientSocket, serverSocket) {
+  constructor(clientSocket, server) {
     super();
 
     this.clientSocket = clientSocket;
-    this.serverSocket = serverSocket;
+    this.server = server;
     this.firstMessage = true;
     this.targetPort = config.proxy.targetPort;
 
@@ -73,7 +73,11 @@ class ProxyConnection extends EventEmitter {
       INVALID_PASSWORD: '28P01'
     }
 
-    this.debugEnabled = config.proxy.debug === 'true';
+    this.debugEnabled = config.proxy.debug;
+    if( this.debugEnabled ) {
+      logger.warn('Proxy debug enabled');
+    }
+
 
     // for replaying startup message on reconnect
     this.startUpMsg = null;
@@ -85,11 +89,18 @@ class ProxyConnection extends EventEmitter {
   }
 
   getConnectionInfo() {
-    return {
-      ip: this.clientSocket?.remoteAddress,
-      database: this.startupProperties?.database,
-      user: this.startupProperties?.user,
+    let info = {};
+    if( this.clientSocket ) {
+      info.client = this.clientSocket.remoteAddress;
     }
+    if( this.serverSocket ) {
+      info.server = this.serverSocket.remoteAddress;
+    }
+    if( this.startupProperties ) {
+      info.database = this.startupProperties.database;
+      info.user = this.startupProperties.user;
+    }
+    return info;
   }
 
   /**
@@ -136,13 +147,25 @@ class ProxyConnection extends EventEmitter {
         try {
           let success = await this.initServerSocket();
           if (!success) {
-            this.closeClientSocket();
+            this.closeSockets();
             return;
           }
+
+          this.server.setSocketProperties(this.clientSocket, {
+            hostname: this.instance.hostname,
+            database: this.startupProperties.database,
+            user: this.startupProperties.user
+          });
+
+          this.server.setSocketProperties(this.serverSocket, {
+            hostname: this.instance.hostname,
+            database: this.startupProperties.database,
+            user: this.startupProperties.user
+          });
+
         } catch (e) {
           logger.error('Error initializing server socket', this.getConnectionInfo(), e);
-          this.closeClientSocket();
-          this.closeServerSocket();
+          this.closeSockets();
           return;
         }
 
@@ -169,32 +192,44 @@ class ProxyConnection extends EventEmitter {
     });
 
     // Handle client socket closure
-    this.clientSocket.on('end', () => {
-      logger.info('Client socket closed', this.getConnectionInfo());
-      this.emitStat('socket-closed', 1);
-      this.clientSocket = null;
-      this.closeServerSocket();
-    });
+    // this.clientSocket.on('end', () => {
+    //   this.closeSockets();
+    // });
 
     // Handle errors
-    this.clientSocket.on('error', err => {
-      logger.error('Client socket error', this.getConnectionInfo(), err);
-      this.emitStat('socket-error', 1);
+    // this.clientSocket.on('error', err => {
+    //   logger.error('Client socket error', this.getConnectionInfo(), err);
+    //   this.emitStat('socket-error', {socket: 'client'});
+    //   this.closeSockets();
+    // });
+  }
+
+  async closeSockets() {
+    if( this.clientSocket && !this.closingClientSocket ) {
+      this.closingClientSocket = true;
+      try {
+        await utils.closeSocket(this.clientSocket);
+        logger.info('Client socket closed', this.getConnectionInfo());
+        // this.emitStat('socket-closed', {socket: 'client'});
+      } catch(e) {
+        logger.error('Error closing client socket', this.getConnectionInfo(), e);
+      }
       this.clientSocket = null;
-      this.closeServerSocket();
-    });
-  }
+      this.closingClientSocket = false;
+    }
 
-  closeServerSocket() {
-    if (!this.serverSocket) return;
-    this.serverSocket.end();
-    this.serverSocket = null;
-  }
-
-  closeClientSocket() {
-    if (!this.clientSocket) return;
-    this.clientSocket.end();
-    this.clientSocket = null;
+    if( this.serverSocket && !this.closingServerSocket ) {
+      this.closingServerSocket = true;
+      try {
+        await utils.closeSocket(this.serverSocket);
+        logger.info('Server socket closed', this.getConnectionInfo());
+        // this.emitStat('socket-closed', {socket: 'server'});
+      } catch(e) {
+        logger.error('Error closing server socket', this.getConnectionInfo(), e);
+      }
+      this.serverSocket = null;
+      this.closingServerSocket = false;
+    }
   }
 
   async initServerSocket() {
@@ -249,10 +284,11 @@ class ProxyConnection extends EventEmitter {
    * @description create a socket connection to the target postgres server
    */
   createServerSocket() {
-    this.serverSocket = net.createConnection({
-      host: this.instance.hostname,
-      port: this.instance.port
-    });
+    this.serverSocket = this.server.createProxyConnection(
+      this.instance.hostname,
+      this.instance.port,
+      this.clientSocket
+    );
 
     // When the target server sends data, forward it to the client
     this.serverSocket.on('data', async data => {
@@ -284,34 +320,33 @@ class ProxyConnection extends EventEmitter {
     });
 
     this.serverSocket.on('connect', () => {
-      this.emitStat('socket-connect', {socket: 'server'});
-
       if (this.awaitingReconnect) {
         logger.info('Resending startup message', this.instance.name, this.instance.port, this.startupProperties.user);
         this.serverSocket.write(this.startUpMsg);
       }
     });
 
-    this.serverSocket.on('error', err => {
-      this.emitStat('socket-error', {socket: 'server'});
-      logger.error('Target socket error', this.getConnectionInfo(), err);
-      this.serverSocket = null;
-      this.closeClientSocket();
-    });
+    // this.serverSocket.on('error', err => {
+    //   this.emitStat('socket-error', {socket: 'server'});
+    //   logger.error('Server socket erro event', this.getConnectionInfo(), err);
+    //   this.closeSockets();
+    // });
 
     // Handle target socket closure
-    this.serverSocket.on('end', () => {
-      this.emitStat('socket-closed', {socket: 'server'});
-      logger.info('Target socket closed', this.getConnectionInfo());
-      this.serverSocket = null;
+    this.serverSocket.on('end', async () => {
+      // logger.info('Server socket end event', this.getConnectionInfo());
 
-      // if we still have a client socket, attempt reconnect
-      if (this.clientSocket) {
-        this.reconnect();
-        return;
+      // if we still have a client socket, and the server is unavailable, attempt reconnect
+      // which will start the instance
+      if ( this.clientSocket?.readyState === 'open' ) {
+        let isAlive = await utils.isAlive(this.instance.hostname, this.instance.port);
+        if( !isAlive ) {
+          this.emitStat('socket-closed', {socket: 'server'});
+          this.serverSocket.destroy();
+          this.reconnect();
+          return;
+        }
       }
-
-      this.closeClientSocket();
     });
   }
 
@@ -338,7 +373,7 @@ class ProxyConnection extends EventEmitter {
       }
       await utils.sleep(100);
 
-      this.closeClientSocket();
+      this.closeSockets();
       return;
     }
 
@@ -693,15 +728,16 @@ class ProxyConnection extends EventEmitter {
    */
   debug(socket, data) {
     if (!this.debugEnabled) return;
+  
 
     if (data instanceof Buffer) {
-      logger.debug({
+      logger.info({
         socket,
         data: '0x' + data.toString('hex'),
         string: data.toString('utf8')
       });
     } else {
-      logger.debug({
+      logger.info({
         socket,
         message: data
       });

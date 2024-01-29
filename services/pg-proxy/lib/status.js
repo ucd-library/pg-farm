@@ -1,14 +1,13 @@
 import keycloak from '../../lib/keycloak.js';
 import metrics from '../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
+import logger from '../../lib/logger.js';
 
 const metricRoot = 'pgfarm.pg-proxy.';
 
 class ProxyStatus {
 
   constructor() {
-    this.DISCONNECT_TYPES = ['socket-error', 'socket-closed'];
-
     this.data = {};
     this.reset();
 
@@ -38,42 +37,21 @@ class ProxyStatus {
       }
     });
 
-    const errors = meter.createObservableGauge(metricRoot+'socket-errors',  {
-      description: 'Error proxy socket errors',
+    const queryCount = meter.createObservableGauge(metricRoot+'queries',  {
+      description: 'Queries sent to a PG Farm database',
       unit: '',
       valueType: ValueType.INT,
     });
-    errors.addCallback(async result => {
-      for( let dbName in this.data.socketErrors.client ) {
-        result.observe(this.data.socketErrors.client[dbName], {
-          type: 'client', 
-          db: dbName
-        });
-
-        this.data.socketErrors.client[dbName] = 0;
-      }
-      for( let dbName in this.data.socketErrors.client ) {
-        result.observe(this.data.socketErrors.client[dbName], {
-          type: 'server', 
-          db: dbName
-        });
-        this.data.socketErrors.client[dbName] = 0;
-      }
+    queryCount.addCallback(async result => {
+      result.observe(this.data.queryCount);
+      this.data.queryCount = 0;
     });
   }
 
   reset() {
     this.data = {
-      connections : {
-        client : {},
-        server : {}
-      },
-      socketErrors : {
-        client : {},
-        server : {}
-      },
-      instanceStarts: [],
-      errors : []
+      queryCount : 0,
+      instanceStarts: []
     };
   }
 
@@ -82,46 +60,21 @@ class ProxyStatus {
     return this.data;
   }
 
-  register(proxyConnection) {
+  registerConnection(proxyConnection) {
     proxyConnection.on('stat', data => this._onSocketMessage(data, proxyConnection));
   }
 
   _onSocketMessage(msg, proxyConnection) {
-    if( this.DISCONNECT_TYPES.includes(msg.type) ) {
-      proxyConnection.removeEventListeners();
-    }
-
-    let socket = msg.data.socket;
+    let socket = msg.socket || msg.data.socket;
     let dbName = proxyConnection.startupProperties?.database;
 
     if( !dbName ) return;
 
     if( msg.type === 'query' ) {
-      // this.inc('query', proxyConnection.dbName);
-    } else if( msg.type === 'socket-error' ) {
-      if( !this.data.socketErrors[socket][dbName] ) {
-        this.data.socketErrors[socket][dbName] = 0;
-      }
-      this.data.socketErrors[socket][dbName]++;
-
-      this.incCon(socket, dbName, -1);
-    } else if( msg.type === 'socket-closed' ) {
-      this.incCon(socket, dbName, -1);
-    } else if( msg.type === 'socket-connect' ) {
-      this.incCon(socket, dbName, 1);
-    } else if( msg.type === 'error' ) {
-      this.data.errors.push(msg.data);
+      this.data.queryCount++;
     } else if( msg.type === 'instance-start' ) {
       this.data.instanceStarts.push(msg.data);
     }
-  }
-
-  incCon(socket, db, amount) {
-    if( !this.data.connections[socket][db] ) {
-      this.data.connections[socket][db] = 0;
-    }
-
-    this.data.connections[socket][db] += amount;
   }
 
 }

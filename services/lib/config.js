@@ -31,6 +31,10 @@ const config = {
     level : env.LOG_LEVEL || 'info'
   },
 
+  metrics : {
+    enabled : env.METRICS_ENABLED === 'true',
+  },
+
   service : {
     url : SERVICE_URL,
     port : PORT
