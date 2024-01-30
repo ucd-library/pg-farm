@@ -23,6 +23,21 @@ class KeycloakUtils {
     }
   }
 
+  async getJWKS() {
+    this.initTls();
+
+    if( this.jwks ) {
+      return this.jwks;
+    }
+
+    let resp = await fetch(config.oidc.baseUrl+'/protocol/openid-connect/certs')
+    this.jwks = await resp.json();
+
+    setTimeout(() => this.jwks = null, 1000 * 60 * 60);
+
+    return this.jwks;
+  }
+
   async loginServiceAccount(username, secret) {
     this.initTls();
 

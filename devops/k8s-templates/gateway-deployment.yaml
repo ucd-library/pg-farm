@@ -23,6 +23,12 @@ spec:
           value : "/etc/google/service-account.json"
         - name : "GATEWAY_HTTP_ENABLED"
           value : "true"
+        - name: METRICS_ENABLED
+          value: "true"
+        - name: METRICS_EXPORT_GC
+          value: "true"
+        - name: SERVICE_NAME
+          value: "gateway"
         envFrom:
         - secretRef:
             name: pg-farm-env

@@ -65,12 +65,14 @@ class ProxyStatus {
   }
 
   _onSocketMessage(msg, proxyConnection) {
-    let socket = msg.socket || msg.data.socket;
-    let dbName = proxyConnection.startupProperties?.database;
+    let dbName = msg.database || proxyConnection.startupProperties?.database;
 
-    if( !dbName ) return;
 
     if( msg.type === 'query' ) {
+      // if( !this.data.queryCount[dbName]  ) {
+      //   this.data.queryCount[dbName] = 0;
+      // }
+      
       this.data.queryCount++;
     } else if( msg.type === 'instance-start' ) {
       this.data.instanceStarts.push(msg.data);

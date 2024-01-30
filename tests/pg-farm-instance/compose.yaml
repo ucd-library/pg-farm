@@ -65,6 +65,23 @@ services:
     volumes:
       - pg-admin-data:/var/lib/postgresql/data
 
+  pgrest:
+    image: localhost/local-dev/pg-farm-service:main  
+    ports:
+      - "3001:3000"
+    environment:
+      - PGREST_INSTANCE_NAME=test
+    env_file:
+      - .env
+    volumes:
+      - ../../services/lib:/services/lib
+      - ../../services/pg-proxy:/services/pg-proxy
+      - ../../services/authenticator:/services/authenticator
+      - ../../services/administration:/services/administration
+      - ../../services/gateway:/services/gateway
+      - ../../services/pg-rest:/services/pg-rest
+    command: ./pg-rest/run.sh
+
   pg-test:
     build: ../../pg-instance
     environment:

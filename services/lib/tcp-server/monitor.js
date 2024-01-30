@@ -85,8 +85,8 @@ class ProxyMonitor {
           name : this.name,
           type: event
         });
+        this.data.serverEvents[event] = 0;
       }
-      this.data.serverEvents = {};
     });
 
     const clientEvents = meter.createObservableGauge(metricRoot+'socket-events',  {
@@ -101,8 +101,8 @@ class ProxyMonitor {
           name : this.name,
           event, type
         });
+        this.data.socketEvents[key] = 0;
       }
-      this.data.socketEvents = {};
     });
   }
 
@@ -144,10 +144,9 @@ class ProxyMonitor {
     }
 
     if( this.opts.logging ) {
-      if( this.opts.logDataEvents ) {
-        data = null;
-      } else {
-        return;
+      if( event === 'data' ) {
+        if( this.opts.logDataEvents ) data = null;
+        else return;
       }
 
       let lt = 'info';

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 
+spec:
+  selector:
+    matchLabels:
+      app:  
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app:  
+    spec:
+      containers:
+      - name: 
+        image: 
+        command: ["/services/pg-rest/run.sh"]
+        imagePullPolicy: Always
+        env:
+        - name: PGREST_INSTANCE_NAME
+          value: 
+        resources:
+          limits:
+            memory: "500Mi"
+            cpu: "1"
+          requests:
+            memory: "100Mi"
+            cpu: "0.2"
+        ports:
+        - containerPort: 3000
+      nodeSelector:
+        intendedfor: instance-pool

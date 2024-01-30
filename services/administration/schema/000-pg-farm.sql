@@ -123,3 +123,18 @@ CREATE TABLE IF NOT EXISTS pgfarm.k8s_config_property (
   value text NOT NULL,
   UNIQUE(instance_id, name)
 );
+
+CREATE OR REPLACE FUNCTION pgfarm.remove_instance(name_in text)
+  RETURNS void AS
+$$
+DECLARE
+  iid UUID;
+BEGIN
+  SELECT instance_id INTO iid FROM pgfarm.instance WHERE name = name_in;
+  DELETE FROM pgfarm.database_user WHERE instance_id = iid;
+  DELETE FROM pgfarm.pg_rest_config WHERE instance_id = iid;
+  DELETE FROM pgfarm.k8s_config_property WHERE instance_id = iid;
+  DELETE FROM pgfarm.instance WHERE instance_id = iid;
+END;
+$$
+LANGUAGE plpgsql;

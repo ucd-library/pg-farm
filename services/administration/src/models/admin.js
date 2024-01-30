@@ -123,10 +123,34 @@ class AdminModel {
     }
 
     // create postgres user to database
-    await this.createUser(id, 'postgres', 'ADMIN', 'postgres');
+    await this.createUser(id, 'postgres');
 
-    // create admin user to database
-    await this.resetPassword(id, 'postgres');
+    // setup pg rest
+    // https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
+
+    // add public user
+    await this.createUser(id, config.pgInstance.publicRole.username);
+
+    // add authenticator user
+    await this.createUser(id, config.pgRest.authenticator.username);
+
+    let con = await this.getConnection(id);
+
+    // create the api schema
+    let formattedQuery = pgFormat('CREATE SCHEMA %s', config.pgRest.schema);
+    let resp = await pgInstClient.query(con, formattedQuery);
+
+    // grant usage on the api schema to the public role
+    formattedQuery = pgFormat('GRANT USAGE ON SCHEMA %s TO "%s"', 
+      config.pgRest.schema, config.pgInstance.publicRole.username
+    );
+    resp = await pgInstClient.query(con, formattedQuery);
+
+    // grant the public role to the authenticator user
+    formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
+      config.pgInstance.publicRole.username, config.pgRest.authenticator.username
+    );
+    resp = await pgInstClient.query(con, formattedQuery);
 
     return id;
   }
@@ -138,10 +162,24 @@ class AdminModel {
    * @param {String} instNameOrId  PG Farm instance name or ID 
    * @param {String} user username 
    * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER. 
+   * @param {String} password optional.  defined password.  If not 
+   * provided, a random password will be generated.
    * 
    * @returns {Promise}
    */
-  async createUser(instNameOrId, user, type='USER', password) {
+  async createUser(instNameOrId, user, type='USER', password, noinherit=false) {
+
+    if( user === config.pgInstance.publicRole.username ) {
+      type = 'PUBLIC';
+      password = config.pgInstance.publicRole.password;
+    } else if( user === config.pgRest.authenticator.username ) {
+      type = 'PGREST';
+      noinherit = true;
+    } else if( user === config.pgInstance.adminRole ) {
+      type = 'ADMIN';
+      password = 'postgres';
+    }
+
     // create new random password
     if( !password ) {
       password = utils.generatePassword();
@@ -150,8 +188,11 @@ class AdminModel {
     // add user to database
     await client.createUser(instNameOrId, user, password, type);
 
-    // TODO: make this global
-    if( user === 'postgres' ) return;
+    // postgres user already exists.  Update password
+    if( user === config.pgInstance.adminRole ) {
+      await this.resetPassword(instNameOrId, config.pgInstance.adminRole);
+      return;
+    }
 
     // make sure pg is running
     await this.ensureInstanceRunning(instNameOrId);
@@ -160,7 +201,10 @@ class AdminModel {
     let con = await this.getConnection(instNameOrId);
 
     // add user to postgres
-    let formattedQuery = pgFormat('CREATE USER %s WITH PASSWORD %L', user, password);
+    if( noinherit ) noinherit = 'NOINHERIT';
+    else noinherit = '';
+
+    let formattedQuery = pgFormat('CREATE ROLE "%s" LOGIN '+noinherit+' PASSWORD %L', user, password);
     let resp = await pgInstClient.query(
       con, 
       formattedQuery,
@@ -184,6 +228,7 @@ class AdminModel {
 
     let hostname = instance.hostname;
 
+    // Postgres
     let k8sConfig = this.getTemplate('postgres');
     k8sConfig.metadata.name = hostname;
     
@@ -206,6 +251,7 @@ class AdminModel {
       isJson: true
     });
 
+    // Postgres Service
     k8sConfig = this.getTemplate('postgres-service');
     k8sConfig.metadata.name = hostname;
     k8sConfig.spec.selector.app = hostname;
@@ -216,6 +262,44 @@ class AdminModel {
     });
 
     return {pgResult, pgServiceResult};
+  }
+
+  async startPgRest(instNameOrId) {
+    let instance = await client.getInstance(instNameOrId);
+
+    // PostgREST
+    let hostname = 'pgrest-'+instance.name;
+    let k8sConfig = this.getTemplate('pgrest');
+    k8sConfig.metadata.name = hostname;
+    
+    let spec = k8sConfig.spec;
+    spec.selector.matchLabels.app = hostname;
+
+    let template = spec.template;
+    template.metadata.labels.app = hostname;
+
+    let container = template.spec.containers[0];
+    container.image = config.pgRest.image;
+    container.name = hostname;
+
+    container.env[0].value = instance.name;
+
+    let pgrestResult = await kubectl.apply(k8sConfig, {
+      stdin: true,
+      isJson: true
+    });
+
+    // PostgREST
+    k8sConfig = this.getTemplate('pgrest-service');
+    k8sConfig.metadata.name = hostname;
+    k8sConfig.spec.selector.app = hostname;
+
+    let pgrestServiceResult = await kubectl.apply(k8sConfig, {
+      stdin:true,
+      isJson: true
+    });
+
+    return {pgrestResult, pgrestServiceResult};
   }
 
   /**

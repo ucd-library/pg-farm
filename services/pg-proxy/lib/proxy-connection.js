@@ -40,6 +40,8 @@ class ProxyConnection extends EventEmitter {
 
     this.SSL_REQUEST = 0x04D2162F;
 
+    this.ALLOWED_USER_TYPES = ['ADMIN', 'USER', 'PUBLIC'];
+
     this.MESSAGE_CODES = {
       PASSWORD: 0x70,
       SEND_PASSWORD: 0x52,
@@ -141,12 +143,15 @@ class ProxyConnection extends EventEmitter {
 
       // first message provides the connection properties
       if (this.firstMessage) {
-        logger.info('client handling first message', this.getConnectionInfo());
+        logger.info('client handling startup message', data.length, this.getConnectionInfo());
         this.parseStartupMessage(data);
+        logger.info('startup message parsed', this.getConnectionInfo());
 
         try {
+          // this checks if user has access to database
           let success = await this.initServerSocket();
           if (!success) {
+            logger.info('invalid user access, closing connection', this.getConnectionInfo());
             this.closeSockets();
             return;
           }
@@ -169,9 +174,7 @@ class ProxyConnection extends EventEmitter {
           return;
         }
 
-        // sending now, as we now now the database name
-        this.emitStat('socket-connect', {socket: 'client'});
-
+        // now just proxy messsage
         logger.info('client startup message parsed', this.getConnectionInfo());
       }
 
@@ -184,7 +187,7 @@ class ProxyConnection extends EventEmitter {
 
       // check for query message, if so, emit stats
       if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
-        this.emitStat('query', 1);
+        this.emitStat('query', {database: this.startupProperties.database});
       }
 
       // else, just proxy message
@@ -236,6 +239,8 @@ class ProxyConnection extends EventEmitter {
     if (!this.startupProperties) return;
     if (!this.startupProperties.database) return;
 
+    logger.info('Initializing server socket', this.getConnectionInfo());
+
     // before attempt connection, check user is registered with database
     let user;
     try {
@@ -245,7 +250,14 @@ class ProxyConnection extends EventEmitter {
       );
     } catch (e) { }
 
-    if (!user) {
+    let userError = false;
+    if( !user ) {
+      userError = true;
+    } else if( !this.ALLOWED_USER_TYPES.includes(user.type) ) {
+      userError = true;
+    }
+
+    if ( userError ) {
       this.sendError(
         'ERROR',
         '28P01',
@@ -274,7 +286,7 @@ class ProxyConnection extends EventEmitter {
       });
     }
 
-    this.createServerSocket();
+    await this.createServerSocket();
 
     return true;
   }
@@ -284,69 +296,78 @@ class ProxyConnection extends EventEmitter {
    * @description create a socket connection to the target postgres server
    */
   createServerSocket() {
-    this.serverSocket = this.server.createProxyConnection(
-      this.instance.hostname,
-      this.instance.port,
-      this.clientSocket
-    );
+    return new Promise((resolve, reject) => {
+      let first = true;
 
-    // When the target server sends data, forward it to the client
-    this.serverSocket.on('data', async data => {
-      this.debug('server', data);
-
-      // check for shutdown message can capture
-      // TODO: should we send this if reconnect fails??
-      if (data.length && data[0] === this.MESSAGE_CODES.ERROR) {
-        let error = this.parseError(data);
-        if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
-          this.shutdownMsg = data;
-          logger.info('Ignoring admin shutdown message, reconnect in progress', (this.awaitingReconnect ? true : false));
-          // we will handle later
+      this.serverSocket = this.server.createProxyConnection(
+        this.instance.hostname,
+        this.instance.port,
+        this.clientSocket
+      );
+  
+      // When the target server sends data, forward it to the client
+      this.serverSocket.on('data', async data => {
+        this.debug('server', data);
+  
+        // check for shutdown message can capture
+        // TODO: should we send this if reconnect fails??
+        if (data.length && data[0] === this.MESSAGE_CODES.ERROR) {
+          let error = this.parseError(data);
+          if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
+            this.shutdownMsg = data;
+            logger.info('Ignoring admin shutdown message, reconnect in progress', (this.awaitingReconnect ? true : false));
+            // we will handle later
+            return;
+          }
+        }
+  
+        // hijack the authentication ok message and send password to quietly 
+        // reestablish connection
+        if (this.awaitingReconnect) {
+          this.handleReconnectServerMessage(data);
+  
+          // if not a password message, just ignore during reconnect
           return;
         }
-      }
-
-      // hijack the authentication ok message and send password to quietly 
-      // reestablish connection
-      if (this.awaitingReconnect) {
-        this.handleReconnectServerMessage(data);
-
-        // if not a password message, just ignore during reconnect
-        return;
-      }
-
-      // if not reconnect, just proxy server message to client
-      this.clientSocket.write(data);
-    });
-
-    this.serverSocket.on('connect', () => {
-      if (this.awaitingReconnect) {
-        logger.info('Resending startup message', this.instance.name, this.instance.port, this.startupProperties.user);
-        this.serverSocket.write(this.startUpMsg);
-      }
-    });
-
-    // this.serverSocket.on('error', err => {
-    //   this.emitStat('socket-error', {socket: 'server'});
-    //   logger.error('Server socket erro event', this.getConnectionInfo(), err);
-    //   this.closeSockets();
-    // });
-
-    // Handle target socket closure
-    this.serverSocket.on('close', async () => {
-      // logger.info('Server socket end event', this.getConnectionInfo());
-
-      // if we still have a client socket, and the server is unavailable, attempt reconnect
-      // which will start the instance
-      if ( this.clientSocket?.readyState === 'open' ) {
-        let isAlive = await utils.isAlive(this.instance.hostname, this.instance.port);
-        if( !isAlive ) {
-          this.emitStat('socket-closed', {socket: 'server'});
-          this.serverSocket.destroy();
-          this.reconnect();
-          return;
+  
+        // if not reconnect, just proxy server message to client
+        this.clientSocket.write(data);
+      });
+  
+      this.serverSocket.on('connect', () => {
+        if( first ) {
+          resolve();
+          first = false;
         }
-      }
+
+        if (this.awaitingReconnect) {
+          logger.info('Resending startup message', this.instance.name, this.instance.port, this.startupProperties.user);
+          this.serverSocket.write(this.startUpMsg);
+        }
+      });
+  
+      // this.serverSocket.on('error', err => {
+      //   this.emitStat('socket-error', {socket: 'server'});
+      //   logger.error('Server socket erro event', this.getConnectionInfo(), err);
+      //   this.closeSockets();
+      // });
+  
+      // Handle target socket closure
+      this.serverSocket.on('close', async () => {
+        // logger.info('Server socket end event', this.getConnectionInfo());
+  
+        // if we still have a client socket, and the server is unavailable, attempt reconnect
+        // which will start the instance
+        if ( this.clientSocket?.readyState === 'open' ) {
+          let isAlive = await utils.isAlive(this.instance.hostname, this.instance.port);
+          if( !isAlive ) {
+            this.emitStat('socket-closed', {socket: 'server'});
+            this.serverSocket.destroy();
+            this.reconnect();
+            return;
+          }
+        }
+      });
     });
   }
 
@@ -451,7 +472,7 @@ class ProxyConnection extends EventEmitter {
     let startupProperties = {};
 
     while (offset < params.length) {
-      while (values[0] !== 0) {
+      while (values[0] !== 0 && offset < params.length) {
         message = Buffer.concat([message, values]);
         values = params.subarray(offset, offset + 1);
         offset += 1;

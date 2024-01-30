@@ -111,6 +111,20 @@ const config = {
 
   pgInstance : {
     image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
+    adminRole : env.PG_INSTANCE_ADMIN_ROLE || 'postgres',
+    publicRole : {
+      username : env.PG_INSTANCE_PUBLIC_ROLE || 'pgfarm-public',
+      password : env.PG_INSTANCE_PUBLIC_PASSWORD || 'go-aggies',
+    }
+  },
+
+  pgRest : {
+    image : env.PG_REST_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-service:main',
+    authenticator : {
+      username : env.PG_REST_AUTHENTICATOR_USERNAME || 'pgfarm-authenticator'
+    },
+    schema : env.PG_REST_SCHEMA || 'api',
+    port : env.PG_REST_PORT || 3000,
   },
 
   // Proxy configuration

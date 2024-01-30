@@ -1,3 +1,6 @@
+# install postgrest
+FROM postgrest/postgrest:v12.0.2 as postgrest
+
 FROM node:20
 
 RUN apt update && apt install -y \
@@ -5,7 +8,8 @@ RUN apt update && apt install -y \
     apt-transport-https \
     ca-certificates \
     gnupg \
-    curl 
+    curl \
+    postgresql-client
 
 RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -14,6 +18,8 @@ RUN echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://p
 RUN apt-get update && apt-get install google-cloud-cli kubectl google-cloud-sdk-gke-gcloud-auth-plugin
 
 RUN rm -rf /var/lib/apt/lists/*
+
+COPY --from=postgrest /bin/postgrest /bin/postgrest
 
 RUN mkdir /services
 WORKDIR /services
