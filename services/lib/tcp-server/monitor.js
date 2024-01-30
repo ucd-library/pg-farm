@@ -144,7 +144,11 @@ class ProxyMonitor {
     }
 
     if( this.opts.logging ) {
-      if( event === 'data' ) return;
+      if( this.opts.logDataEvents ) {
+        data = null;
+      } else {
+        return;
+      }
 
       let lt = 'info';
       if( event.toLowerCase().match(/(error|timeout|failed)/) ) {
@@ -177,7 +181,7 @@ class ProxyMonitor {
         lt = 'error';
       }
 
-      if( data ) {
+      if( !data ) {
         logger[lt](this.name+' server event', event);
       } else {
         logger[lt](this.name+' server event', event, data);

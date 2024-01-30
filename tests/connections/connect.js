@@ -10,8 +10,8 @@ async function run() {
 
   for( let i = 0; i < connections; i++ ) {
     let c = new PG.Client({
-      host : 'pgfarm.justinmerz.net',
-      database : 'testing',
+      host : 'localhost',
+      database : 'test',
       password : process.env.PGPASSWORD,
       port : 5432,
       user : 'jrmerz'

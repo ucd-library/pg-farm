@@ -10,15 +10,30 @@ let server = new PgFarmTcpServer({
     port: config.gateway.pg.port
   }, 
   (clientSocket) => {
+    let connected = false;
+    let buffer = [];
+
     let serverSocket = server.createProxyConnection(
       config.gateway.pg.host,
       config.gateway.pg.port,
       clientSocket
     );
 
+    clientSocket.on('data', data => {
+      if( !connected ) {
+        return buffer.push(data);
+      }
+      serverSocket.write(data);
+    });
+
     serverSocket.on('connect', () => {
-      serverSocket.pipe(clientSocket);
-      clientSocket.pipe(serverSocket);
+      connected = true;
+      buffer.forEach(data => serverSocket.write(data));
+      buffer = null;
+    });
+
+    serverSocket.on('data', data => {
+      clientSocket.write(data);
     });
   }
 );

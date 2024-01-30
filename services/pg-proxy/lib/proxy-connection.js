@@ -333,7 +333,7 @@ class ProxyConnection extends EventEmitter {
     // });
 
     // Handle target socket closure
-    this.serverSocket.on('end', async () => {
+    this.serverSocket.on('close', async () => {
       // logger.info('Server socket end event', this.getConnectionInfo());
 
       // if we still have a client socket, and the server is unavailable, attempt reconnect
