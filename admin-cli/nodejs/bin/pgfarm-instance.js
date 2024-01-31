@@ -25,6 +25,12 @@ program.command('list')
     instance.list(opts.mine, opts.id);
   });
 
+program.command('stop <instance>')
+  .description('Stop an instance (requires admin access to instance)')
+  .action(instanceName => {
+    instance.stop(instanceName);
+  });
+
 program.command('restart-api <instance>')
   .description('Restart the PostgREST API for an instance (requires admin access)')
   .action(instanceName => {

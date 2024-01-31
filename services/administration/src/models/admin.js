@@ -4,16 +4,16 @@ import utils from '../../../lib/utils.js';
 import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
 import logger from '../../../lib/logger.js';
+import modelUtils from './utils.js';
+import pgRest from './pg-rest.js'; 
 import { fileURLToPath } from 'url';
 import path from 'path';
-import yaml from 'js-yaml';
 import fs from 'fs';
 import pgFormat from 'pg-format';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let schemaPath = path.join(__dirname, '..', '..', 'schema');
-let k8sTemplatePath = path.join(__dirname, '..', '..', 'k8s');
 
 class AdminModel {
 
@@ -37,40 +37,6 @@ class AdminModel {
       let response = await client.query(fs.readFileSync(file, 'utf-8'));
       logger.debug(response);
     }
-  }
-
-  /**
-   * @method getConnection
-   * @description Returns a postgres user connection object for a postgres instance
-   * 
-   * @param {String} instNameOrId PG Farm instance name or ID 
-   * @returns 
-   */
-  async getConnection(instNameOrId) {
-    let user = await client.getUser(instNameOrId, 'postgres');
-
-    return {
-      id : user.instance_id,
-      host : user.database_hostname,
-      port : user.database_port,
-      user : user.username,
-      database : user.database_name,
-      password : user.password
-    };
-  }
-
-  /**
-   * @method getTemplate
-   * @description Returns a k8s template object
-   * 
-   * @param {String} template
-   *  
-   * @returns {Object}
-   */
-  getTemplate(template) {
-    let templatePath = path.join(k8sTemplatePath, template+'.yaml');
-    let k8sConfig = yaml.load(fs.readFileSync(templatePath, 'utf-8'));
-    return k8sConfig;
   }
 
   /**
@@ -125,37 +91,37 @@ class AdminModel {
     // create postgres user to database
     await this.createUser(id, 'postgres');
 
-    // setup pg rest
-    // https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
-
-    // add public user
-    await this.createUser(id, config.pgInstance.publicRole.username);
-
-    // add authenticator user
-    await this.createUser(id, config.pgRest.authenticator.username);
-
-    let con = await this.getConnection(id);
-
-    // create the api schema
-    let formattedQuery = pgFormat('CREATE SCHEMA %s', config.pgRest.schema);
-    let resp = await pgInstClient.query(con, formattedQuery);
-
-    // grant usage on the api schema to the public role
-    formattedQuery = pgFormat('GRANT USAGE ON SCHEMA %s TO "%s"', 
-      config.pgRest.schema, config.pgInstance.publicRole.username
-    );
-    resp = await pgInstClient.query(con, formattedQuery);
-
-    // grant the public role to the authenticator user
-    formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
-      config.pgInstance.publicRole.username, config.pgRest.authenticator.username
-    );
-    resp = await pgInstClient.query(con, formattedQuery);
-
-    // start pg rest once instance is running
-    await this.startPgRest(name);
+    await this.setupPgRest(name);
 
     return id;
+  }
+
+  /**
+   * @method setupPgRest
+   * @description Sets up the pg rest instance with roles and schema
+   * https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
+   * 
+   */
+  async setupPgRest(instNameOrId) {
+    // add public user
+    try {
+      await this.createUser(instNameOrId, config.pgInstance.publicRole.username);
+    } catch(e) {
+      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${instNameOrId}`, e);
+    }
+
+    // add authenticator user
+    try {
+      await this.createUser(instNameOrId, config.pgRest.authenticator.username);
+    } catch(e) {
+      logger.warn(`Failed to create authenticator user ${config.pgRest.authenticator.username}: ${instNameOrId}`, e);
+    }
+
+    // initialize the database for PostgREST roles and schema
+    await pgRest.initDb(instNameOrId);
+
+    // start pg rest once instance is running
+    await pgRest.start(instNameOrId);
   }
 
   /**
@@ -202,7 +168,7 @@ class AdminModel {
     await this.ensureInstanceRunning(instNameOrId);
 
     // get instance connection information
-    let con = await this.getConnection(instNameOrId);
+    let con = await client.getConnection(instNameOrId);
 
     // add user to postgres
     if( noinherit ) noinherit = 'NOINHERIT';
@@ -237,7 +203,7 @@ class AdminModel {
     let hostname = instance.hostname;
 
     // Postgres
-    let k8sConfig = this.getTemplate('postgres');
+    let k8sConfig = modelUtils.getTemplate('postgres');
     k8sConfig.metadata.name = hostname;
     
     let spec = k8sConfig.spec;
@@ -260,7 +226,7 @@ class AdminModel {
     });
 
     // Postgres Service
-    k8sConfig = this.getTemplate('postgres-service');
+    k8sConfig = modelUtils.getTemplate('postgres-service');
     k8sConfig.metadata.name = hostname;
     k8sConfig.spec.selector.app = hostname;
 
@@ -272,51 +238,16 @@ class AdminModel {
     return {pgResult, pgServiceResult};
   }
 
-  async startPgRest(instNameOrId) {
+  async stopInstance(instNameOrId) {
     let instance = await client.getInstance(instNameOrId);
+    let hostname = instance.hostname;
 
-    // PostgREST
-    let hostname = 'pgrest-'+instance.name;
-    let k8sConfig = this.getTemplate('pgrest');
-    k8sConfig.metadata.name = hostname;
-    
-    let spec = k8sConfig.spec;
-    spec.selector.matchLabels.app = hostname;
+    let pgResult = await kubectl.delete('statefulset', hostname);
+    let pgServiceResult = await kubectl.delete('service', hostname);
 
-    let template = spec.template;
-    template.metadata.labels.app = hostname;
+    let result = await pgRest.remove(instNameOrId);
 
-    let container = template.spec.containers[0];
-    container.image = config.pgRest.image;
-    container.name = hostname;
-
-    container.env[0].value = instance.name;
-    container.env.push({
-      name : 'APP_URL',
-      value : config.appUrl
-    });
-
-    let pgrestResult = await kubectl.apply(k8sConfig, {
-      stdin: true,
-      isJson: true
-    });
-
-    // PostgREST
-    k8sConfig = this.getTemplate('pgrest-service');
-    k8sConfig.metadata.name = hostname;
-    k8sConfig.spec.selector.app = hostname;
-
-    let pgrestServiceResult = await kubectl.apply(k8sConfig, {
-      stdin:true,
-      isJson: true
-    });
-
-    return {pgrestResult, pgrestServiceResult, hostname};
-  }
-
-  async restartPgRest(instNameOrId) {
-    let {hostname} = await this.startPgRest(instNameOrId);
-    await kubectl.restart('deployment', hostname);
+    return Object.assign(result, {pgResult, pgServiceResult});
   }
 
   /**
@@ -346,7 +277,7 @@ class AdminModel {
    * @returns {Promise}
    */
   async resetPassword(instNameOrId, user, password) {
-    let con = await this.getConnection(instNameOrId);
+    let con = await client.getConnection(instNameOrId);
 
     // generate random password if not provided
     if( !password ) password = utils.generatePassword();
@@ -432,7 +363,7 @@ class AdminModel {
    */
   async syncInstanceUsers(instNameOrId, updatePassword=false) {
     let users = await client.getInstanceUsers(instNameOrId);
-    let con = await this.getConnection(instNameOrId);
+    let con = await client.getConnection(instNameOrId);
 
     for( let user of users ) {
 

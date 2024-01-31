@@ -1,5 +1,6 @@
 import {Router} from 'express';
 import model from '../../models/admin.js';
+import pgRest from '../../models/pg-rest.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 
@@ -40,10 +41,20 @@ router.put('/:instance/:user', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.get('/:instance/stop', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let instance = req.params.instance;
+    let resp = await model.stopInstance(instance);
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.get('/:instance/restart/api', keycloak.protect('admin'), async (req, res) => {
   try {
     let instance = req.params.instance;
-    let resp = await model.restartPgRest(instance);
+    let resp = await pgRest.restart(instance);
     res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);

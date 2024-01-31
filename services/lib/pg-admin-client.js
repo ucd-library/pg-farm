@@ -170,6 +170,26 @@ class PgFarmAdminClient {
     });
   }
 
+  /**
+   * @method getConnection
+   * @description Returns a postgres user connection object for a postgres instance
+   * 
+   * @param {String} instNameOrId PG Farm instance name or ID 
+   * @returns 
+   */
+  async getConnection(instNameOrId) {
+    let user = await this.getUser(instNameOrId, 'postgres');
+
+    return {
+      id : user.instance_id,
+      host : user.database_hostname,
+      port : user.database_port,
+      user : user.username,
+      database : user.database_name,
+      password : user.password
+    };
+  }
+
   async getInstanceUsers(instNameOrId) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_USERS}

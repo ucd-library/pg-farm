@@ -44,6 +44,19 @@ class Instances {
     console.log(`Created instance ${opts.name} with id ${body.id}`);
   }
 
+  async stop(instance) {
+    let resp = await fetch(`${config.host}/api/admin/${instance}/stop`, {
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to stop instance', await resp.text());
+      return;
+    }
+
+    console.log(`Stopped instance ${instance}`);
+  }
+
   async addUser(instance, user) {
     let resp = await fetch(`${config.host}/api/admin/${instance}/${user}`, {
       method: 'PUT',

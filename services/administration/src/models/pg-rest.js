@@ -1,10 +1,13 @@
+import pgFormat from 'pg-format';
 import client from '../../../lib/pg-admin-client.js';
+import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
 import keycloak from '../../../lib/keycloak.js';
+import pgInstClient from '../../../lib/pg-client.js';
+import logger from '../../../lib/logger.js';
+import modelUtils from './utils.js';
 
 class PgRest {
-
-
 
   async generateConfigFile(instNameOrId) {
     let user = await client.getUser(instNameOrId, config.pgRest.authenticator.username);
@@ -29,6 +32,101 @@ openapi-server-proxy-uri = "${config.appUrl}/api/db/${user.database_name}"
 
 server-port = ${config.pgRest.port}`
     return file;
+  }
+
+  /**
+   * @method initDb
+   * @description Initialize the database for PostgREST roles and schema
+   * 
+   * @param {String} instNameOrId 
+   */
+  async initDb(instNameOrId) {
+    let con = await client.getConnection(instNameOrId);
+
+    // create the api schema
+    try {
+      let formattedQuery = pgFormat('CREATE SCHEMA %s', config.pgRest.schema);
+      await pgInstClient.query(con, formattedQuery);
+    } catch(e) {
+      logger.warn(`Failed to create pgrest schema ${config.pgRest.schema}, it may already exist: ${con.database}`, e);
+    }
+
+    // grant usage on the api schema to the public role
+    try {
+      let formattedQuery = pgFormat('GRANT USAGE ON SCHEMA %s TO "%s"', 
+        config.pgRest.schema, config.pgInstance.publicRole.username
+      );
+      await pgInstClient.query(con, formattedQuery);
+    } catch(e) {
+      logger.warn(`Pgrest failed to grant usage on schema ${config.pgRest.schema} to ${config.pgInstance.publicRole.username}: ${con.database}`, e);
+    }
+
+    // grant the public role to the authenticator user
+    try {
+      let formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
+        config.pgInstance.publicRole.username, config.pgRest.authenticator.username
+      );
+      resp = await pgInstClient.query(con, formattedQuery);
+    } catch(e) {
+      logger.warn(`Pgrest failed to grant ${config.pgInstance.publicRole.username} to ${config.pgRest.authenticator.username}: ${con.database}`, e);
+    }
+  }
+
+  async start(instNameOrId) {
+    let instance = await client.getInstance(instNameOrId);
+
+    // PostgREST
+    let hostname = 'pgrest-'+instance.name;
+    let k8sConfig = modelUtils.getTemplate('pgrest');
+    k8sConfig.metadata.name = hostname;
+    
+    let spec = k8sConfig.spec;
+    spec.selector.matchLabels.app = hostname;
+
+    let template = spec.template;
+    template.metadata.labels.app = hostname;
+
+    let container = template.spec.containers[0];
+    container.image = config.pgRest.image;
+    container.name = hostname;
+
+    container.env[0].value = instance.name;
+    container.env.push({
+      name : 'APP_URL',
+      value : config.appUrl
+    });
+
+    let pgrestResult = await kubectl.apply(k8sConfig, {
+      stdin: true,
+      isJson: true
+    });
+
+    // PostgREST
+    k8sConfig = modelUtils.getTemplate('pgrest-service');
+    k8sConfig.metadata.name = hostname;
+    k8sConfig.spec.selector.app = hostname;
+
+    let pgrestServiceResult = await kubectl.apply(k8sConfig, {
+      stdin:true,
+      isJson: true
+    });
+
+    return {pgrestResult, pgrestServiceResult, hostname};
+  }
+
+  async restart(instNameOrId) {
+    let {hostname} = await this.start(instNameOrId);
+    await kubectl.restart('deployment', hostname);
+  }
+
+  async remove(instNameOrId) {
+    let instance = await client.getInstance(instNameOrId);
+    let hostname = 'pgrest-'+instance.name;
+
+    let pgrestResult = await kubectl.delete('deployment', hostname);
+    let pgrestServiceResult = await kubectl.delete('service', hostname);
+
+    return {pgrestResult, pgrestServiceResult};
   }
 
 }

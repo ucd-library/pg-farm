@@ -1,5 +1,3 @@
-import PG from 'pg';
-import net from 'net';
 import tls from 'tls';
 import { EventEmitter } from 'node:events';
 import keycloak from '../../lib/keycloak.js';
@@ -8,7 +6,7 @@ import utils from '../../lib/utils.js';
 import logger from '../../lib/logger.js';
 import adminClient from '../../lib/pg-admin-client.js';
 import adminModel from '../../administration/src/models/admin.js';
-import instanceStart from './instance-start.js';
+import instanceStart from '../../lib/instance-start.js';
 
 // let pgPassConnection = null;
 // if( config.proxy.password.type === 'pg' ) {
@@ -180,9 +178,16 @@ class ProxyConnection extends EventEmitter {
 
       // intercept the password message and handle it
       if (data.length && data[0] === this.MESSAGE_CODES.PASSWORD) {
-        logger.info('client handling jwt auth', this.getConnectionInfo());
-        this.handleJwt(data);
-        return;
+
+        // TODO: currently I'm just allowing the known public user to login with a
+        // password.  Should I let any user marked as public in??
+        if( this.startupProperties.user !== config.pgInstance.publicRole.username ) {
+          logger.info('client handling jwt auth', this.getConnectionInfo());
+          this.handleJwt(data);
+          return;
+        } else {
+          logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
+        }
       }
 
       // check for query message, if so, emit stats
@@ -193,18 +198,6 @@ class ProxyConnection extends EventEmitter {
       // else, just proxy message
       this.serverSocket.write(data);
     });
-
-    // Handle client socket closure
-    // this.clientSocket.on('end', () => {
-    //   this.closeSockets();
-    // });
-
-    // Handle errors
-    // this.clientSocket.on('error', err => {
-    //   logger.error('Client socket error', this.getConnectionInfo(), err);
-    //   this.emitStat('socket-error', {socket: 'client'});
-    //   this.closeSockets();
-    // });
   }
 
   async closeSockets() {
@@ -346,11 +339,6 @@ class ProxyConnection extends EventEmitter {
         }
       });
   
-      // this.serverSocket.on('error', err => {
-      //   this.emitStat('socket-error', {socket: 'server'});
-      //   logger.error('Server socket erro event', this.getConnectionInfo(), err);
-      //   this.closeSockets();
-      // });
   
       // Handle target socket closure
       this.serverSocket.on('close', async () => {

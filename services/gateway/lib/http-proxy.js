@@ -2,6 +2,7 @@ import httpProxy from 'http-proxy';
 import adminModel from '../../administration/src/models/admin.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
+import startInstance from '../../lib/instance-start.js';
 
 const dbRouteRegex = /^\/api\/db\/(\w+)(\/|$)/;
 
@@ -34,7 +35,10 @@ async function middleware(req, res) {
     try {
       let instance = await adminModel.getInstance(dbName);
       host = 'http://pgrest-'+instance.name+':'+config.pgRest.port;
+
+      await startInstance.start(dbName, instance, {waitForPgRest: true});
     } catch(e) {
+      logger.error('Error starting database', dbName, e);
       res.status(404).send('Database not found');
       return;
     }
