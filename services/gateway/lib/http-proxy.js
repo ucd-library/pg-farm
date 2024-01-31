@@ -42,6 +42,8 @@ async function middleware(req, res) {
       res.status(404).send('Database not found');
       return;
     }
+  } else if( path === '/api/db' || path === '/api/db/' ) {
+    path = '/api/admin/instance';
   }
 
   proxy.web(req, res, {

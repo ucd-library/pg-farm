@@ -398,8 +398,33 @@ class AdminModel {
    * @param {String} opts.username 
    * @returns 
    */
-  getInstances(opts={}) {
-    return client.getInstances(opts);
+  async getInstances(opts={}) {
+    let appHostname = new URL(config.appUrl).hostname;
+    let instances = await client.getInstances(opts);
+    for( let instance of instances ) {
+      try {
+        let pubUser = await client.getUser(instance.id, config.pgInstance.publicRole.username);
+        instance.publicAccess = {
+          username : pubUser.username,
+          password : pubUser.password,
+          connectionUri : `postgres://${pubUser.username}:${pubUser.password}@${appHostname}:5432/${instance.name}`,
+          psql : `PGPASSWORD="${pubUser.password}" psql -h ${appHostname} -U ${pubUser.username} -d ${instance.name}`
+        }
+      } catch(e) {
+        logger.error('Failed to find public user for: '+instance.name, e);
+      }
+      
+      instance.database = instance.name;
+      instance.port = 5432;
+      instance.host = appHostname;
+
+      delete instance.name;
+
+      instance.api = config.appUrl+'/api/db/'+instance.database;
+      instance.psql = `psql -h `+appHostname+` -U `+config.pgInstance.publicRole.username+` -d `+instance.database;
+    }
+
+    return instances;
   }
 
 }

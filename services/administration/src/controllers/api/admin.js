@@ -16,10 +16,13 @@ router.post('/instance', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.get('/instance', keycloak.protect(), async (req, res) => {
+router.get('/instance', keycloak.setUser, async (req, res) => {
   try {
     let opts = {};
     if( req.query.onlyMine === 'true' ) {
+      if( !req.user ) {
+        throw new Error('You must provide an authorization token to view your instances');
+      }
       opts.username = req.user.username;
     }
 
