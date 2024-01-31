@@ -43,6 +43,8 @@ if [[ -z $REG_HOST ]]; then
   fi
 fi
 
+APP_URL=${APP_URL:-http://pgfarm.justinmerz.net}
+
 # Postgres Instance
 PG_VERSION=16
 

@@ -77,6 +77,11 @@ class KubectlWrapper {
     return stdout.trim();
   }
 
+  async restart(type, name) {
+    await this.init();
+    return this.exec(`kubectl rollout restart ${type} ${name}`);
+  }
+
   /**
    * @method apply
    * @description Apply a kubernetes configuration.  Can be file or stdin. Stdin can be a 

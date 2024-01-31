@@ -152,6 +152,9 @@ class AdminModel {
     );
     resp = await pgInstClient.query(con, formattedQuery);
 
+    // start pg rest once instance is running
+    await this.startPgRest(name);
+
     return id;
   }
 
@@ -169,6 +172,7 @@ class AdminModel {
    */
   async createUser(instNameOrId, user, type='USER', password, noinherit=false) {
 
+    // check for reserved users
     if( user === config.pgInstance.publicRole.username ) {
       type = 'PUBLIC';
       password = config.pgInstance.publicRole.password;
@@ -211,6 +215,10 @@ class AdminModel {
     );
 
     return resp;
+  }
+
+  getInstance(instNameOrId) {
+    return client.getInstance(instNameOrId);
   }
 
   /**
@@ -283,6 +291,10 @@ class AdminModel {
     container.name = hostname;
 
     container.env[0].value = instance.name;
+    container.env.push({
+      name : 'APP_URL',
+      value : config.appUrl
+    });
 
     let pgrestResult = await kubectl.apply(k8sConfig, {
       stdin: true,
@@ -299,7 +311,12 @@ class AdminModel {
       isJson: true
     });
 
-    return {pgrestResult, pgrestServiceResult};
+    return {pgrestResult, pgrestServiceResult, hostname};
+  }
+
+  async restartPgRest(instNameOrId) {
+    let {hostname} = await this.startPgRest(instNameOrId);
+    await kubectl.restart('deployment', hostname);
   }
 
   /**

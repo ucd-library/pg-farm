@@ -22,7 +22,7 @@ spec:
         - name : "GOOGLE_APPLICATION_CREDENTIALS"
           value : "/etc/google/service-account.json"
         - name : "APP_URL"
-          value : "http://pgfarm.justinmerz.net"
+          value : "{{APP_URL}}"
         envFrom:
         - secretRef:
             name: pg-farm-env

@@ -40,4 +40,14 @@ router.put('/:instance/:user', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.get('/:instance/restart/api', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let instance = req.params.instance;
+    let resp = await model.restartPgRest(instance);
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 export default router;

@@ -58,6 +58,19 @@ class Instances {
     console.log(`Added user ${user} to instance ${instance}`);
   }
 
+  async restartApi(instance) {
+    let resp = await fetch(`${config.host}/api/admin/${instance}/restart/api`, {
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to restart API', await resp.text());
+      return;
+    }
+
+    console.log(`Restarted API for instance ${instance}`);
+  }
+
 }
 
 const instance = new Instances();

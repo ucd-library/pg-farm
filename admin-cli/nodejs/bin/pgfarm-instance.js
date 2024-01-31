@@ -25,4 +25,10 @@ program.command('list')
     instance.list(opts.mine, opts.id);
   });
 
+program.command('restart-api <instance>')
+  .description('Restart the PostgREST API for an instance (requires admin access)')
+  .action(instanceName => {
+    instance.restartApi(instanceName);
+  });
+
 program.parse(process.argv);

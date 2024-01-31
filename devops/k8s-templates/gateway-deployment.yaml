@@ -21,6 +21,8 @@ spec:
           value: "info"
         - name : "GOOGLE_APPLICATION_CREDENTIALS"
           value : "/etc/google/service-account.json"
+        - name : "APP_URL"
+          value : "{{APP_URL}}"
         - name : "GATEWAY_HTTP_ENABLED"
           value : "true"
         - name: METRICS_ENABLED
