@@ -12,10 +12,12 @@ gcloud config set project ${GC_PROJECT_ID}
 # Create cluster with default pool
 gcloud beta container clusters create ${GKE_CLUSTER_NAME} \
   --zone ${GKE_CLUSTER_ZONE} \
+  --addons GcsFuseCsiDriver \
   --num-nodes 3 \
   --disk-size 50GB \
   --release-channel=regular \
   --machine-type e2-standard-2 \
+  --workload-pool=${GC_PROJECT_ID}.svc.id.goog \
   --node-labels=intendedfor=services
 
 gcloud beta container node-pools create instance-pool \
@@ -28,3 +30,7 @@ gcloud beta container node-pools create instance-pool \
   --enable-autoscaling --min-nodes 1 --max-nodes 8
 
 ./create-secrets.sh
+
+./setup-k8s-service-accounts.sh
+
+./setup-k8s-gcs-volume.sh

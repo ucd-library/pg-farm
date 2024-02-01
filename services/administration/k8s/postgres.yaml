@@ -11,7 +11,9 @@ spec:
   template:
     metadata:
       labels:
-        app:  
+        app:
+      annotations:
+        gke-gcsfuse/volumes: "true"  
     spec:
       containers:
       - name: 
@@ -37,8 +39,15 @@ spec:
         volumeMounts:
         - name: 
           mountPath: /var/lib/postgresql/data
+        - name: gcs-fuse
+          mountPath: /backups
+      serviceAccountName: pg-farm-ksa
       nodeSelector:
         intendedfor: instance-pool
+      volumes:
+      - name: gcs-fuse
+        persistentVolumeClaim:
+          claimName: gcs-fuse-pvc
 
   volumeClaimTemplates:
   - metadata:

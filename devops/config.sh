@@ -57,3 +57,6 @@ GC_PROJECT_ID=digital-ucdavis-edu
 GKE_CLUSTER_NAME=pg-farm
 GKE_CLUSTER_ZONE=us-central1-c
 GKE_EXTERNAL_IP=34.170.150.232
+GC_SA_NAME=pg-farm
+GKE_KSA_NAME=pg-farm-ksa
+GCS_BACKUP_BUCKET=pg-farm-backups
