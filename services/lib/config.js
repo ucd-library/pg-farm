@@ -85,6 +85,7 @@ const config = {
   },
 
   k8s : {
+    enabled : env.K8S_DISABLED === 'true' ? false : true,
     platform : 'gke',
     cluster : env.K8S_CLUSTER || 'pg-farm',
     region : env.K8S_REGION || 'us-central1-c',
@@ -99,19 +100,24 @@ const config = {
     host : env.PG_HOST || 'admin-db',
 
     tables : {
+      get ORGANIZATION() { return config.adminDb.schema+'.organization' },
       get INSTANCE() { return config.adminDb.schema+'.instance' },
+      get DATABASE() { return config.adminDb.schema+'.database' },
       get DATABASE_USERS() { return config.adminDb.schema+'.database_user'},
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' },
     },
     views : {
-      get INSTANCE_USERS() { return config.adminDb.schema+'.instance_database_user' }
+      get INSTANCE_DATABASE() { return config.adminDb.schema+'.instance_database' },
+      get INSTANCE_DATABSE_USERS() { return config.adminDb.schema+'.instance_database_user' }
     }
   },
 
   pgInstance : {
+    name : env.PG_INSTANCE_NAME || '', // set for running pg instances
     image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
     adminRole : env.PG_INSTANCE_ADMIN_ROLE || 'postgres',
+    adminInitPassword : env.PG_INSTANCE_ADMIN_INIT_PASSWORD || 'postgres',
     publicRole : {
       username : env.PG_INSTANCE_PUBLIC_ROLE || 'pgfarm-public',
       password : env.PG_INSTANCE_PUBLIC_PASSWORD || 'go-aggies',

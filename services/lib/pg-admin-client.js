@@ -2,7 +2,7 @@ import PG from 'pg';
 import crypto from 'crypto';
 import config from './config.js';
 import logger from './logger.js';
-
+import pgFormat from 'pg-format';
 
 const client = new PG.Pool({
   user : config.adminDb.username,
@@ -50,11 +50,25 @@ class PgFarmAdminClient {
     }
   }
 
-  async getInstance(nameOrId) {
+  async getOrganization(nameOrId) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.tables.ORGANIZATION}
+      WHERE name = $1 OR organization_id=try_cast_uuid($1)
+    `, [nameOrId]);
+
+    if( resp.rows.length === 0 ) {
+      throw new Error('Organization not found: '+nameOrId);
+    }
+
+    return resp.rows[0];
+  }
+
+  async getInstance(nameOrId, organizationId) {
     let res = await client.query(`
       SELECT * FROM ${config.adminDb.tables.INSTANCE}
-      WHERE name = $1 OR instance_id=try_cast_uuid($1)
-    `, [nameOrId]);
+      WHERE (name = $1 OR instance_id=try_cast_uuid($1)) AND
+      and organization_id = $2
+    `, [nameOrId, organizationId]);
 
     if( res.rows.length === 0 ) {
       throw new Error('Instance not found: '+nameOrId);
@@ -63,13 +77,26 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
-  async createInstance(name, hostname, description, port) {
+  /**
+   * @method createInstance
+   * @description create a new instance
+   * 
+   * @param {String} name Instance name
+   * @param {Object} opts  
+   * @param {String} opts.hostname Optional. hostname of the instance. If not provided, it will be set to 'pg-'+name
+   * @param {String} opts.description description of the instance
+   * @param {String} opts.port port of the instance
+   * @param {String} opts.organization Optional. name or ID of the organization
+   * 
+   * @returns 
+   */
+  async createInstance(name, opts) {
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.INSTANCE}
-      (name, hostname, description, port)
+      (name, hostname, description, organization_id)
       VALUES ($1, $2, $3, $4)
       RETURNING instance_id
-    `, [name, hostname, description, port]);
+    `, [name, opts.hostname, opts.description, opts.organization_id]);
 
     if( resp.rows.length === 0 ) {
       logger.error('Instance not created: '+name, resp);
@@ -77,6 +104,16 @@ class PgFarmAdminClient {
     }
 
     return resp.rows[0].instance_id;
+  }
+
+  async updateInstance(nameOrId, instanceId, property, value) {
+    let instance = await this.getInstance(nameOrId);
+
+    let resp = await client.query(`
+      UPDATE ${config.adminDb.tables.INSTANCE}
+      SET ${pgFormat('%s', property)} = $1
+      WHERE instance_id = $2
+    `, [value, instance.instance_id]);
   }
 
   async setInstanceConfig(nameOrId, name, value) {
@@ -107,7 +144,54 @@ class PgFarmAdminClient {
     return iconfig;
   }
 
-  async createUser(nameOrId, username, password, type) {
+  /**
+   * @method createOrganization
+   * @description create a new organization
+   * 
+   * @param {String} name name of the organization 
+   * @param {Object} opts
+   * @param {String} opts.description description of the organization
+   * @param {String} opts.url url of the organization
+   *  
+   * @returns {Promise<Object>}
+   */
+  async createOrganization(name, opts) {
+    let resp = await client.query(`
+      INSERT INTO ${config.adminDb.tables.ORGANIZATION} (name, description, url)
+      VALUES ($1, $2, $3)
+      RETURNING organization_id
+    `, [name, opts.description, opts.url]);
+
+    return resp.rows[0].organization_id;
+  }
+
+  async getDatabase(nameOrId, organizationId) {
+    let res = await client.query(`
+      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE}
+      WHERE (database_name = $1 OR database_id=try_cast_uuid($1)) AND
+      and organization_id = $2
+    `, [nameOrId, organizationId]);
+
+    if( res.rows.length === 0 ) {
+      throw new Error('Database not found: '+nameOrId);
+    }
+
+    return res.rows[0];
+  }
+
+  async createDatabase(name, opts) {
+    let resp = await client.query(`
+      INSERT INTO ${config.adminDb.tables.DATABASE}
+      (name, instance_id, organization_id, short_description, description, tags)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING database_id
+    `, [name, opts.instance_id, opts.organization_id, 
+        opts.short_description, opts.description, opts.tags]);
+
+    return resp.rows[0].database_id;
+  }
+
+  async createDatabaseUser(databaseId, username, password, type) {
     let instance = await this.getInstance(nameOrId);
 
     return client.query(`
@@ -117,18 +201,7 @@ class PgFarmAdminClient {
     `, [username, password, type, instance.instance_id]);
   }
 
-  async getUser(instNameOrId, username) {
-    let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.views.INSTANCE_USERS}
-      WHERE (database_name = $1 OR instance_id=try_cast_uuid($1)) AND username = $2
-    `, [instNameOrId, username]);
 
-    if( resp.rows.length === 0 ) {
-      throw new Error('User not found: '+username);
-    }
-
-    return resp.rows[0];
-  }
 
   async userExists(instNameOrId, username) {
     try {
@@ -146,7 +219,7 @@ class PgFarmAdminClient {
       type = `, type`;
     }
 
-    let SELECT = `SELECT database_name, instance_id${type} FROM ${config.adminDb.views.INSTANCE_USERS}`;
+    let SELECT = `SELECT database_name, instance_id${type} FROM ${config.adminDb.views.INSTANCE_DATABSE_USERS}`;
     let args = [];
 
     if( opts.username ) {
@@ -170,29 +243,10 @@ class PgFarmAdminClient {
     });
   }
 
-  /**
-   * @method getConnection
-   * @description Returns a postgres user connection object for a postgres instance
-   * 
-   * @param {String} instNameOrId PG Farm instance name or ID 
-   * @returns 
-   */
-  async getConnection(instNameOrId) {
-    let user = await this.getUser(instNameOrId, 'postgres');
-
-    return {
-      id : user.instance_id,
-      host : user.database_hostname,
-      port : user.database_port,
-      user : user.username,
-      database : user.database_name,
-      password : user.password
-    };
-  }
 
   async getInstanceUsers(instNameOrId) {
     let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.views.INSTANCE_USERS}
+      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABSE_USERS}
       WHERE database_name = $1 OR instance_id=try_cast_uuid($1)
     `, [instNameOrId]);
 
