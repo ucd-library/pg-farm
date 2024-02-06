@@ -5,7 +5,7 @@ import config from '../../lib/config.js';
 import utils from '../../lib/utils.js';
 import logger from '../../lib/logger.js';
 import adminClient from '../../lib/pg-admin-client.js';
-import adminModel from '../../administration/src/models/admin.js';
+import {admin, user, instance} from '../../administration/src/models/index.js';
 import instanceStart from '../../lib/instance-start.js';
 
 // let pgPassConnection = null;
@@ -237,8 +237,9 @@ class ProxyConnection extends EventEmitter {
     // before attempt connection, check user is registered with database
     let user;
     try {
-      user = await adminClient.getUser(
+      user = await user.get(
         this.startupProperties.database,
+        this.startupProperties.organization,
         this.startupProperties.user
       );
     } catch (e) { }
@@ -262,7 +263,10 @@ class ProxyConnection extends EventEmitter {
       return false;
     }
 
-    this.instance = await adminClient.getInstance(this.startupProperties.database);
+    this.instance = await instance.get(
+      this.startupProperties.database,
+      this.startupProperties.organization
+    );
 
     let startTime = Date.now();
     let started = await instanceStart.start(
@@ -371,7 +375,10 @@ class ProxyConnection extends EventEmitter {
 
     try {
       logger.info('Starting instance', this.instance.name);
-      await adminModel.startInstance(this.instance.name);
+      await instanceStart.start(
+        this.startupProperties.database, 
+        this.instance
+      );
 
       logger.info('Waiting for instance tcp port', this.instance.name);
       await utils.waitUntil(this.instance.hostname, this.instance.port, 20);
@@ -487,6 +494,14 @@ class ProxyConnection extends EventEmitter {
       this.firstMessage = false;
     }
 
+    if( startupProperties.database && startupProperties.database.match('/') ) {
+      let parts = startupProperties.database.split('/');
+      startupProperties.organization = parts[0];
+      startupProperties.database = parts[1];
+    } else {
+      startupProperties.organization = null;
+    }
+
     this.startupProperties = startupProperties;
   }
 
@@ -546,8 +561,9 @@ class ProxyConnection extends EventEmitter {
     (this.parsedJwt.roles || []).forEach(role => roles.add(role));
     (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
 
-    let user = await adminClient.getUser(
+    let user = await user.get(
       this.startupProperties.database,
+      this.startupProperties.organization,
       this.startupProperties.user
     );
 
@@ -581,7 +597,11 @@ class ProxyConnection extends EventEmitter {
   async sendUserPassword() {
     let password = config.proxy.password.static;
     if (config.proxy.password.type === 'pg') {
-      let user = await adminClient.getUser(this.instance.name, this.startupProperties.user);
+      let user = await user.get(
+        this.startupProperties.database,
+        this.startupProperties.organization, 
+        this.startupProperties.user
+      );
       password = user.password;
     }
 

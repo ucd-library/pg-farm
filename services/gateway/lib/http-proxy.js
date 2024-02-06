@@ -1,10 +1,10 @@
 import httpProxy from 'http-proxy';
-import adminModel from '../../administration/src/models/admin.js';
+import {instance} from '../../administration/src/models/index.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import startInstance from '../../lib/instance-start.js';
 
-const dbRouteRegex = /^\/api\/db\/(\w+)(\/|$)/;
+const dbRouteRegex = /^\/api\/db\/(w+)\/(\w+)(\/|$)/;
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
@@ -29,11 +29,15 @@ async function middleware(req, res) {
   let dbRouteMatch = path.match(dbRouteRegex);
   
   if( dbRouteMatch ) {
-    let dbName = dbRouteMatch[1];
+    let orgName = dbRouteMatch[1];
+    let dbName = dbRouteMatch[2];
     path = path.replace(dbRouteRegex, '/');
+    if( orgName === '_' ) {
+      orgName = null;
+    }
 
     try {
-      let instance = await adminModel.getInstance(dbName);
+      let instance = await instance.get(dbName, orgName);
       host = 'http://pgrest-'+instance.name+':'+config.pgRest.port;
 
       await startInstance.start(dbName, instance, {waitForPgRest: true});

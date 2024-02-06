@@ -1,7 +1,7 @@
 import {Router} from 'express';
-import model from '../../models/admin.js';
-import keycloak from '../../../../lib/keycloak.js';
-import handleError from '../handle-errors.js';
+import model from '../../../models/admin.js';
+import keycloak from '../../../../../lib/keycloak.js';
+import handleError from '../../handle-errors.js';
 
 const router = Router();
 

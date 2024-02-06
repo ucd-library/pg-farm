@@ -39,6 +39,29 @@ class AdminModel {
     }
   }
 
+  async createDatabase(opts={}) {
+    let name = opts.name || opts.database;
+    let organization;
+
+    if( opts.organization ) {
+      if( !await this.models.organization.exists(opts.organization) ) {
+        organization = await this.models.organization.create(opts.organization);
+        opts.organization = organization.name;
+      }
+    }
+
+    let instance = await this.models.instance.exists(opts.instance);
+    if( !instance ) {
+      let iOpts = {};
+      if( opts.organization ) iOpts.organization = organization.name;
+      console.log(opts.instance, iOpts);
+      instance = await this.models.instance.create(opts.instance, iOpts);
+      opts.instance = instance.name;
+    }
+
+    await this.models.database.create(name, opts);
+  }
+
   /**
    * @method createInstance
    * @description Creates a new postgres instance

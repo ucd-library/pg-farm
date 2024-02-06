@@ -5,9 +5,9 @@ const program = new Command();
 
 program.command('create')
   .description('Create a new instance PG Farm database (requires admin access)')
-  .requiredOption('-i, --instance <name>', 'Instance name.  Will be created if it does not exist')
-  .requiredOption('-d, --database <name>', 'Database name')
-  .option('-o, --organization <name>', 'Organization name. Will be created if it does not exist')
+  .requiredOption('-i, --instance <title>', 'Instance title.  Will be created if it does not exist')
+  .requiredOption('-d, --database <title>', 'Database title')
+  .option('-o, --organization <title>', 'Organization title. Will be created if it does not exist')
   .action(options => {
     database.create(options);
   });
@@ -31,3 +31,5 @@ program.command('restart-api <database>')
   .action(dbName => {
     database.restartApi(dbName);
   });
+
+program.parse(process.argv);

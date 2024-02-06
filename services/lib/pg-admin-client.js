@@ -19,6 +19,8 @@ class PgFarmAdminClient {
 
     this.getEnumTypes();
 
+    this.schema = config.adminDb.schema;
+
     this.enums = [
       'instance_user_type'
     ]
@@ -63,12 +65,12 @@ class PgFarmAdminClient {
     return resp.rows[0];
   }
 
-  async getInstance(nameOrId, organizationId) {
-    let res = await client.query(`
-      SELECT * FROM ${config.adminDb.tables.INSTANCE}
-      WHERE (name = $1 OR instance_id=try_cast_uuid($1)) AND
-      and organization_id = $2
-    `, [nameOrId, organizationId]);
+  async getInstance(nameOrId='', orgNameOrId=null) {
+    let res = await client.query(
+      `SELECT * FROM ${config.adminDb.tables.INSTANCE} 
+       WHERE instance_id = ${this.schema}.get_instance($1, $2)`, 
+      nameOrId, orgNameOrId
+    );
 
     if( res.rows.length === 0 ) {
       throw new Error('Instance not found: '+nameOrId);
@@ -83,7 +85,7 @@ class PgFarmAdminClient {
    * 
    * @param {String} name Instance name
    * @param {Object} opts  
-   * @param {String} opts.hostname Optional. hostname of the instance. If not provided, it will be set to 'pg-'+name
+   * @param {String} opts.hostname hostname of the instance.
    * @param {String} opts.description description of the instance
    * @param {String} opts.port port of the instance
    * @param {String} opts.organization Optional. name or ID of the organization
@@ -95,15 +97,16 @@ class PgFarmAdminClient {
       INSERT INTO ${config.adminDb.tables.INSTANCE}
       (name, hostname, description, organization_id)
       VALUES ($1, $2, $3, $4)
-      RETURNING instance_id
+      RETURNING *
     `, [name, opts.hostname, opts.description, opts.organization_id]);
 
+    // TODO: where does node pg report errors?
     if( resp.rows.length === 0 ) {
       logger.error('Instance not created: '+name, resp);
-      throw new Error('Instance not created: '+name);
+      throw new Error('Instance not created: '+name+'. Please check logs');
     }
 
-    return resp.rows[0].instance_id;
+    return resp.rows[0];
   }
 
   async updateInstance(nameOrId, instanceId, property, value) {
@@ -155,22 +158,21 @@ class PgFarmAdminClient {
    *  
    * @returns {Promise<Object>}
    */
-  async createOrganization(name, opts) {
+  async createOrganization(title, opts) {
     let resp = await client.query(`
-      INSERT INTO ${config.adminDb.tables.ORGANIZATION} (name, description, url)
-      VALUES ($1, $2, $3)
-      RETURNING organization_id
-    `, [name, opts.description, opts.url]);
+      INSERT INTO ${config.adminDb.tables.ORGANIZATION} (title, name, description, url)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [title, opts.name, opts.description, opts.url]);
 
-    return resp.rows[0].organization_id;
+    return resp.rows[0];
   }
 
-  async getDatabase(nameOrId, organizationId) {
+  async getDatabase(nameOrId, orgNameOrId) {
     let res = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE}
-      WHERE (database_name = $1 OR database_id=try_cast_uuid($1)) AND
-      and organization_id = $2
-    `, [nameOrId, organizationId]);
+      WHERE database_id = ${this.schema}.get_database($1, $2)
+    `, [nameOrId, orgNameOrId]);
 
     if( res.rows.length === 0 ) {
       throw new Error('Database not found: '+nameOrId);
@@ -179,37 +181,47 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
-  async createDatabase(name, opts) {
+  async createDatabase(title, opts) {
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.DATABASE}
-      (name, instance_id, organization_id, short_description, description, tags)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING database_id
-    `, [name, opts.instance_id, opts.organization_id, 
+      (title, name, instance_id, organization_id, short_description, description, tags)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [title, opts.name, opts.instance_id, opts.organization_id, 
         opts.short_description, opts.description, opts.tags]);
 
-    return resp.rows[0].database_id;
+    return resp.rows[0];
   }
 
-  async createDatabaseUser(databaseId, username, password, type) {
-    let instance = await this.getInstance(nameOrId);
-
-    return client.query(`
-      INSERT INTO ${config.adminDb.tables.DATABASE_USERS}
-      (username, password, type, instance_id)
-      VALUES ($1, $2, $3, $4)
-    `, [username, password, type, instance.instance_id]);
+  async createInstanceUser(instNameOrId, orgNameOrId, username, password, type) {
+    return client.query(`SELECT * FROM ${this.schema}.create_instance_user($1, $2, $3, $4)`, 
+    [instNameOrId, orgNameOrId, username, password, type]);
   }
 
+  async getInstanceUser(instNameOrId, orgNameOrId, username) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.tables.INSTANCE_DATABASE_USERS}
+      WHERE instance_user_id = ${this.schema}.get_instance_user($1, $2, $3)
+    `, [instNameOrId, orgNameOrId, username]);
 
-
-  async userExists(instNameOrId, username) {
-    try {
-      await this.getUser(instNameOrId, username);
-      return true;
-    } catch(e) {
-      return false;
+    if( resp.rows.length === 0 ) {
+      throw new Error('User not found: '+username);
     }
+
+    return resp.rows[0];
+  }
+
+  async getInstanceUserForDb(dbNameOrId, orgNameOrId, username) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
+      WHERE instance_user_id = ${this.schema}.get_instance_user_id_for_db($1, $2, $3)
+    `, [dbNameOrId, orgNameOrId, username]);
+
+    if( resp.rows.length === 0 ) {
+      throw new Error('User not found: '+username);
+    }
+
+    return resp.rows[0];
   }
 
   async getInstances(opts={}) {
@@ -243,25 +255,15 @@ class PgFarmAdminClient {
     });
   }
 
-
-  async getInstanceUsers(instNameOrId) {
-    let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABSE_USERS}
-      WHERE database_name = $1 OR instance_id=try_cast_uuid($1)
-    `, [instNameOrId]);
-
-    return resp.rows;
-  }
-
   async setUserToken(token) {
     const hash = 'urn:md5:'+crypto.createHash('md5').update(token).digest('base64');
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
     const expires = new Date(payload.exp * 1000);
+    const username = payload.username || payload.preferred_username;
 
     await client.query(`
-      INSERT INTO ${config.adminDb.tables.USER_TOKEN}
-      (token, hash, expires) VALUES ($1, $2, $3)
-    `, [token, hash, expires.toISOString()]);
+      SELECT * from ${this.schema}.add_user_token($1, $2, $3)
+    `, [username, token, hash, expires.toISOString()]);
 
     return hash;
   }

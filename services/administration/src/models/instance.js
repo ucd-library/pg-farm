@@ -26,7 +26,7 @@ class Instance {
   async get(nameOrId, orgNameOrId) {
     let organizationId = null;
     if( orgNameOrId ) {
-      let org = await this.getOrganization(orgNameOrId);
+      let org = await this.models.organization.get(orgNameOrId);
       organizationId = org.organization_id;
     }
 
@@ -55,21 +55,25 @@ class Instance {
    * @returns {Promise<Object>}
    */
   async create(name, opts) {
-    let exists = await this.instanceExists(name, opts.organization);
+    let exists = await this.exists(name, opts.organization);
     if( exists ) {
       throw new Error('Instance already exists: '+name);
     }
 
-    if( !opts.hostname ) {
-      opts.hostname = 'pg-'+name;
-    }
-
+    let orgName = '';
     if( opts.organization ) {
       let org = await this.getOrganization(opts.organization);
       opts.organization_id = org.organization_id;
+      orgName = org.name+'-';
     }
     if( !opts.organization_id ) {
       opts.organization_id = null;
+    }
+
+    name = name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+    
+    if( !opts.hostname ) {
+      opts.hostname = 'pg-'+orgName+name;
     }
 
     return client.createInstance(name, opts);

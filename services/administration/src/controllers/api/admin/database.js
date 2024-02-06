@@ -1,14 +1,17 @@
 import {Router} from 'express';
-import model from '../../../models/admin.js';
-import pgRest from '../../../models/pg-rest.js';
+import {admin as model, pgRest} from '../../../models/index.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
 
+const router = Router();
+
 router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
+    console.log('createDatabase', req.body)
     let resp = await model.createDatabase(req.body);
     res.status(201).json(resp);
   } catch(e) {
+    console.log(e);
     handleError(res, e);
   }
 });

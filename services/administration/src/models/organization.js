@@ -8,7 +8,7 @@ class OrganizationModel {
 
   async exists(name) {
     try {
-      let org = await this.getOrganization(name);
+      let org = await this.get(name);
       return org;
     } catch(e) {}
 
@@ -19,20 +19,24 @@ class OrganizationModel {
    * @method create
    * @description create a new organization
    * 
-   * @param {String} name name of the organization 
+   * @param {String} title name of the organization 
    * @param {Object} opts
    * @param {String} opts.description description of the organization
    * @param {String} opts.url url of the organization
    *  
    * @returns {Promise<Object>}
    */
-  async create(name, opts) {
-    let exists = await this.organizationExists(name);
-    if( exists ) {
-      throw new Error('Organization already exists: '+name);
+  async create(title, opts={}) {
+    if( !opts.name ) {
+      opts.name = title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
     }
 
-    return client.createOrganization(name, opts);
+    let exists = await this.exists(opts.name);
+    if( exists ) {
+      throw new Error('Organization already exists: '+opts.name);
+    }
+
+    return client.createOrganization(title, opts);
   }
 
 }

@@ -1,7 +1,7 @@
 import {Router} from 'express';
 
-import instanceRoutes from './instance.js';
-import databaseRoutes from './database.js';
+import instanceRoutes from './admin/instance.js';
+import databaseRoutes from './admin/database.js';
 
 const router = Router();
 
