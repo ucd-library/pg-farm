@@ -47,8 +47,9 @@ class Database {
     }
   }
 
-  async addUser(database, user) {
-    let resp = await fetch(`${config.host}/api/admin/database/${database}/${user}`, {
+  async addUser(database, organization, user) {
+    if( !organization ) organization = '_';
+    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/${user}`, {
       method: 'PUT',
       headers: headers()
     });

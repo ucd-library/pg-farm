@@ -20,8 +20,13 @@ class User {
    * 
    * @returns {Promise}
    */
-  async create(instNameOrId, orgNameOrId=null, user, type='USER', password, noinherit=false) {
-    let db = await this.models.instance.get(nameOrId, orgNameOrId);
+  async create(nameOrId, orgNameOrId=null, user, type='USER', password, noinherit=false) {
+    let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
+    if( !instance ) {
+      let db = await this.models.database.exists(nameOrId, orgNameOrId);
+      if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
+      instance = await this.models.instance.get(db.instance_id);
+    }
 
     // check for reserved users
     if( user === config.pgInstance.publicRole.username ) {
@@ -41,16 +46,22 @@ class User {
     }
 
     // add user to database
-    await client.createDatabaseUser(db.database_id, user, password, type);
+    await client.getInstanceUser(instance.instance_id, user, password, type);
 
     // postgres user already exists.  Update password
     if( user === config.pgInstance.adminRole ) {
-      await this.resetPassword(db.database_id, config.pgInstance.adminRole);
+      await this.resetPassword(instance.instance_id, config.pgInstance.adminRole);
       return;
     }
 
     // get instance connection information
-    let con = await client.getConnection(instNameOrId);
+    let con = {
+      host : instance.hostname,
+      port : user.instance_port,
+      user : user.username,
+      database : user.database_name,
+      password : user.password
+    };
 
     // add user to postgres
     if( noinherit ) noinherit = 'NOINHERIT';
@@ -81,8 +92,8 @@ class User {
       WHERE 
         (organization_name = $1 OR organization_id=try_cast_uuid($1)) AND
         (
-          instance_name = $1 OR instance_id=try_cast_uuid($1) OR
-          database_name = $1 OR database_id=try_cast_uuid($1)
+          (instance_name = $1 OR instance_id=try_cast_uuid($1)) OR
+          (database_name = $1 OR database_id=try_cast_uuid($1))
         ) AND 
         username = $2
     `, [nameOrId, orgNameOrId, username]);

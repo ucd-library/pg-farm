@@ -24,7 +24,7 @@ function init() {
 }
 
 async function middleware(req, res) {
-  let path = req.path;
+  let path = req.originalUrl;
   let host = DEFAULT_HOST;
   let dbRouteMatch = path.match(dbRouteRegex);
   

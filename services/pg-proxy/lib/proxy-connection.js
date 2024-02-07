@@ -5,7 +5,7 @@ import config from '../../lib/config.js';
 import utils from '../../lib/utils.js';
 import logger from '../../lib/logger.js';
 import adminClient from '../../lib/pg-admin-client.js';
-import {admin, user, instance} from '../../administration/src/models/index.js';
+import {admin, user as userModel, instance} from '../../administration/src/models/index.js';
 import instanceStart from '../../lib/instance-start.js';
 
 // let pgPassConnection = null;
@@ -237,12 +237,14 @@ class ProxyConnection extends EventEmitter {
     // before attempt connection, check user is registered with database
     let user;
     try {
-      user = await user.get(
+      user = await userModel.get(
         this.startupProperties.database,
         this.startupProperties.organization,
         this.startupProperties.user
       );
     } catch (e) { }
+
+    console.log({user, startupProperties: this.startupProperties})
 
     let userError = false;
     if( !user ) {
@@ -561,7 +563,7 @@ class ProxyConnection extends EventEmitter {
     (this.parsedJwt.roles || []).forEach(role => roles.add(role));
     (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
 
-    let user = await user.get(
+    let user = await userModel.get(
       this.startupProperties.database,
       this.startupProperties.organization,
       this.startupProperties.user
@@ -597,7 +599,7 @@ class ProxyConnection extends EventEmitter {
   async sendUserPassword() {
     let password = config.proxy.password.static;
     if (config.proxy.password.type === 'pg') {
-      let user = await user.get(
+      let user = await userModel.get(
         this.startupProperties.database,
         this.startupProperties.organization, 
         this.startupProperties.user

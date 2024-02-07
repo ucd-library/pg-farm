@@ -24,13 +24,7 @@ class Instance {
   }
 
   async get(nameOrId, orgNameOrId) {
-    let organizationId = null;
-    if( orgNameOrId ) {
-      let org = await this.models.organization.get(orgNameOrId);
-      organizationId = org.organization_id;
-    }
-
-    return client.getInstance(nameOrId, organizationId);
+    return client.getInstance(nameOrId, orgNameOrId);
   }
 
   async exists(name, orgNameOrId) {
@@ -60,14 +54,11 @@ class Instance {
       throw new Error('Instance already exists: '+name);
     }
 
+    // look up organization name to use in hostname
     let orgName = '';
     if( opts.organization ) {
-      let org = await this.getOrganization(opts.organization);
-      opts.organization_id = org.organization_id;
+      let org = await this.models.organization.get(opts.organization);
       orgName = org.name+'-';
-    }
-    if( !opts.organization_id ) {
-      opts.organization_id = null;
     }
 
     name = name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');

@@ -5,7 +5,7 @@ const program = new Command();
 
 program.command('create')
   .description('Create a new instance PG Farm database (requires admin access)')
-  .requiredOption('-i, --instance <title>', 'Instance title.  Will be created if it does not exist')
+  .requiredOption('-i, --instance <title>', 'Instance to use.  Will be created if it does not exist')
   .requiredOption('-d, --database <title>', 'Database title')
   .option('-o, --organization <title>', 'Organization title. Will be created if it does not exist')
   .action(options => {
@@ -14,8 +14,9 @@ program.command('create')
 
 program.command('add-user <database> <user>')
   .description('Add a user to an database (requires admin access to instance)')
-  .action((dbName, user) => {
-    database.addUser(dbName, user);
+  .option('-o, --organization <name>', 'Database organization name')
+  .action((dbName, user, opts) => {
+    database.addUser(dbName, opts.organization, user);
   });
 
 program.command('list')

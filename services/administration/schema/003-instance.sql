@@ -60,17 +60,17 @@ CREATE OR REPLACE FUNCTION get_instance_id(name_or_id text, org_name_or_id text)
   BEGIN
 
     IF org_name_or_id IS NULL THEN
-      SELECT instance_id INTO oid FROM pgfarm.instance
+      SELECT instance_id INTO iid FROM pgfarm.instance
       WHERE name = name_or_id OR instance_id=try_cast_uuid(name_or_id);
 
-      IF oid IS NULL THEN
+      IF iid IS NULL THEN
         RAISE EXCEPTION 'Instance not found: %', name_or_id;
       END IF;
 
     ELSE 
-      SELECT pgfarm.get_organization(org_name_or_id) INTO oid;
+      SELECT pgfarm.get_organization_id(org_name_or_id) INTO oid;
 
-      SELECT instance_id INTO oid FROM pgfarm.instance
+      SELECT instance_id INTO iid FROM pgfarm.instance
       WHERE 
         (name = name_or_id OR instance_id=try_cast_uuid(name_or_id)) AND
         organization_id = oid;

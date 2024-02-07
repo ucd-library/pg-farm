@@ -7,11 +7,9 @@ const router = Router();
 
 router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
-    console.log('createDatabase', req.body)
     let resp = await model.createDatabase(req.body);
     res.status(201).json(resp);
   } catch(e) {
-    console.log(e);
     handleError(res, e);
   }
 });
@@ -43,7 +41,13 @@ router.put('/:organization/:database/:user', keycloak.protect('admin'), async (r
     let database = req.params.database;
     let user = req.params.user.replace(/@.*$/, '');
 
-    let id = await model.createUser(organization, database, user);
+    // do not let api create special users, for now
+    let type = req.query.type || 'USER';
+    if( type !== 'USER' && type !== 'ADMIN' ) {
+      throw new Error('Invalid type: '+type);
+    }
+
+    let id = await model.createUser(database, organization, user);
     res.status(204).json({id});
   } catch(e) {
     handleError(res, e);

@@ -12,27 +12,27 @@ CREATE TABLE IF NOT EXISTS pgfarm.user_email (
     email text NOT NULL UNIQUE
 );
 
-CREATE FUNCTION IF NOT EXISTS pgfarm.get_user(username_in text) 
+CREATE OR REPLACE FUNCTION pgfarm.get_user(username_in text) 
   RETURNS UUID AS $$
   DECLARE
     uid UUID;
   BEGIN
     SELECT user_id INTO uid FROM pgfarm.user WHERE username = username_in;
-    IF user_id IS NULL THEN
+    IF uid IS NULL THEN
       RAISE EXCEPTION 'User not found: %', username_in;
     END IF;
     RETURN uid;
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION IF NOT EXISTS pgfarm.ensure_user(username_in text) 
+CREATE OR REPLACE FUNCTION pgfarm.ensure_user(username_in text) 
   RETURNS UUID AS $$
   DECLARE
     uid UUID;
   BEGIN
     SELECT user_id INTO uid FROM pgfarm.user WHERE username = username_in;
-    IF user_id IS NULL THEN
-      INSERT INTO pgfarm.user (username) VALUES (username_in) RETURNING user_id INTO user_id;
+    IF uid IS NULL THEN
+      INSERT INTO pgfarm.user (username) VALUES (username_in) RETURNING user_id INTO uid;
     END IF;
     RETURN uid;
   END;
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.user_token (
 );
 CREATE INDEX IF NOT EXISTS user_token_hash_idx ON pgfarm.user_token(hash);
 
-CREATE FUNCTION IF NOT EXISTS pgfarm.add_user_token(username_in text, token_in text, hash_in text, expires_in timestamp) 
+CREATE OR REPLACE FUNCTION pgfarm.add_user_token(username_in text, token_in text, hash_in text, expires_in timestamp) 
   RETURNS void AS $$
   DECLARE
     uid UUID;

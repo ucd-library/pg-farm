@@ -39,25 +39,35 @@ class AdminModel {
     }
   }
 
+  async createUser(instNameOrId, orgNameOrId, user, type='USER') {
+    return this.models.user.create(instNameOrId, orgNameOrId, user, type);
+  }
+
   async createDatabase(opts={}) {
     let name = opts.name || opts.database;
     let organization;
 
+    let database = await this.models.database.exists(name, opts.organization);
+    if( database ) {
+      if( opts.organization ) name = opts.organization+'/'+name;
+      throw new Error('Database already exists: '+name);
+    }
+
     if( opts.organization ) {
-      if( !await this.models.organization.exists(opts.organization) ) {
+      organization = await this.models.organization.exists(opts.organization);
+      if( !organization ) {
         organization = await this.models.organization.create(opts.organization);
         opts.organization = organization.name;
       }
     }
 
-    let instance = await this.models.instance.exists(opts.instance);
+    let instance = await this.models.instance.exists(opts.instance, opts.organization);
     if( !instance ) {
       let iOpts = {};
-      if( opts.organization ) iOpts.organization = organization.name;
-      console.log(opts.instance, iOpts);
+      if( opts.organization ) iOpts.organization = opts.organization;
       instance = await this.models.instance.create(opts.instance, iOpts);
-      opts.instance = instance.name;
     }
+    opts.instance = instance.name;
 
     await this.models.database.create(name, opts);
   }

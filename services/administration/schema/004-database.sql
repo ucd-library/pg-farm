@@ -1,3 +1,5 @@
+set search_path to pgfarm, public;
+
 CREATE TABLE IF NOT EXISTS pgfarm.database (
   database_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id),
@@ -6,6 +8,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   title text NOT NULL,
   short_description text,
   description text,
+  url text,
   tags text[],
   created_at timestamp NOT NULL DEFAULT now(),
   updated_at timestamp NOT NULL DEFAULT now(),
@@ -22,12 +25,12 @@ CREATE OR REPLACE FUNCTION check_organization_id()
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER check_org_id_update_trigger
+CREATE OR REPLACE TRIGGER check_org_id_update_trigger
   BEFORE UPDATE ON pgfarm.database
   FOR EACH ROW
-  EXECUTE FUNCTION check_organization_id();4
+  EXECUTE FUNCTION check_organization_id();
 
-CREATE TRIGGER check_org_id_create_trigger
+CREATE OR REPLACE TRIGGER check_org_id_create_trigger
   BEFORE INSERT ON pgfarm.database
   FOR EACH ROW
   EXECUTE FUNCTION check_organization_id();
@@ -49,7 +52,7 @@ CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
       END IF;
 
     ELSE 
-      SELECT pgfarm.get_organization(org_name_or_id) INTO oid;
+      SELECT pgfarm.get_organization_id(org_name_or_id) INTO oid;
 
       SELECT database_id INTO dbid FROM pgfarm.database
       WHERE 

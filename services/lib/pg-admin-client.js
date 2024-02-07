@@ -11,6 +11,9 @@ const client = new PG.Pool({
   password : config.adminDb.password,
   port : config.adminDb.port
 });
+client.on('error', (err) => {
+  logger.error('PG admin db client error', err);
+});
 
 class PgFarmAdminClient {
 
@@ -22,8 +25,17 @@ class PgFarmAdminClient {
     this.schema = config.adminDb.schema;
 
     this.enums = [
-      'instance_user_type'
+      'instance_user_type',
+      'instance_availability',
+      'instance_state'
     ]
+
+    this.INVALID_UPDATE_PROPS = {
+      ORGANIZATION : ['organization_id', 'updated_at', 'created_at'],
+      INSTANCE : ['instance_id', 'updated_at', 'created_at', 'organization_id'],
+      DATABASE : ['database_id', 'updated_at', 'created_at', 'organization_id']
+    }
+
   }
 
   query(query, args) {
@@ -52,10 +64,17 @@ class PgFarmAdminClient {
     }
   }
 
+  /**
+   * @method getOrganization
+   * @description get organization by name or ID
+   * 
+   * @param {String} nameOrId organization name or ID
+   * @returns {Promise<Object>}
+   */
   async getOrganization(nameOrId) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.ORGANIZATION}
-      WHERE name = $1 OR organization_id=try_cast_uuid($1)
+      WHERE organization_id = ${this.schema}.get_organization_id($1)
     `, [nameOrId]);
 
     if( resp.rows.length === 0 ) {
@@ -65,11 +84,63 @@ class PgFarmAdminClient {
     return resp.rows[0];
   }
 
+  /**
+   * @method createOrganization
+   * @description create a new organization
+   * 
+   * @param {String} title long name of the organization 
+   * @param {Object} opts
+   * @param {String} opts.name short name of the organization
+   * @param {String} opts.description description of the organization
+   * @param {String} opts.url url of the organization
+   *  
+   * @returns {Promise<Object>}
+   */
+  async createOrganization(title, opts) {
+    let resp = await client.query(`
+      INSERT INTO ${config.adminDb.tables.ORGANIZATION} (title, name, description, url)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [title, opts.name, opts.description, opts.url]);
+
+    return resp.rows[0];
+  }
+
+  /**
+   * @method updateOrganization
+   * @description update organization property
+   * 
+   * @param {String} nameOrId organization name or ID
+   * @param {String} property property to update
+   * @param {String} value value to set
+   */
+  async updateOrganization(nameOrId, property, value) {
+    let org = await this.getOrganization(nameOrId);
+
+    if( this.INVALID_UPDATE_PROPS.ORGANIZATION.includes(property) ) {
+      throw new Error('Cannot update '+property);
+    }
+
+    return client.query(`
+      UPDATE ${config.adminDb.tables.ORGANIZATION}
+      SET ${pgFormat('%s', property)} = $1
+      WHERE organization_id = $2
+    `, [value, org.organization_id]);
+  }
+
+  /**
+   * @method getInstance
+   * @description get instance by name or ID
+   * 
+   * @param {String} nameOrId instance name or ID
+   * @param {String} orgNameOrId organization name or ID, can be null
+   * @returns 
+   */
   async getInstance(nameOrId='', orgNameOrId=null) {
     let res = await client.query(
       `SELECT * FROM ${config.adminDb.tables.INSTANCE} 
-       WHERE instance_id = ${this.schema}.get_instance($1, $2)`, 
-      nameOrId, orgNameOrId
+       WHERE instance_id = ${this.schema}.get_instance_id($1, $2)`, 
+      [nameOrId, orgNameOrId]
     );
 
     if( res.rows.length === 0 ) {
@@ -93,12 +164,16 @@ class PgFarmAdminClient {
    * @returns 
    */
   async createInstance(name, opts) {
+    if( opts.organization ) {
+      opts.organization = (await this.getOrganization(opts.organization)).organization_id;
+    }
+
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.INSTANCE}
       (name, hostname, description, organization_id)
       VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [name, opts.hostname, opts.description, opts.organization_id]);
+    `, [name, opts.hostname, opts.description, opts.organization]);
 
     // TODO: where does node pg report errors?
     if( resp.rows.length === 0 ) {
@@ -109,35 +184,63 @@ class PgFarmAdminClient {
     return resp.rows[0];
   }
 
-  async updateInstance(nameOrId, instanceId, property, value) {
-    let instance = await this.getInstance(nameOrId);
+  /**
+   * @method updateInstanceProperty
+   * @description update instance property
+   * 
+   * @param {String} nameOrId instance name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * @param {String} property property to update
+   * @param {String} value value to set
+   * @returns {Promise<Object>}
+   */
+  async updateInstanceProperty(nameOrId, orgNameOrId, property, value) {
+    if( this.INVALID_UPDATE_PROPS.INSTANCE.includes(property) ) {
+      throw new Error('Cannot update '+property);
+    }
 
-    let resp = await client.query(`
+    return client.query(`
       UPDATE ${config.adminDb.tables.INSTANCE}
       SET ${pgFormat('%s', property)} = $1
-      WHERE instance_id = $2
-    `, [value, instance.instance_id]);
+      WHERE instance_id = ${this.schema}.get_instance_id($2, $3)
+    `, [value, nameOrId, orgNameOrId]);
   }
 
-  async setInstanceConfig(nameOrId, name, value) {
-    let instance = await this.getInstance(nameOrId);
-
-    let resp = await client.query(`
+  /**
+   * @method setInstancek8sConfig
+   * @description set k8s config for an instance
+   * 
+   * @param {String} nameOrId name or ID of the instance
+   * @param {String} orgNameOrId name or ID of the organization
+   * @param {String} property property to set
+   * @param {String} value value to set
+   * 
+   * @returns {Promise<Object>}
+   */
+  async setInstancek8sConfig(nameOrId, orgNameOrId, property, value) {
+    return client.query(`
       INSERT INTO ${config.adminDb.tables.INSTANCE_CONFIG}
       (instance_id, name, value)
-      VALUES ($1, $2, $3)
+      VALUES (${this.schema}.get_instance_id($1, $2), $3, $4)
       ON CONFLICT (instance_id, name)
       DO UPDATE SET value = EXCLUDED.value
-    `, [instance.instance_id, name, value]);
+    `, [nameOrId, orgNameOrId, property, value]);
   }
 
-  async getInstanceConfig(nameOrId) {
-    let instance = await this.getInstance(nameOrId);
-
+  /**
+   * @method getInstanceConfig
+   * @description get instance config, all properties
+   * 
+   * @param {String} nameOrId instance name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * 
+   * @returns {Promise<Object>}
+   */
+  async getInstanceConfig(nameOrId, orgNameOrId) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.INSTANCE_CONFIG}
-      WHERE instance_id = $1
-    `, [instance.instance_id]);
+      WHERE instance_id = ${this.schema}.get_instance_id($1, $2)
+    `, [nameOrId, orgNameOrId]);
 
     let iconfig = {};
     for( let row of resp.rows ) {
@@ -148,30 +251,18 @@ class PgFarmAdminClient {
   }
 
   /**
-   * @method createOrganization
-   * @description create a new organization
+   * @method getDatabase
+   * @description get database by name or ID
    * 
-   * @param {String} name name of the organization 
-   * @param {Object} opts
-   * @param {String} opts.description description of the organization
-   * @param {String} opts.url url of the organization
-   *  
+   * @param {String} nameOrId database name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * 
    * @returns {Promise<Object>}
    */
-  async createOrganization(title, opts) {
-    let resp = await client.query(`
-      INSERT INTO ${config.adminDb.tables.ORGANIZATION} (title, name, description, url)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [title, opts.name, opts.description, opts.url]);
-
-    return resp.rows[0];
-  }
-
   async getDatabase(nameOrId, orgNameOrId) {
     let res = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE}
-      WHERE database_id = ${this.schema}.get_database($1, $2)
+      WHERE database_id = ${this.schema}.get_database_id($1, $2)
     `, [nameOrId, orgNameOrId]);
 
     if( res.rows.length === 0 ) {
@@ -181,23 +272,82 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
+  /**
+   * @method createDatabase
+   * @description create a new database
+   * 
+   * @param {String} title long name of the database
+   * @param {Object} opts
+   * @param {String} opts.name short name of the database
+   * @param {String} opts.instance name or ID of the instance
+   * @param {String} opts.organization name or ID of the organization
+   * @param {String} opts.short_description short description of the database
+   * @param {String} opts.description description of the database, can include markdown
+   * @param {String} opts.tags tags for the database
+   * 
+   * @returns {Promise<Object>}
+   **/
   async createDatabase(title, opts) {
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.DATABASE}
-      (title, name, instance_id, organization_id, short_description, description, tags)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      (title, name, instance_id, organization_id, short_description, description, tags, url)
+      VALUES ($1, $2, ${this.schema}.get_instance_id($3, $4), ${this.schema}.get_organization_id($4), $5, $6, $7, $8)
       RETURNING *
-    `, [title, opts.name, opts.instance_id, opts.organization_id, 
-        opts.short_description, opts.description, opts.tags]);
+    `, [title, opts.name, opts.instance, opts.organization, 
+        opts.short_description, opts.description, opts.tags, opts.url]);
 
     return resp.rows[0];
   }
 
+  /**
+   * @method updateDatabaseProperty
+   * @description update database property
+   * 
+   * @param {String} nameOrId database name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * @param {String} property property to update
+   * @param {String} value value to set
+   * @returns {Promise<Object>}
+   */
+  updateDatabaseProperty(nameOrId, orgNameOrId, property, value) {
+    if( this.INVALID_UPDATE_PROPS.DATABASE.includes(property) ) {
+      throw new Error('Cannot update '+property);
+    }
+
+    return client.query(`
+      UPDATE ${config.adminDb.tables.DATABASE}
+      SET ${pgFormat('%s', property)} = $1
+      WHERE database_id = ${this.schema}.get_database_id($2, $3)
+    `, [value, nameOrId, orgNameOrId]);
+  }
+
+  /**
+   * @method createInstanceUser
+   * @description create a new database instance user
+   * 
+   * @param {String} instNameOrId instance name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * @param {String} username username of the user.  will be added to the pgfarm.users table if not exists
+   * @param {String} password password for this user on this instance
+   * @param {String} type pgfarm user type (instance_user_type enum)
+   * @returns {Promise<Object>}
+   */
   async createInstanceUser(instNameOrId, orgNameOrId, username, password, type) {
     return client.query(`SELECT * FROM ${this.schema}.create_instance_user($1, $2, $3, $4)`, 
     [instNameOrId, orgNameOrId, username, password, type]);
   }
 
+  /**
+   * @method getInstanceUser
+   * @description get instance user by name or ID.  Note this is for looking up
+   * a user by database instance name, not database name.  See getInstanceUserForDb()
+   * for that more common use case.
+   * 
+   * @param {String} instNameOrId instance name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * @param {String} username 
+   * @returns {Promise<Object>}
+   */
   async getInstanceUser(instNameOrId, orgNameOrId, username) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.INSTANCE_DATABASE_USERS}
@@ -211,6 +361,15 @@ class PgFarmAdminClient {
     return resp.rows[0];
   }
 
+  /**
+   * @method getInstanceUserForDb
+   * @description get instance user given a specific database and organization
+   * 
+   * @param {String} dbNameOrId database name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * @param {String} username 
+   * @returns {Promise<Object>}
+   */
   async getInstanceUserForDb(dbNameOrId, orgNameOrId, username) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
@@ -255,6 +414,16 @@ class PgFarmAdminClient {
     });
   }
 
+  /**
+   * @method setUserToken
+   * @description set a user auth token in the database.  The JWT token should be trusted as this
+   * method does not verify the token.  It will parse the body and store the expires time as well
+   * as username and token hash.  The token hash is the md5 hash of the token.  It's shorter and
+   * can be used in place of the full JWT token.  Returns the md5 hash token.
+   * 
+   * @param {String} token JWT token to store
+   * @returns {Promise<String>} 
+   */
   async setUserToken(token) {
     const hash = 'urn:md5:'+crypto.createHash('md5').update(token).digest('base64');
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
@@ -262,12 +431,19 @@ class PgFarmAdminClient {
     const username = payload.username || payload.preferred_username;
 
     await client.query(`
-      SELECT * from ${this.schema}.add_user_token($1, $2, $3)
+      SELECT * from ${this.schema}.add_user_token($1, $2, $3, $4)
     `, [username, token, hash, expires.toISOString()]);
 
     return hash;
   }
 
+  /**
+   * @method getUserTokenFromHash
+   * @description get the full JWT token from the md5 hash of the token
+   * 
+   * @param {String} hash md5 hash of the
+   * @returns {Promise<String>}
+   */
   async getUserTokenFromHash(hash) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.USER_TOKEN}

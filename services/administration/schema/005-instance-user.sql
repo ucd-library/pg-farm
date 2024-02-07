@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.instance_user (
     type instance_user_type NOT NULL,
     created_at timestamp NOT NULL DEFAULT now(),
     updated_at timestamp NOT NULL DEFAULT now(),
-    UNIQUE (instance_id, username)
+    UNIQUE (instance_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS instance_user_username_idx ON pgfarm.instance_user(user_id);
 
@@ -53,7 +53,7 @@ CREATE OR REPLACE FUNCTION add_instance_user(inst_name_or_id text, org_name_or_i
   DECLARE
     uid UUID;
     iid UUID;
-    iuid UUID
+    iuid UUID;
   BEGIN
 
     SELECT pgfarm.get_instance_id(inst_name_or_id, org_name_or_id) INTO iid;
@@ -67,6 +67,7 @@ CREATE OR REPLACE FUNCTION add_instance_user(inst_name_or_id text, org_name_or_i
 
     RETURN iuid;
   END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE VIEW pgfarm.instance_database_user AS
   SELECT
@@ -89,3 +90,19 @@ CREATE OR REPLACE VIEW pgfarm.instance_database_user AS
   RIGHT JOIN pgfarm.instance_user iu ON iu.instance_id = i.instance_id
   LEFT JOIN pgfarm.user u ON u.user_id = u.user_id
   RIGHT JOIN pgfarm.database db ON db.instance_id = i.instance_id;
+
+
+SELECT
+    o.name as organization_name,
+    o.title as organization_title,
+    o.organization_id as organization_id,
+    i.hostname as instance_hostname,
+    i.port as instance_port,
+    i.instance_id as instance_id,
+    i.name as instance_name,
+    iu.instance_user_id,
+    iu.password,
+    iu.type as user_type
+  FROM pgfarm.instance i
+  LEFT JOIN pgfarm.organization o ON o.organization_id = i.organization_id
+  LEFT JOIN pgfarm.instance_user iu ON iu.instance_id = i.instance_id;

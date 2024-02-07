@@ -55,25 +55,25 @@ class Database {
    * @param {*} opts 
    */
   async create(title, opts) {
-    let instance = await this.models.instance.get(
-      opts.instance,
-      opts.organization
-    );
+    // let instance = await this.models.instance.get(
+    //   opts.instance,
+    //   opts.organization
+    // );
 
-    if( opts.organization ) {
-      let org = await this.models.organization.get(opts.organization);
-      opts.organization_id = org.organization_id;
-    }
-    if( !opts.organization_id ) {
-      opts.organization_id = null;
-    }
+    // if( opts.organization ) {
+    //   let org = await this.models.organization.get(opts.organization);
+    //   opts.organization_id = org.organization_id;
+    // }
+    // if( !opts.organization_id ) {
+    //   opts.organization_id = null;
+    // }
     if( !opts.name ) {
       opts.name = title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
     }
 
     await client.createDatabase(title, opts);
 
-    let db = await this.get(opts.name, opts.organization_id);
+    let db = await this.get(opts.name, opts.organization);
 
     try {
       let formattedQuery = pgFormat('CREATE DATABASE %s', name);
