@@ -80,6 +80,7 @@ class ProxyConnection extends EventEmitter {
 
 
     // for replaying startup message on reconnect
+    this.pgFarmUser = null;
     this.startUpMsg = null;
     this.shutdownMsg = null;
     this.pendingMessages = [];
@@ -142,7 +143,7 @@ class ProxyConnection extends EventEmitter {
       // first message provides the connection properties
       if (this.firstMessage) {
         logger.info('client handling startup message', data.length, this.getConnectionInfo());
-        this.parseStartupMessage(data);
+        data = this.parseStartupMessage(data);
         logger.info('startup message parsed', this.getConnectionInfo());
 
         try {
@@ -235,21 +236,19 @@ class ProxyConnection extends EventEmitter {
     logger.info('Initializing server socket', this.getConnectionInfo());
 
     // before attempt connection, check user is registered with database
-    let user;
     try {
-      user = await userModel.get(
+      this.pgFarmUser = await userModel.get(
         this.startupProperties.database,
-        this.startupProperties.organization,
+        this.dbOrganization,
         this.startupProperties.user
       );
-    } catch (e) { }
+    } catch (e) {}
 
-    console.log({user, startupProperties: this.startupProperties})
 
     let userError = false;
-    if( !user ) {
+    if( !this.pgFarmUser ) {
       userError = true;
-    } else if( !this.ALLOWED_USER_TYPES.includes(user.type) ) {
+    } else if( !this.ALLOWED_USER_TYPES.includes(this.pgFarmUser.type || this.pgFarmUser.user_type) ) {
       userError = true;
     }
 
@@ -265,9 +264,9 @@ class ProxyConnection extends EventEmitter {
       return false;
     }
 
-    this.instance = await instance.get(
+    this.instance = await instance.getByDatabase(
       this.startupProperties.database,
-      this.startupProperties.organization
+      this.dbOrganization
     );
 
     let startTime = Date.now();
@@ -449,7 +448,8 @@ class ProxyConnection extends EventEmitter {
    * @param {Buffer} data message from client 
    */
   parseStartupMessage(data) {
-    this.startUpMsg = data;
+    console.log('0x' + data.toString('hex'));
+    console.log(data.toString('utf8'));
 
     let offset = 0;
     let len = data.readInt32BE(offset);
@@ -498,13 +498,44 @@ class ProxyConnection extends EventEmitter {
 
     if( startupProperties.database && startupProperties.database.match('/') ) {
       let parts = startupProperties.database.split('/');
-      startupProperties.organization = parts[0];
+      this.dbOrganization = parts[0];
       startupProperties.database = parts[1];
     } else {
-      startupProperties.organization = null;
+      this.dbOrganization = null;
     }
 
     this.startupProperties = startupProperties;
+
+    // now create new startup message, with organization remove from database
+    offset = 0;
+
+    // set version
+    this.startUpMsg = Buffer.alloc(4);
+    this.startUpMsg.writeInt32BE(this.version, 0);
+    offset += 4;
+
+    // set properties
+    for (let key in startupProperties) {
+      let value = startupProperties[key];
+      
+      this.startUpMsg = Buffer.concat([
+        this.startUpMsg,
+        Buffer.from(key, 'utf8'),
+        Buffer.from([0]),
+        Buffer.from(value, 'utf8'),
+        Buffer.from([0])
+      ]);
+    }
+    // set null
+    this.startUpMsg = Buffer.concat([this.startUpMsg, Buffer.from([0])]);
+
+    // set length
+    let lenBuffer = Buffer.alloc(4);
+    lenBuffer.writeInt32BE(this.startUpMsg.length+4, 0);
+
+    this.startUpMsg = Buffer.concat([lenBuffer, this.startUpMsg]);
+
+    return this.startUpMsg;
   }
 
   /**
@@ -523,7 +554,6 @@ class ProxyConnection extends EventEmitter {
     let len = data.readInt32BE(1);
 
     let jwt = data.subarray(5, data.length - 1).toString('utf8');
-
 
     try {
       // attempt jwt verification
@@ -563,14 +593,9 @@ class ProxyConnection extends EventEmitter {
     (this.parsedJwt.roles || []).forEach(role => roles.add(role));
     (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
 
-    let user = await userModel.get(
-      this.startupProperties.database,
-      this.startupProperties.organization,
-      this.startupProperties.user
-    );
-
+    let userType = this.pgFarmUser.type || this.pgFarmUser.user_type;
     let isAdminAndPGuser = (
-      (user.type === 'ADMIN' || roles.has('admin')) &&
+      (userType === 'ADMIN' || roles.has('admin')) &&
       this.startupProperties.user === 'postgres'
     );
 
@@ -599,12 +624,7 @@ class ProxyConnection extends EventEmitter {
   async sendUserPassword() {
     let password = config.proxy.password.static;
     if (config.proxy.password.type === 'pg') {
-      let user = await userModel.get(
-        this.startupProperties.database,
-        this.startupProperties.organization, 
-        this.startupProperties.user
-      );
-      password = user.password;
+      password = this.pgFarmUser.password;
     }
 
     this.sendPassword(password, this.serverSocket);

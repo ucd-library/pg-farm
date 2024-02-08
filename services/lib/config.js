@@ -103,7 +103,6 @@ const config = {
       get ORGANIZATION() { return config.adminDb.schema+'.organization' },
       get INSTANCE() { return config.adminDb.schema+'.instance' },
       get DATABASE() { return config.adminDb.schema+'.database' },
-      get DATABASE_USERS() { return config.adminDb.schema+'.database_user'},
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_USER() { return config.adminDb.schema+'.instance_user' },
       get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' },

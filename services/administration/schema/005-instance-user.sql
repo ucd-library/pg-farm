@@ -87,22 +87,6 @@ CREATE OR REPLACE VIEW pgfarm.instance_database_user AS
     iu.type as user_type
   FROM pgfarm.instance i
   LEFT JOIN pgfarm.organization o ON o.organization_id = i.organization_id
-  RIGHT JOIN pgfarm.instance_user iu ON iu.instance_id = i.instance_id
-  LEFT JOIN pgfarm.user u ON u.user_id = u.user_id
-  RIGHT JOIN pgfarm.database db ON db.instance_id = i.instance_id;
-
-
-SELECT
-    o.name as organization_name,
-    o.title as organization_title,
-    o.organization_id as organization_id,
-    i.hostname as instance_hostname,
-    i.port as instance_port,
-    i.instance_id as instance_id,
-    i.name as instance_name,
-    iu.instance_user_id,
-    iu.password,
-    iu.type as user_type
-  FROM pgfarm.instance i
-  LEFT JOIN pgfarm.organization o ON o.organization_id = i.organization_id
-  LEFT JOIN pgfarm.instance_user iu ON iu.instance_id = i.instance_id;
+  LEFT JOIN pgfarm.instance_user iu ON iu.instance_id = i.instance_id
+  LEFT JOIN pgfarm.user u ON u.user_id = iu.user_id
+  LEFT JOIN pgfarm.database db ON db.instance_id = i.instance_id;

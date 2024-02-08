@@ -41,8 +41,8 @@ server-port = ${config.pgRest.port}`
    * 
    * @param {String} instNameOrId 
    */
-  async initDb(instNameOrId) {
-    let con = await client.getConnection(instNameOrId);
+  async initDb(nameOrId, orgNameOrId=null) {
+    let con = await this.models.database.getConnection(nameOrId, orgNameOrId);
 
     // create the api schema
     try {
@@ -73,8 +73,13 @@ server-port = ${config.pgRest.port}`
     }
   }
 
-  async start(instNameOrId) {
-    let instance = await client.getInstance(instNameOrId);
+  async start(nameOrId, orgNameOrId=null) {
+    if( config.k8s.enabled === false ) {
+      logger.warn('K8s is not enabled, just setting state to RUN');
+      return;
+    }
+
+    let instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
 
     // PostgREST
     let hostname = 'pgrest-'+instance.name;

@@ -27,6 +27,20 @@ class Instance {
     return client.getInstance(nameOrId, orgNameOrId);
   }
 
+  /**
+   * @method getByDatabase
+   * @description get instance by database name or id
+   * 
+   * @param {String} nameOrId database name or id
+   * @param {Stromg} orgNameOrId organization name or id
+   * 
+   * @returns {Promise<Object>}
+   */
+  async getByDatabase(nameOrId, orgNameOrId) {
+    let database = await this.models.database.get(nameOrId, orgNameOrId);
+    return this.get(database.instance_id);
+  }
+
   async exists(name, orgNameOrId) {
     try {
       let instance = await this.get(name, orgNameOrId);

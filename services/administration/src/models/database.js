@@ -17,7 +17,23 @@ class Database {
    * @returns {Promise<Object>}
    */
   async getConnection(dbNameOrId, orgNameOrId=null, username='postgres') {
-    let user = await this.getUser(dbNameOrId, orgNameOrId, username);
+    let user;
+    try {
+      user = await this.models.user.get(dbNameOrId, orgNameOrId, username);
+    } catch(e) { 
+      if( username === 'postgres' ) {
+        let db = await this.get(dbNameOrId, orgNameOrId);
+        let instance = await this.models.instance.get(db.instance_id);
+        return {
+          host : instance.hostname,
+          port : instance.port,
+          user : username,
+          database : db.name,
+          password : config.pgInstance.adminInitPassword
+        }
+      }
+      throw e;
+    }
 
     return {
       host : user.instance_hostname,
@@ -73,10 +89,13 @@ class Database {
 
     await client.createDatabase(title, opts);
 
+    // register postgres database
+    await client.createDatabase('postgres', opts);
+
     let db = await this.get(opts.name, opts.organization);
 
     try {
-      let formattedQuery = pgFormat('CREATE DATABASE %s', name);
+      let formattedQuery = pgFormat('CREATE DATABASE %s', opts.name);
       let resp = await pgInstClient.query(
         {
           host : db.instance_hostname,
@@ -93,16 +112,16 @@ class Database {
 
     // create postgres user to admin database, resets password
     try {
-      await this.createUser(db.database_id, db.instance_id, 'postgres');
+      await this.models.user.create(db.instance_id, db.organization_id, 'postgres');
     } catch(e) {
-      logger.warn(`Failed to create postgres user for database ${opts.name} on host ${db.instance_hostname}`, e);
+      logger.warn(`Failed to create postgres user for database ${opts.name} on instance ${db.instance_name}`, e);
     }
 
     // add public user
     try {
-      await this.createUser(db.database_id, db.instance_id, config.pgInstance.publicRole.username);
+      await this.models.user.create(db.instance_id, db.organization_id, config.pgInstance.publicRole.username);
     } catch(e) {
-      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${instNameOrId}`, e);
+      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${db.instance_name}`, e);
     }
   }
 

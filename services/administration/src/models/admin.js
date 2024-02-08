@@ -47,11 +47,11 @@ class AdminModel {
     let name = opts.name || opts.database;
     let organization;
 
-    let database = await this.models.database.exists(name, opts.organization);
-    if( database ) {
-      if( opts.organization ) name = opts.organization+'/'+name;
-      throw new Error('Database already exists: '+name);
-    }
+    // let database = await this.models.database.exists(name, opts.organization);
+    // if( database ) {
+    //   if( opts.organization ) name = opts.organization+'/'+name;
+    //   throw new Error('Database already exists: '+name);
+    // }
 
     if( opts.organization ) {
       organization = await this.models.organization.exists(opts.organization);
@@ -69,7 +69,27 @@ class AdminModel {
     }
     opts.instance = instance.name;
 
-    await this.models.database.create(name, opts);
+    try {
+      await this.models.database.create(name, opts);
+    } catch(e) {
+      logger.warn('Failed to create database: '+name, e);
+    }
+
+    // register the postgres user
+    try {
+      await this.createUser(instance.id, opts.organization, 'postgres');
+    } catch(e) {
+      logger.warn(`Failed to create postgres user for database ${name} on instance ${instance.name}`, e);
+    }
+
+    // add public user
+    try {
+      await this.createUser(instance.id, opts.organization, config.pgInstance.publicRole.username);
+    } catch(e) {
+      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${instance.name}`, e);
+    }
+
+    await this.setupPgRest(name, opts.organization);
   }
 
   /**
@@ -135,26 +155,22 @@ class AdminModel {
    * https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
    * 
    */
-  async setupPgRest(instNameOrId) {
-    // add public user
-    try {
-      await this.createUser(instNameOrId, config.pgInstance.publicRole.username);
-    } catch(e) {
-      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${instNameOrId}`, e);
-    }
+  async setupPgRest(nameOrId, orgNameOrId=null) {
+    let instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
+
 
     // add authenticator user
     try {
-      await this.createUser(instNameOrId, config.pgRest.authenticator.username);
+      await this.createUser(instance.id, orgNameOrId, config.pgRest.authenticator.username);
     } catch(e) {
-      logger.warn(`Failed to create authenticator user ${config.pgRest.authenticator.username}: ${instNameOrId}`, e);
+      logger.warn(`Failed to create authenticator user ${config.pgRest.authenticator.username}: ${instance.name}`, e);
     }
 
     // initialize the database for PostgREST roles and schema
-    await pgRest.initDb(instNameOrId);
+    await pgRest.initDb(nameOrId, orgNameOrId);
 
     // start pg rest once instance is running
-    await pgRest.start(instNameOrId);
+    await pgRest.start(nameOrId, orgNameOrId);
   }
 
 

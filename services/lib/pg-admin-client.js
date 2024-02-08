@@ -2,6 +2,7 @@ import PG from 'pg';
 import crypto from 'crypto';
 import config from './config.js';
 import logger from './logger.js';
+import utils from './utils.js';
 import pgFormat from 'pg-format';
 
 const client = new PG.Pool({
@@ -47,6 +48,7 @@ class PgFarmAdminClient {
    * @description need to set parser for custom enum types
    */
   async getEnumTypes() {
+    await utils.waitUntil(config.adminDb.host, config.adminDb.port);
     let resp = await client.query('SELECT typname, oid, typarray FROM pg_type WHERE typname = \'text\'');
     let text = resp.rows[0];
 
@@ -333,7 +335,7 @@ class PgFarmAdminClient {
    * @returns {Promise<Object>}
    */
   async createInstanceUser(instNameOrId, orgNameOrId, username, password, type) {
-    return client.query(`SELECT * FROM ${this.schema}.create_instance_user($1, $2, $3, $4)`, 
+    return client.query(`SELECT * FROM ${this.schema}.add_instance_user($1, $2, $3, $4, $5)`, 
     [instNameOrId, orgNameOrId, username, password, type]);
   }
 
@@ -350,7 +352,7 @@ class PgFarmAdminClient {
    */
   async getInstanceUser(instNameOrId, orgNameOrId, username) {
     let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.tables.INSTANCE_DATABASE_USERS}
+      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
       WHERE instance_user_id = ${this.schema}.get_instance_user($1, $2, $3)
     `, [instNameOrId, orgNameOrId, username]);
 

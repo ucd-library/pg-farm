@@ -101,7 +101,7 @@ DECLARE
 BEGIN
   SELECT instance_id INTO iid FROM pgfarm.instance WHERE name = name_in;
   DELETE FROM pgfarm.database WHERE instance_id = iid;
-  DELETE FROM pgfarm.database_user WHERE instance_id = iid;
+  DELETE FROM pgfarm.instance_user WHERE instance_id = iid;
   DELETE FROM pgfarm.pg_rest_config WHERE instance_id = iid;
   DELETE FROM pgfarm.k8s_config_property WHERE instance_id = iid;
   DELETE FROM pgfarm.instance WHERE instance_id = iid;

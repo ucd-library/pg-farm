@@ -13,14 +13,14 @@ class User {
    * 
    * @param {String} nameOrId  PG Farm instance name or ID 
    * @param {String} orgNameOrId Organization name or ID. Can be null.
-   * @param {String} user username 
+   * @param {String} username username 
    * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER. 
    * @param {String} password optional.  defined password.  If not 
    * provided, a random password will be generated.
    * 
    * @returns {Promise}
    */
-  async create(nameOrId, orgNameOrId=null, user, type='USER', password, noinherit=false) {
+  async create(nameOrId, orgNameOrId=null, username, type='USER', password, noinherit=false) {
     let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
     if( !instance ) {
       let db = await this.models.database.exists(nameOrId, orgNameOrId);
@@ -29,13 +29,13 @@ class User {
     }
 
     // check for reserved users
-    if( user === config.pgInstance.publicRole.username ) {
+    if( username === config.pgInstance.publicRole.username ) {
       type = 'PUBLIC';
       password = config.pgInstance.publicRole.password;
-    } else if( user === config.pgRest.authenticator.username ) {
+    } else if( username === config.pgRest.authenticator.username ) {
       type = 'PGREST';
       noinherit = true;
-    } else if( user === config.pgInstance.adminRole ) {
+    } else if( username === config.pgInstance.adminRole ) {
       type = 'ADMIN';
       password = 'postgres';
     }
@@ -46,28 +46,42 @@ class User {
     }
 
     // add user to database
-    await client.getInstanceUser(instance.instance_id, user, password, type);
+    let user = await this.exists(instance.instance_id, orgNameOrId, username);
+    if( !user ) {
+      await client.createInstanceUser(instance.instance_id, orgNameOrId, username, password, type);
+    }
 
     // postgres user already exists.  Update password
-    if( user === config.pgInstance.adminRole ) {
-      await this.resetPassword(instance.instance_id, config.pgInstance.adminRole);
+    if( username === config.pgInstance.adminRole ) {
+      await this.resetPassword(instance.instance_id, orgNameOrId, config.pgInstance.adminRole);
       return;
     }
 
     // get instance connection information
+    let pgUser;
+    try {
+      pgUser = await this.models.user.get(instance.instance_id, orgNameOrId, config.pgInstance.adminRole);
+    } catch(e) {}
+    if( !pgUser ) {
+      pgUser = { 
+        username : config.pgInstance.adminRole,
+        password : config.pgInstance.adminInitPassword
+      }
+    }
+
     let con = {
       host : instance.hostname,
-      port : user.instance_port,
-      user : user.username,
-      database : user.database_name,
-      password : user.password
+      port : instance.port,
+      user : pgUser.username,
+      password : pgUser.password,
+      database : 'postgres'
     };
 
     // add user to postgres
     if( noinherit ) noinherit = 'NOINHERIT';
     else noinherit = '';
 
-    let formattedQuery = pgFormat('CREATE ROLE "%s" LOGIN '+noinherit+' PASSWORD %L', user, password);
+    let formattedQuery = pgFormat('CREATE ROLE "%s" LOGIN '+noinherit+' PASSWORD %L', username, password);
     let resp = await pgInstClient.query(
       con, 
       formattedQuery,
@@ -90,12 +104,12 @@ class User {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_DATABSE_USERS}
       WHERE 
-        (organization_name = $1 OR organization_id=try_cast_uuid($1)) AND
+        (organization_name = $2 OR organization_id=try_cast_uuid($2)) AND
         (
           (instance_name = $1 OR instance_id=try_cast_uuid($1)) OR
           (database_name = $1 OR database_id=try_cast_uuid($1))
         ) AND 
-        username = $2
+        username = $3
     `, [nameOrId, orgNameOrId, username]);
 
     if( resp.rows.length === 0 ) {
@@ -104,6 +118,17 @@ class User {
 
     return resp.rows[0];
   }
+
+  async exists(nameOrId, orgNameOrId=null, username) {
+    try {
+      let user = await this.get(nameOrId, orgNameOrId, username);
+      return user;
+    } catch(e) {
+      return false;
+    }
+  }
+
+
 
   /**
    * @method resetUserPassword
@@ -126,7 +151,7 @@ class User {
     // update database
     // TODO: move this to client
     await client.query(
-      `UPDATE ${config.adminDb.tables.DATABASE_USERS} 
+      `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
       SET password = $2 
       WHERE username = $1 AND instance_id = $3`, 
       [user, password, con.id]
