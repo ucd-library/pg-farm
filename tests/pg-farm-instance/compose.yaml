@@ -82,7 +82,7 @@ services:
       - ../../services/pg-rest:/services/pg-rest
     command: ./pg-rest/run.sh
 
-  pg-test-test:
+  pg-inst-test-test:
     image: localhost/local-dev/pg-farm-instance:16
     environment:
       - POSTGRES_USER=postgres

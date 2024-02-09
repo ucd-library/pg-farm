@@ -5,18 +5,17 @@ const program = new Command();
 
 program.command('create')
   .description('Create a new instance PG Farm database (requires admin access)')
-  .requiredOption('-i, --instance <title>', 'Instance to use.  Will be created if it does not exist')
+  .option('-i, --instance <title>', 'Instance to use.  Will be created if it does not exist')
   .requiredOption('-d, --database <title>', 'Database title')
   .option('-o, --organization <title>', 'Organization title. Will be created if it does not exist')
   .action(options => {
     database.create(options);
   });
 
-program.command('add-user <database> <user>')
+program.command('add-user <org/database> <user>')
   .description('Add a user to an database (requires admin access to instance)')
-  .option('-o, --organization <name>', 'Database organization name')
-  .action((dbName, user, opts) => {
-    database.addUser(dbName, opts.organization, user);
+  .action((dbName, user) => {
+    database.addUser(dbName, user);
   });
 
 program.command('list')
@@ -27,7 +26,7 @@ program.command('list')
     database.list(opts.mine, opts.id);
   });
 
-program.command('restart-api <database>')
+program.command('restart-api <org/database>')
   .description('Restart the PostgREST API for an instance (requires admin access)')
   .action(dbName => {
     database.restartApi(dbName);

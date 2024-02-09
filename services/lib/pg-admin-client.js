@@ -385,35 +385,15 @@ class PgFarmAdminClient {
     return resp.rows[0];
   }
 
-  async getInstances(opts={}) {
+  async getDatabases(opts={}) {
+    let username = opts.username || config.pgInstance.publicRole.username;
 
-    let type = '';
-    if( opts.username ) {
-      type = `, type`;
-    }
+    let resp = await client.query(
+      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS} WHERE username = $1`, 
+      [username]
+    );
 
-    let SELECT = `SELECT database_name, instance_id${type} FROM ${config.adminDb.views.INSTANCE_DATABSE_USERS}`;
-    let args = [];
-
-    if( opts.username ) {
-      SELECT += ` WHERE username = $1`;
-      args.push(opts.username);
-    }
-
-    SELECT += ` GROUP BY database_name, instance_id${type} ORDER BY database_name`;
-
-    let resp = await client.query(SELECT, args);
-
-    return resp.rows.map(row => {
-      let v = {
-        name : row.database_name,
-        id : row.instance_id
-      }
-      if( opts.username ) {
-        v.role = row.type;
-      }
-      return v;
-    });
+    return resp.rows;
   }
 
   /**

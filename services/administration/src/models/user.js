@@ -1,11 +1,15 @@
 import client from '../../../lib/pg-admin-client.js';
-import pgInstClient from '../../../lib/pg-client.js';
+import pgInstClient from '../../../lib/pg-instance-client.js';
 import pgFormat from 'pg-format';
 import logger from '../../../lib/logger.js';
 import config from '../../../lib/config.js';
 import utils from '../../../lib/utils.js';
 
 class User {
+
+  constructor() {
+    this.schema = config.adminDb.schema;
+  }
  
   /**
    * @method addUser
@@ -23,7 +27,7 @@ class User {
   async create(nameOrId, orgNameOrId=null, username, type='USER', password, noinherit=false) {
     let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
     if( !instance ) {
-      let db = await this.models.database.exists(nameOrId, orgNameOrId);
+      let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
       if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
       instance = await this.models.instance.get(db.instance_id);
     }
@@ -48,7 +52,11 @@ class User {
     // add user to database
     let user = await this.exists(instance.instance_id, orgNameOrId, username);
     if( !user ) {
+      logger.info('Creating instance user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
       await client.createInstanceUser(instance.instance_id, orgNameOrId, username, password, type);
+    } else { // get current password.  make sure its set on the instance db
+      logger.info('Instance user already exists: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
+      password = user.password;
     }
 
     // postgres user already exists.  Update password
@@ -58,36 +66,10 @@ class User {
     }
 
     // get instance connection information
-    let pgUser;
-    try {
-      pgUser = await this.models.user.get(instance.instance_id, orgNameOrId, config.pgInstance.adminRole);
-    } catch(e) {}
-    if( !pgUser ) {
-      pgUser = { 
-        username : config.pgInstance.adminRole,
-        password : config.pgInstance.adminInitPassword
-      }
-    }
+    let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
 
-    let con = {
-      host : instance.hostname,
-      port : instance.port,
-      user : pgUser.username,
-      password : pgUser.password,
-      database : 'postgres'
-    };
-
-    // add user to postgres
-    if( noinherit ) noinherit = 'NOINHERIT';
-    else noinherit = '';
-
-    let formattedQuery = pgFormat('CREATE ROLE "%s" LOGIN '+noinherit+' PASSWORD %L', username, password);
-    let resp = await pgInstClient.query(
-      con, 
-      formattedQuery,
-    );
-
-    return resp;
+    logger.info('Ensuring pg user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
+    await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });  
   }
 
   /**
@@ -102,7 +84,7 @@ class User {
    */
   async get(nameOrId, orgNameOrId=null, username) {
     let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABSE_USERS}
+      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
       WHERE 
         (organization_name = $2 OR organization_id=try_cast_uuid($2)) AND
         (
@@ -136,52 +118,27 @@ class User {
    * 
    * @param {String} instNameOrId PG Farm instance name or ID
    * @param {String} orgNameOrId PG Farm organization name or ID
-   * @param {String} user 
+   * @param {String} username 
    * @param {String} password 
    * 
    * @returns {Promise}
    */
-  async resetPassword(instNameOrId, orgNameOrId, user, password) {
-    // TODO: should this just force the instance on??
-    let con = await this.models.database.getConnection(instNameOrId, orgNameOrId);
-
+  async resetPassword(instNameOrId, orgNameOrId=null, username, password) {
     // generate random password if not provided
     if( !password ) password = utils.generatePassword();
 
+    let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
+    logger.info('resetting password for user: '+username+' on instance: '+con.host+' for organization: '+orgNameOrId);
+
+    await pgInstClient.createOrUpdatePgUser(con, { username, password });
+
     // update database
-    // TODO: move this to client
     await client.query(
       `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
-      SET password = $2 
-      WHERE username = $1 AND instance_id = $3`, 
-      [user, password, con.id]
+      SET password = $4 
+      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
+      [username, instNameOrId, orgNameOrId, password]
     );
-
-    await this.setDbPassword(instNameOrId, orgNameOrId, user, password);
-  }
-
-  /**
-   * @method setDbPassword
-   * @description Sets a user's (pg role) password in the postgres instance
-   * 
-   * @param {*} instNameOrId 
-   * @param {*} orgNameOrId 
-   * @param {*} username 
-   * @param {*} password 
-   * @returns 
-   */
-  async setDbPassword(instNameOrId, orgNameOrId, username, password) {
-    let con = await this.getConnection(instNameOrId, orgNameOrId);
-    // let user = await this.getUser(instNameOrId, orgNameOrId, username);
-
-    // update postgres instance users password
-    let formattedQuery = pgFormat('ALTER USER %s WITH PASSWORD %L', username, password);
-    let resp = await pgInstClient.query(
-      con, 
-      formattedQuery
-    );
-
-    return resp;
   }
 
 }

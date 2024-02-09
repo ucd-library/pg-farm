@@ -20,7 +20,7 @@ CREATE OR REPLACE FUNCTION get_instance_user_id(username_or_id text, inst_name_o
   BEGIN
 
     SELECT pgfarm.get_instance_id(inst_name_or_id, org_name_or_id) INTO iid;
-    SELECT pgfarm.get_user_id(username_or_id, iid) INTO uid;
+    SELECT pgfarm.get_user_id(username_or_id) INTO uid;
 
     SELECT instance_user_id INTO uid FROM pgfarm.instance_user
       WHERE user_id = uid AND instance_id = iid;
@@ -39,7 +39,7 @@ CREATE OR REPLACE FUNCTION get_instance_user_id_for_db(username_or_id text, db_n
 
     SELECT pgfarm.get_database_id(db_name_or_id, org_name_or_id) INTO dbid;
     SELECT instance_id INTO iid from pgfarm.database WHERE database_id = dbid;
-    SELECT pgfarm.get_user_id(username_or_id, iid) INTO uid;
+    SELECT pgfarm.get_user_id(username_or_id) INTO uid;
 
     SELECT instance_user_id INTO uid FROM pgfarm.instance_user
       WHERE user_id = uid AND instance_id = iid;

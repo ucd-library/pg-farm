@@ -1,3 +1,4 @@
+import logger from '../../../lib/logger.js';
 import client from '../../../lib/pg-admin-client.js';
 
 class OrganizationModel {
@@ -36,6 +37,7 @@ class OrganizationModel {
       throw new Error('Organization already exists: '+opts.name);
     }
 
+    logger.info('Creating organization', title, opts);
     return client.createOrganization(title, opts);
   }
 

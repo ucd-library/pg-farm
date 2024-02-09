@@ -4,6 +4,21 @@ import {config} from './config.js';
 
 class Database {
 
+  parseOrg(dbName) {
+    if( dbName.match('/') ) {
+      let parts = dbName.split('/');
+      return {
+        organization: parts[0],
+        database: parts[1]
+      };
+    }
+
+    return {
+      organization: null,
+      database: dbName
+    };
+  }
+
   async list(onlyUsers=false, showId=false) {
     let resp = await fetch(`${config.host}/api/admin/database?onlyMine=${onlyUsers}`, {
       method: 'GET',
@@ -27,6 +42,10 @@ class Database {
   }
 
   async create(opts) {
+    if( opts.instance && !opts.instance.match(/^inst-/) ) {
+      opts.instance = 'inst-'+opts.instance;
+    }
+ 
     let resp = await fetch(`${config.host}/api/admin/database`, {
       method: 'POST',
       headers: headers({
@@ -41,14 +60,16 @@ class Database {
     }
 
     let body = await resp.json();
-    console.log(`Created database ${opts.name} with id ${body.id} on instance ${body.instance}`);
-    if( body.organization ) {
-      console.log(`  -> Organization: ${body.organization}`);
+    console.log(`Created database ${body.database_name} with id ${body.database_id} on instance ${body.instance_name}`);
+    if( body.organization_name ) {
+      console.log(`  -> Organization: ${body.organization_name}`);
     }
   }
 
-  async addUser(database, organization, user) {
+  async addUser(name, user) {
+    let {organization, database} = this.parseOrg(name);
     if( !organization ) organization = '_';
+
     let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/${user}`, {
       method: 'PUT',
       headers: headers()
@@ -62,8 +83,11 @@ class Database {
     console.log(`Added user ${user} to database ${database}`);
   }
 
-  async restartApi(database) {
-    let resp = await fetch(`${config.host}/api/admin/database/${database}/restart/api`, {
+  async restartApi(name) {
+    let {organization, database} = this.parseOrg(name);
+    if( !organization ) organization = '_';
+
+    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/restart/api`, {
       headers: headers()
     });
 

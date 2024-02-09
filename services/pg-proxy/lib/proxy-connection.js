@@ -253,11 +253,13 @@ class ProxyConnection extends EventEmitter {
     }
 
     if ( userError ) {
+      let orgText = this.dbOrganization ? this.dbOrganization + '/' : '';
+
       this.sendError(
         'ERROR',
         '28P01',
         'Invalid Username',
-        `The username provided (${this.startupProperties.user}) is not registered with the database (${this.startupProperties.database}).`,
+        `The username provided (${this.startupProperties.user}) is not registered with the database (${orgText}${this.startupProperties.database}).`,
         'Make sure you are using the correct username and that your account has been registered with PG Farm.',
         this.clientSocket
       );
@@ -448,9 +450,6 @@ class ProxyConnection extends EventEmitter {
    * @param {Buffer} data message from client 
    */
   parseStartupMessage(data) {
-    console.log('0x' + data.toString('hex'));
-    console.log(data.toString('utf8'));
-
     let offset = 0;
     let len = data.readInt32BE(offset);
     offset += 4;

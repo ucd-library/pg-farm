@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.user_email (
     email text NOT NULL UNIQUE
 );
 
-CREATE OR REPLACE FUNCTION pgfarm.get_user(username_in text) 
+CREATE OR REPLACE FUNCTION pgfarm.get_user_id(username_in text) 
   RETURNS UUID AS $$
   DECLARE
     uid UUID;

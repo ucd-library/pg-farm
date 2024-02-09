@@ -1,11 +1,10 @@
 import client from '../../../lib/pg-admin-client.js';
-import pgInstClient from '../../../lib/pg-client.js';
+import pgInstClient from '../../../lib/pg-instance-client.js';
 import utils from '../../../lib/utils.js';
 import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
 import logger from '../../../lib/logger.js';
 import modelUtils from './utils.js';
-import pgRest from './pg-rest.js'; 
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
@@ -40,25 +39,40 @@ class AdminModel {
   }
 
   async createUser(instNameOrId, orgNameOrId, user, type='USER') {
+    console.log({instNameOrId, orgNameOrId, user, type})
     return this.models.user.create(instNameOrId, orgNameOrId, user, type);
   }
 
-  async createDatabase(opts={}) {
+  /**
+   * @method ensureDatabase
+   * @description Creates a new database.  This will also create the instance and
+   * organization if they do not exist and are provided in the options.  This will
+   * attempt to start the instance if it is not already running.  Additionally this command
+   * will always run even if the database already exists.  Ensuring all users, roles, and
+   * schema are up to date.
+   * 
+   * @param {Object} opts
+   * @param {String} opts.name name of database
+   * @param {String} opts.database alias for name
+   * @param {String} opts.organization name or id of organization
+   * @param {String} opts.instance name or id of instance 
+   */
+  async ensureDatabase(opts={}) {
     let name = opts.name || opts.database;
     let organization;
-
-    // let database = await this.models.database.exists(name, opts.organization);
-    // if( database ) {
-    //   if( opts.organization ) name = opts.organization+'/'+name;
-    //   throw new Error('Database already exists: '+name);
-    // }
 
     if( opts.organization ) {
       organization = await this.models.organization.exists(opts.organization);
       if( !organization ) {
         organization = await this.models.organization.create(opts.organization);
+        // make sure we are using the actual name of the org after cleanup
         opts.organization = organization.name;
       }
+    }
+
+    // create instance if not provided
+    if( !opts.instance ) {
+      opts.instance = 'inst-'+name;
     }
 
     let instance = await this.models.instance.exists(opts.instance, opts.organization);
@@ -69,27 +83,18 @@ class AdminModel {
     }
     opts.instance = instance.name;
 
-    try {
+    let database = await this.models.database.exists(name, opts.organization);
+    if( !database ) {
       await this.models.database.create(name, opts);
-    } catch(e) {
-      logger.warn('Failed to create database: '+name, e);
+      database = await this.models.database.get(name, opts.organization); 
     }
 
-    // register the postgres user
-    try {
-      await this.createUser(instance.id, opts.organization, 'postgres');
-    } catch(e) {
-      logger.warn(`Failed to create postgres user for database ${name} on instance ${instance.name}`, e);
-    }
 
-    // add public user
-    try {
-      await this.createUser(instance.id, opts.organization, config.pgInstance.publicRole.username);
-    } catch(e) {
-      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${instance.name}`, e);
-    }
+    // initialize the database for PostgREST roles and schem
+    await this.models.pgRest.initDb(instance.name, opts.organization, database.database_name);
 
-    await this.setupPgRest(name, opts.organization);
+    // start pg rest once instance is running
+    await this.models.pgRest.start(name, opts.organization);
   }
 
   /**
@@ -102,81 +107,9 @@ class AdminModel {
    * @returns {Promise}
    **/
   async createInstance(name, opts={}) {
-    if( !name ) throw new Error('Instance name required');
-
-    let hostname = opts.hostname || 'pg-'+name;
-    let description = opts.description || '';
-    let port = opts.port || 5432;
-    let imageName = opts.imageName || config.pgInstance.image;
-
-    // add instance to database
-    let id = await client.createInstance(name, hostname, description, port);
-
-    // add config
-    await client.setInstanceConfig(id, 'image', imageName);
-
-    // create k8s statefulset and service
-    // using ensure instance here in case the instance is already running
-    // possibly manually created or running docker compose environment
-    await this.ensureInstanceRunning(name);
-
-    // wait for instance to be ready
-    await utils.waitUntil(hostname, port);
-
-    // create instance database
-    // TODO: how do we add params???
-    try {
-      let formattedQuery = pgFormat('CREATE DATABASE %s', name);
-      let resp = await pgInstClient.query(
-        {
-          host : hostname,
-          port : port,
-          database : 'postgres',
-          user  : 'postgres',
-          password : 'postgres'
-        }, 
-        formattedQuery
-      );
-    } catch(e) {
-      logger.error(e);
-    }
-
-    // create postgres user to database
-    await this.createUser(id, 'postgres');
-
-    await this.setupPgRest(name);
-
-    return id;
+    await this.models.instance.create(name, opts);
   }
 
-  /**
-   * @method setupPgRest
-   * @description Sets up the pg rest instance with roles and schema
-   * https://postgrest.org/en/stable/tutorials/tut0.html#step-4-create-database-for-api
-   * 
-   */
-  async setupPgRest(nameOrId, orgNameOrId=null) {
-    let instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
-
-
-    // add authenticator user
-    try {
-      await this.createUser(instance.id, orgNameOrId, config.pgRest.authenticator.username);
-    } catch(e) {
-      logger.warn(`Failed to create authenticator user ${config.pgRest.authenticator.username}: ${instance.name}`, e);
-    }
-
-    // initialize the database for PostgREST roles and schema
-    await pgRest.initDb(nameOrId, orgNameOrId);
-
-    // start pg rest once instance is running
-    await pgRest.start(nameOrId, orgNameOrId);
-  }
-
-
-  getInstance(instNameOrId) {
-    return client.getInstance(instNameOrId);
-  }
 
   async stopInstance(instNameOrId, orgNameOrId) {
     await database.stop(instNameOrId, orgNameOrId);
@@ -232,35 +165,125 @@ class AdminModel {
    * @param {String} opts.username 
    * @returns 
    */
-  async getInstances(opts={}) {
+  async getDatabases(opts={}) {
     let appHostname = new URL(config.appUrl).hostname;
-    let instances = await client.getInstances(opts);
-    for( let instance of instances ) {
-      try {
-        let pubUser = await client.getUser(instance.id, config.pgInstance.publicRole.username);
-        instance.publicAccess = {
-          username : pubUser.username,
-          password : pubUser.password,
-          connectionUri : `postgres://${pubUser.username}:${pubUser.password}@${appHostname}:5432/${instance.name}`,
-          psql : `PGPASSWORD="${pubUser.password}" psql -h ${appHostname} -U ${pubUser.username} -d ${instance.name}`
+    let databases = await client.getDatabases(opts);
+    
+    let resp = [];
+    for( let db of databases ) {
+      let dbOrgName = (db.organization_name ? db.organization_name+'/' : '')+db.database_name;
+      let dbUrlName = (db.organization_name ? db.organization_name : '_')+'/'+db.database_name;
+
+      let organization = null;
+      if( db.organization_name ) {
+        organization = {
+          name : db.organization_name,
+          title : db.organization_title
         }
-      } catch(e) {
-        logger.error('Failed to find public user for: '+instance.name, e);
       }
-      
-      instance.database = instance.name;
-      instance.port = 5432;
-      instance.host = appHostname;
 
-      delete instance.name;
-
-      instance.api = config.appUrl+'/api/db/'+instance.database;
-      instance.psql = `psql -h `+appHostname+` -U `+config.pgInstance.publicRole.username+` -d `+instance.database;
+      resp.push({
+        title : db.database_title,
+        database : dbOrgName,
+        organization,
+        host : appHostname,
+        port : 5432,
+        api : config.appUrl+'/api/db/'+dbUrlName,
+        publicAccess : {
+          username : db.username,
+          password : db.password,
+          connectionUri : `postgres://${db.username}:${db.password}@${appHostname}:5432/${dbOrgName}`,
+          psql : `PGPASSWORD="${db.password}" psql -h ${appHostname} -U ${db.username} ${dbOrgName}`
+        },
+        id : db.database_id,
+        instance : db.instance_name
+      })
     }
 
-    return instances;
+    return resp;
   }
 
+  async startDatabase(nameOrId, orgNameOrId, opts={}) {
+    let instance;
+    if( opts.isDb ) {
+      instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
+      nameOrId = instance.name;
+    } else {
+      instance = await this.models.instance.get(nameOrId, orgNameOrId);
+    }
+    let iid = instance.id;
+
+
+    if( this.instancesStarting[iid] ) {
+      return this.instancesStarting[iid].promise;
+    }
+
+    this.instancesStarting[iid] = {};
+    this.instancesStarting[iid].promise = new Promise((resolve, reject) => {
+      this.instancesStarting[iid].resolve = resolve;
+      this.instancesStarting[iid].reject = reject;
+    });
+
+    let isPortAlive = await utils.isAlive(
+      instance.hostname,
+      instance.port
+    );
+
+    // TODO: split out pgRest and instance test.
+    if (!isPortAlive) {
+      logger.info('Port test failed, starting instance', instance.hostname);
+      
+      let pgRestPromise = this.models.pgRest.start(database);
+
+      await this.models.instance.start(database);
+      await utils.waitUntil(instance.hostname, instance.port);
+
+      if( opts.waitForPgRest ) {
+        await pgRestPromise;
+        await utils.waitUntil('pgrest-'+instance.name, config.pgRest.port);
+        await waitForPgRestDb('http://pgrest-'+instance.name, config.pgRest.port);
+      }
+
+      resolveStart(database);
+
+      return true;
+    }
+
+    resolveStart(database);
+    return false;
+  }
+
+}
+
+function resolveStart(instance) {
+  this.instancesStarting[instance].resolve(instance);
+  delete this.instancesStarting[instance];
+}
+
+
+/**
+ * @function waitForPgRestDb
+ * @description waits for the pgrest database to be ready.  PgRest service
+ * may take a few seconds to start up after the database is ready.
+ *  
+ * @param {String} host 
+ * @param {String} port 
+ * @param {Number} maxAttempts defaults to 10 
+ * @param {Number} delayTime default to 500ms
+ */
+async function waitForPgRestDb(host, port, maxAttempts=10, delayTime=500) {
+  let isAlive = false;
+  let attempts = 0;
+
+  while( !isAlive && attempts < maxAttempts ) {
+    let resp = await fetch(`${host}:${port}`);
+    isAlive = (resp.status !== 503);
+    
+    if( !isAlive ) {
+      attempts++;
+      await utils.sleep(delayTime);
+    }
+  }
 }
 
 function sortInitScripts(files) {

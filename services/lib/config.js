@@ -109,7 +109,7 @@ const config = {
     },
     views : {
       get INSTANCE_DATABASE() { return config.adminDb.schema+'.instance_database' },
-      get INSTANCE_DATABSE_USERS() { return config.adminDb.schema+'.instance_database_user' }
+      get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' }
     }
   },
 

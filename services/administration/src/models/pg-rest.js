@@ -3,7 +3,7 @@ import client from '../../../lib/pg-admin-client.js';
 import kubectl from '../../../lib/kubectl.js';
 import config from '../../../lib/config.js';
 import keycloak from '../../../lib/keycloak.js';
-import pgInstClient from '../../../lib/pg-client.js';
+import pgInstClient from '../../../lib/pg-instance-client.js';
 import logger from '../../../lib/logger.js';
 import modelUtils from './utils.js';
 
@@ -41,36 +41,30 @@ server-port = ${config.pgRest.port}`
    * 
    * @param {String} instNameOrId 
    */
-  async initDb(nameOrId, orgNameOrId=null) {
-    let con = await this.models.database.getConnection(nameOrId, orgNameOrId);
+  async initDb(instNameOrId, orgNameOrId=null, dbNameOrId) {
+    let con = await this.models.database.getConnection(dbNameOrId, orgNameOrId);
+
+    // add authenticator user
+    logger.info('Ensuring authenticator user: '+config.pgRest.authenticator.username+' on instance: '+instNameOrId+' for organization: '+orgNameOrId)
+    await this.models.user.create(instNameOrId, orgNameOrId, config.pgRest.authenticator.username);
 
     // create the api schema
-    try {
-      let formattedQuery = pgFormat('CREATE SCHEMA %s', config.pgRest.schema);
-      await pgInstClient.query(con, formattedQuery);
-    } catch(e) {
-      logger.warn(`Failed to create pgrest schema ${config.pgRest.schema}, it may already exist: ${con.database}`, e);
-    }
+    logger.info('Ensuring schema: '+config.pgRest.schema+' on instance: '+instNameOrId+', database: '+dbNameOrId+' for organization: '+orgNameOrId)
+    await pgInstClient.ensurePgSchema(con, config.pgRest.schema);
 
     // grant usage on the api schema to the public role
-    try {
-      let formattedQuery = pgFormat('GRANT USAGE ON SCHEMA %s TO "%s"', 
-        config.pgRest.schema, config.pgInstance.publicRole.username
-      );
-      await pgInstClient.query(con, formattedQuery);
-    } catch(e) {
-      logger.warn(`Pgrest failed to grant usage on schema ${config.pgRest.schema} to ${config.pgInstance.publicRole.username}: ${con.database}`, e);
-    }
+    logger.info('Granting usage on schema: '+config.pgRest.schema+' to public role on instance: '+instNameOrId+', database: '+dbNameOrId+' for organization: '+orgNameOrId)
+    let formattedQuery = pgFormat('GRANT USAGE ON SCHEMA %s TO "%s"', 
+      config.pgRest.schema, config.pgInstance.publicRole.username
+    );
+    await pgInstClient.query(con, formattedQuery);
 
     // grant the public role to the authenticator user
-    try {
-      let formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
-        config.pgInstance.publicRole.username, config.pgRest.authenticator.username
-      );
-      resp = await pgInstClient.query(con, formattedQuery);
-    } catch(e) {
-      logger.warn(`Pgrest failed to grant ${config.pgInstance.publicRole.username} to ${config.pgRest.authenticator.username}: ${con.database}`, e);
-    }
+    logger.info('Granting public role to authenticator user on instance: '+instNameOrId+' for organization: '+orgNameOrId)
+    formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
+      config.pgInstance.publicRole.username, config.pgRest.authenticator.username
+    );
+    await pgInstClient.query(con, formattedQuery);
   }
 
   async start(nameOrId, orgNameOrId=null) {

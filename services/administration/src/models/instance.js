@@ -23,6 +23,33 @@ class Instance {
 
   }
 
+  /**
+   * @method getConnection
+   * @description Returns a postgres user connection object for the
+   * postgres database for a given instance name and organization
+   * 
+   * 
+   * @param {*} nameOrId 
+   * @param {*} orgNameOrId 
+   * @returns 
+   */
+  async getConnection(nameOrId, orgNameOrId=null) {
+    let instance = await this.get(nameOrId, orgNameOrId);
+
+    let pgUser = {};
+    try {
+      pgUser = await this.models.user.get(nameOrId, orgNameOrId, config.pgInstance.adminRole);
+    } catch(e) {}
+
+    return {
+      host : instance.hostname,
+      port : instance.port,
+      user : config.pgInstance.adminRole,
+      database : 'postgres',
+      password : pgUser.password || config.pgInstance.adminInitPassword
+    };
+  }
+
   async get(nameOrId, orgNameOrId) {
     return client.getInstance(nameOrId, orgNameOrId);
   }
@@ -63,6 +90,14 @@ class Instance {
    * @returns {Promise<Object>}
    */
   async create(name, opts) {
+    
+    // make sure instance's always start with 'inst-'
+    // this lets us know its an instance and not a database by name
+    if( name.startsWith('inst-') ) {
+      name = name.replace(/^inst-/, '');
+    }
+    name = 'inst-'+name.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+
     let exists = await this.exists(name, opts.organization);
     if( exists ) {
       throw new Error('Instance already exists: '+name);
@@ -75,13 +110,33 @@ class Instance {
       orgName = org.name+'-';
     }
 
-    name = name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
-    
     if( !opts.hostname ) {
-      opts.hostname = 'pg-'+orgName+name;
+      opts.hostname = orgName+name.replace(/^inst-/, '');
+    } else {
+      opts.hostname = orgName+opts.hostname.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    }
+    opts.hostname = 'pg-inst-'+opts.hostname;
+
+    logger.info('Creating instance', name, opts);
+    await client.createInstance(name, opts);
+  }
+
+  async initInstanceDb(nameOrId, orgNameOrId) {
+    // create postgres user to admin database, resets password
+    try {
+      logger.info('Ensuring postgres user', opts.name)
+      await this.models.user.create(nameOrId, orgNameOrId, 'postgres');
+    } catch(e) {
+      logger.warn(`Failed to create postgres user for database ${opts.name} on instance ${orgNameOrId}/${nameOrId}`, e.message);
     }
 
-    return client.createInstance(name, opts);
+    // add public user
+    try {
+      logger.info('Ensuring public user', opts.name)
+      await this.models.user.create(nameOrId, orgNameOrId, config.pgInstance.publicRole.username);
+    } catch(e) {
+      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${orgNameOrId}/${nameOrId}`, e.message);
+    }
   }
 
   /**

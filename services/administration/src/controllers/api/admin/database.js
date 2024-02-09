@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {admin as model, pgRest} from '../../../models/index.js';
+import {admin as model, pgRest, database} from '../../../models/index.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
 
@@ -7,8 +7,8 @@ const router = Router();
 
 router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
-    let resp = await model.createDatabase(req.body);
-    res.status(201).json(resp);
+    await model.ensureDatabase(req.body);
+    res.status(201).json(await database.get(req.body.name || req.body.database, req.body.organization));
   } catch(e) {
     handleError(res, e);
   }
@@ -25,6 +25,7 @@ router.get('/', keycloak.setUser, async (req, res) => {
     }
 
     let databases = await model.getDatabases(opts);
+    console.log(databases)
     res.json(databases);
   } catch(e) {
     handleError(res, e);
