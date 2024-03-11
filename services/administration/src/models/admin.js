@@ -112,8 +112,8 @@ class AdminModel {
 
 
   async stopInstance(instNameOrId, orgNameOrId) {
-    await database.stop(instNameOrId, orgNameOrId);
-    await pgRest.stop(instNameOrId, orgNameOrId);
+    await this.models.instance.stop(instNameOrId, orgNameOrId);
+    await this.models.pgRest.stop(instNameOrId, orgNameOrId);
   }
 
   /**

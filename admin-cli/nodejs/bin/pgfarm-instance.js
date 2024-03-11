@@ -12,6 +12,12 @@ program.command('create')
     instance.create(options);
   });
 
+program.command('start <instance>')
+  .description('Manually start an postgres instance (requires admin access to instance)')
+  .action(instanceName => {
+    instance.start(instanceName);
+  });
+
 program.command('stop <instance>')
   .description('Manually stop an postgres instance (requires admin access to instance)')
   .option('-f, --force', 'Force stop the instance.  Required for ALWAYS availability instances.')

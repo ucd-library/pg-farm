@@ -244,6 +244,9 @@ class Instance {
     container.name = hostname;
     container.volumeMounts[0].name = hostname+'-ps';
 
+    container = template.spec.containers[1];
+    container.image = config.pgHelper.image;
+
     spec.volumeClaimTemplates[0].metadata.name = hostname+'-ps';
 
     let pgResult = await kubectl.apply(k8sConfig, {

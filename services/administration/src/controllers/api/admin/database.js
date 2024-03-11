@@ -24,9 +24,7 @@ router.get('/', keycloak.setUser, async (req, res) => {
       opts.username = req.user.username;
     }
 
-    let databases = await model.getDatabases(opts);
-    console.log(databases)
-    res.json(databases);
+    res.json(await model.getDatabases(opts));
   } catch(e) {
     handleError(res, e);
   }

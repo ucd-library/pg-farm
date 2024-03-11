@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: 
-        image: 
+        image: pg
         args: ["-c", "max_connections=100"]
         imagePullPolicy: Always
         env:
@@ -41,6 +41,19 @@ spec:
           mountPath: /var/lib/postgresql/data
         - name: gcs-fuse
           mountPath: /backups
+      - name: pg-helper
+        image: 
+        args: ["npm", "run", "pg-helper"]
+        imagePullPolicy: Always
+        env:
+        - name: LOG_LEVEL
+          value: "info"
+        - name: METRICS_ENABLED
+          value: "true"
+        - name: METRICS_EXPORT_GC
+          value: "true"
+        - name: SERVICE_NAME
+          value: "gateway"
       serviceAccountName: pg-farm-ksa
       nodeSelector:
         intendedfor: instance-pool

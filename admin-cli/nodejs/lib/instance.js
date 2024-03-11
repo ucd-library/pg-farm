@@ -23,7 +23,7 @@ class Instances {
   }
 
   async stop(instance) {
-    let resp = await fetch(`${config.host}/api/admin/${instance}/stop`, {
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/stop`, {
       headers: headers()
     });
 
@@ -35,6 +35,18 @@ class Instances {
     console.log(`Stopped instance ${instance}`);
   }
 
+  async start(instance) {
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/start`, {
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to start instance', await resp.text());
+      return;
+    }
+
+    console.log(`Started instance ${instance}`);
+  }
 
 }
 

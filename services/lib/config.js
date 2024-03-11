@@ -23,6 +23,8 @@ if( env.GOOGLE_APPLICATION_CREDENTIALS ) {
   serviceAccountExists = fs.existsSync(env.GOOGLE_APPLICATION_CREDENTIALS);
 }
 
+let DEFAULT_IMAGE_TAG = env.PG_FARM_REPO_TAG || env.PG_FARM_REPO_BRANCH || 'main';
+
 const config = {
 
   appUrl : env.APP_URL || 'http://localhost:3000',
@@ -125,12 +127,16 @@ const config = {
   },
 
   pgRest : {
-    image : env.PG_REST_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-service:main',
+    image : env.PG_REST_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-service:'+DEFAULT_IMAGE_TAG,
     authenticator : {
       username : env.PG_REST_AUTHENTICATOR_USERNAME || 'pgfarm-authenticator'
     },
     schema : env.PG_REST_SCHEMA || 'api',
     port : env.PG_REST_PORT || 3000,
+  },
+
+  pgHelper : {
+    image : env.PG_HELPER_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-service:'+DEFAULT_IMAGE_TAG,
   },
 
   // Proxy configuration

@@ -152,6 +152,17 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
+  async getInstanceDatabases(nameOrId='', orgNameOrId=null) {
+    let instance = await this.getInstance(nameOrId, orgNameOrId);
+
+    let res = await client.query(
+      `select * from instance_database where instance_id = $1;`, 
+      [instance.instance_id]
+    );
+
+    return res.rows;
+  }
+
   /**
    * @method createInstance
    * @description create a new instance

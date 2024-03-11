@@ -19,8 +19,8 @@ class Database {
     };
   }
 
-  async list(onlyUsers=false, showId=false) {
-    let resp = await fetch(`${config.host}/api/admin/database?onlyMine=${onlyUsers}`, {
+  async list(opts) {
+    let resp = await fetch(`${config.host}/api/admin/database?onlyMine=${opts.mine}`, {
       method: 'GET',
       headers: headers()
     });
@@ -32,12 +32,18 @@ class Database {
 
     let body = await resp.json();
 
-    body.forEach((database) => {
-      let out = `${database.name}`;
-      if( showId ) {
-        out += ` (${database.id})`;
-      }
-      console.log(out);
+    if( opts.json ) { 
+      return console.log(body);
+    }
+
+    body.sort((a, b) => {
+      if( a.database < b.database ) return -1;
+      if( a.database > b.database ) return 1;
+      return 0;
+    });
+
+    body.forEach((db) => {
+      console.log(`${db.database}`);
     });
   }
 

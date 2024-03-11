@@ -21,9 +21,9 @@ program.command('add-user <org/database> <user>')
 program.command('list')
   .description('List databases')
   .option('-m, --mine', 'List only databases I have an account on')
-  .option('-i, --id', 'Include instance id in output')
+  .option('-j, --json', 'Raw json output')
   .action(opts => {
-    database.list(opts.mine, opts.id);
+    database.list(opts);
   });
 
 program.command('restart-api <org/database>')

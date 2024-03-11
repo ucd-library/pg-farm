@@ -17,3 +17,7 @@ app.post('/backup', async (req, res) => {
 app.post('/restore', (req, res) => {
 
 });
+
+app.listen(3000, () => {
+  console.log('Backup service started on port 3000');
+});
