@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {admin as model, pgRest, database} from '../../../models/index.js';
+import {admin as model, pgRest, database, instance} from '../../../models/index.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
 
@@ -64,6 +64,24 @@ router.get('/:organization/:database/restart/api', keycloak.protect('admin'), as
     let database = req.params.database;
     let resp = await pgRest.restart(organization, database);
     res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/init', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+    let database = req.params.database;
+
+    let inst = await instance.getByDatabase(database, organization);
+    await instance.initInstanceDb(inst.instance_id, organization);
+    await pgRest.initDb(inst.instance_id, organization, database);
+
+    res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
   }

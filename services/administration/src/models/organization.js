@@ -38,7 +38,9 @@ class OrganizationModel {
     }
 
     logger.info('Creating organization', title, opts);
-    return client.createOrganization(title, opts);
+    await client.createOrganization(title, opts);
+
+    return this.get(opts.name);
   }
 
 }

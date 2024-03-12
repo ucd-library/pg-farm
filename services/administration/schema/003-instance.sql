@@ -39,8 +39,8 @@ END $$;
 -- Instance
 CREATE TABLE IF NOT EXISTS pgfarm.instance (
     instance_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name text NOT NULL UNIQUE,
-    hostname text NOT NULL UNIQUE,
+    name text NOT NULL,
+    hostname_id UUID NOT NULL REFERENCES pgfarm.hostname(hostname_id),
     description text,
     port integer NOT NULL DEFAULT 5432,
     state instance_state NOT NULL DEFAULT 'CREATING',

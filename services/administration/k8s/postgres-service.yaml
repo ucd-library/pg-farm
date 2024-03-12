@@ -9,5 +9,9 @@ spec:
   selector:
     app: 
   ports:
-  - protocol: TCP
+  - name: postgres
+    protocol: TCP
     port: 5432
+  - name: pg-helper
+    protocol: TCP
+    port: 3000

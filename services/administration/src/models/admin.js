@@ -81,20 +81,26 @@ class AdminModel {
       if( opts.organization ) iOpts.organization = opts.organization;
       instance = await this.models.instance.create(opts.instance, iOpts);
     }
+    await this.startInstance(opts.instance, opts.organization);
+
+    // ensure the public user and pg user password update
+    await this.models.instance.initInstanceDb(instance.name, opts.organization);
+
     opts.instance = instance.name;
 
     let database = await this.models.database.exists(name, opts.organization);
     if( !database ) {
       await this.models.database.create(name, opts);
       database = await this.models.database.get(name, opts.organization); 
+    } else {
+      await this.models.database.ensurePgDatabase(instance.name, opts.organization, database.database_name);
     }
-
 
     // initialize the database for PostgREST roles and schem
     await this.models.pgRest.initDb(instance.name, opts.organization, database.database_name);
 
     // start pg rest once instance is running
-    await this.models.pgRest.start(name, opts.organization);
+    await this.models.pgRest.start(instance.name, opts.organization);
   }
 
   /**
@@ -203,7 +209,7 @@ class AdminModel {
     return resp;
   }
 
-  async startDatabase(nameOrId, orgNameOrId, opts={}) {
+  async startInstance(nameOrId, orgNameOrId, opts={}) {
     let instance;
     if( opts.isDb ) {
       instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
@@ -233,32 +239,51 @@ class AdminModel {
     if (!isPortAlive) {
       logger.info('Port test failed, starting instance', instance.hostname);
       
-      let pgRestPromise = this.models.pgRest.start(database);
+      try {
+        let pgRestPromise = this.models.pgRest.start(instance.instance_id, instance.organization_id);
+          pgRestPromise.catch(e => {
+            logger.error('Error starting pgRest', e);
+          });
 
-      await this.models.instance.start(database);
-      await utils.waitUntil(instance.hostname, instance.port);
-
-      if( opts.waitForPgRest ) {
-        await pgRestPromise;
-        await utils.waitUntil('pgrest-'+instance.name, config.pgRest.port);
-        await waitForPgRestDb('http://pgrest-'+instance.name, config.pgRest.port);
+        await this.models.instance.start(instance.instance_id, instance.organization_id);
+        await utils.waitUntil(instance.hostname, instance.port);
+        if( opts.waitForPgRest ) {
+          await pgRestPromise;
+          await utils.waitUntil('pgrest-'+instance.name, config.pgRest.port);
+          await waitForPgRestDb('http://pgrest-'+instance.name, config.pgRest.port);
+        }
+      } catch(e) {
+        logger.error('Error starting instance', e);
+        this.rejectStart(instance, e);
+        return;
       }
 
-      resolveStart(database);
+      this.resolveStart(instance);
 
       return true;
     }
 
-    resolveStart(database);
+    this.resolveStart(instance);
     return false;
+  }
+
+  rejectStart(instance, e) {
+    if( !this.instancesStarting[instance.instance_id] ) return;
+  
+    this.instancesStarting[instance.instance_id].reject(e);
+    delete this.instancesStarting[instance.instance_id];
+  }
+  
+  resolveStart(instance) {
+    if( !this.instancesStarting[instance.instance_id] ) return;
+  
+    this.instancesStarting[instance.instance_id].resolve(instance);
+    delete this.instancesStarting[instance.instance_id];
   }
 
 }
 
-function resolveStart(instance) {
-  this.instancesStarting[instance].resolve(instance);
-  delete this.instancesStarting[instance];
-}
+
 
 
 /**

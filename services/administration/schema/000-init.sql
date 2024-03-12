@@ -17,3 +17,8 @@ begin
 end;
 $$
 language plpgsql;
+
+CREATE OR REPLACE TABLE pgfarm.hostname (
+  hostname_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  hostname text NOT NULL UNIQUE
+);

@@ -105,6 +105,22 @@ class Database {
     console.log(`Restarted API for database ${database}`);
   }
 
+  async init(name) {
+    let {organization, database} = this.parseOrg(name);
+    if( !organization ) organization = '_';
+
+    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/init`, {
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to re-init database', await resp.text());
+      return;
+    }
+
+    console.log(`Re-ran init for database ${database}`);
+  }
+
 }
 
 const database = new Database();

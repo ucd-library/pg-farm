@@ -32,4 +32,10 @@ program.command('restart-api <org/database>')
     database.restartApi(dbName);
   });
 
+program.command('init <org/database>')
+  .description('Rerun the pgfarm init scripts for database (requires admin access)')
+  .action(dbName => {
+    database.init(dbName);
+  });
+
 program.parse(process.argv);

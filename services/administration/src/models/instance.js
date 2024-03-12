@@ -1,6 +1,8 @@
 import client from '../../../lib/pg-admin-client.js';
 import config from '../../../lib/config.js';
 import kubectl from '../../../lib/kubectl.js';
+import logger from '../../../lib/logger.js';
+import modelUtils from './utils.js';
 
 class Instance {
 
@@ -119,20 +121,29 @@ class Instance {
 
     logger.info('Creating instance', name, opts);
     await client.createInstance(name, opts);
+
+    return this.get(name, opts.organization);
   }
 
+  /**
+   * @method initInstanceDb
+   * @description Initialize the database pgfarm public user and postgres user
+   * 
+   * @param {String} nameOrId instance name or id 
+   * @param {String} orgNameOrId organization name or id
+   */
   async initInstanceDb(nameOrId, orgNameOrId) {
     // create postgres user to admin database, resets password
     try {
-      logger.info('Ensuring postgres user', opts.name)
+      logger.info('Ensuring postgres user', nameOrId)
       await this.models.user.create(nameOrId, orgNameOrId, 'postgres');
     } catch(e) {
-      logger.warn(`Failed to create postgres user for database ${opts.name} on instance ${orgNameOrId}/${nameOrId}`, e.message);
+      logger.warn(`Failed to create postgres user for database ${nameOrId} on instance ${orgNameOrId}/${nameOrId}`, e.message);
     }
 
     // add public user
     try {
-      logger.info('Ensuring public user', opts.name)
+      logger.info('Ensuring public user', nameOrId)
       await this.models.user.create(nameOrId, orgNameOrId, config.pgInstance.publicRole.username);
     } catch(e) {
       logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${orgNameOrId}/${nameOrId}`, e.message);
@@ -156,7 +167,7 @@ class Instance {
       organizationId = org.organization_id;
     }
 
-    return client.updateInstance(nameOrId, organizationId, property, value);
+    return client.updateInstanceProperty(nameOrId, organizationId, property, value);
   }
 
   /**
@@ -169,7 +180,7 @@ class Instance {
    * @returns 
    */
   async setInstanceState(nameOrId, orgNameOrId=null, state) {
-    return client.updateInstance(nameOrId, orgNameOrId, 'state', state);
+    return client.updateInstanceProperty(nameOrId, orgNameOrId, 'state', state);
   }
 
   /**
@@ -253,6 +264,7 @@ class Instance {
       stdin:true,
       isJson: true
     });
+    logger.info('Applied instance k8s config', hostname);
 
     // Postgres Service
     k8sConfig = modelUtils.getTemplate('postgres-service');
@@ -263,8 +275,10 @@ class Instance {
       stdin:true,
       isJson: true
     });
+    logger.info('Applied instance k8s service config', hostname);
 
-    this.setInstanceState(instNameOrId, this.STATES.RUN);
+
+    await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
 
     return {pgResult, pgServiceResult};
   }
@@ -279,8 +293,27 @@ class Instance {
     let instance = await this.get(instNameOrId, orgNameOrId);
     let hostname = instance.hostname;
 
-    let pgResult = await kubectl.delete('statefulset', hostname);
-    let pgServiceResult = await kubectl.delete('service', hostname);
+    let pgResult, pgServiceResult;
+
+    try {
+      pgResult = await kubectl.delete('statefulset', hostname);
+    } catch(e) {
+      logger.warn('Error deleting statefulset', e.message);
+      pgResult = {
+        message : e.message,
+        stack : e.stacks
+      }
+    }
+
+    try {
+      pgServiceResult = await kubectl.delete('service', hostname);
+    } catch(e) {
+      logger.warn('Error deleting service', e.message);
+      pgServiceResult = {
+        message : e.message,
+        stack : e.stacks
+      }
+    }
 
     await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.SLEEP);
 

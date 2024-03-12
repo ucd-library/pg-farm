@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   name text NOT NULL,
   title text NOT NULL,
   short_description text,
+  pgrest_hostname hostname_id UUID NOT NULL REFERENCES pgfarm.hostname(hostname_id),
   description text,
   url text,
   tags text[],
@@ -14,6 +15,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   updated_at timestamp NOT NULL DEFAULT now(),
   UNIQUE (instance_id, name)
 );
+CREATE INDEX IF NOT EXISTS database_name_idx ON pgfarm.database(name);
 
 CREATE OR REPLACE FUNCTION check_organization_id()
   RETURNS TRIGGER AS $$

@@ -73,7 +73,7 @@ server-port = ${config.pgRest.port}`
       return;
     }
 
-    let instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
+    let instance = await this.models.instance.get(nameOrId, orgNameOrId);
 
     // PostgREST
     let hostname = 'pgrest-'+instance.name;
@@ -119,12 +119,31 @@ server-port = ${config.pgRest.port}`
     await kubectl.restart('deployment', hostname);
   }
 
-  async remove(instNameOrId) {
+  async stop(instNameOrId) {
     let instance = await client.getInstance(instNameOrId);
     let hostname = 'pgrest-'+instance.name;
 
-    let pgrestResult = await kubectl.delete('deployment', hostname);
-    let pgrestServiceResult = await kubectl.delete('service', hostname);
+    let pgrestResult, pgrestServiceResult;
+
+    try {
+      pgrestResult = await kubectl.delete('deployment', hostname);
+    } catch(e) {
+      logger.warn('Error deleting statefulset', e.message);
+      pgrestResult = {
+        message : e.message,
+        stack : e.stacks
+      }
+    }
+
+    try {
+      pgrestServiceResult = await kubectl.delete('service', hostname);
+    } catch(e) {
+      logger.warn('Error deleting service', e.message);
+      pgrestServiceResult = {
+        message : e.message,
+        stack : e.stacks
+      }
+    }
 
     return {pgrestResult, pgrestServiceResult};
   }
