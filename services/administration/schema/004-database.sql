@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   name text NOT NULL,
   title text NOT NULL,
   short_description text,
-  pgrest_hostname hostname_id UUID NOT NULL REFERENCES pgfarm.hostname(hostname_id),
+  pgrest_hostname TEXT NOT NULL UNIQUE,
   description text,
   url text,
   tags text[],
@@ -82,6 +82,7 @@ CREATE OR REPLACE VIEW pgfarm.instance_database AS
     i.port as instance_port,
     db.name as database_name,
     db.title as database_title,
+    db.pgrest_hostname as pgrest_hostname,
     db.database_id as database_id
   FROM pgfarm.database db
   LEFT JOIN pgfarm.instance i ON i.instance_id = db.instance_id

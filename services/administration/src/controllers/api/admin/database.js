@@ -62,7 +62,7 @@ router.get('/:organization/:database/restart/api', keycloak.protect('admin'), as
     }
 
     let database = req.params.database;
-    let resp = await pgRest.restart(organization, database);
+    let resp = await pgRest.restart(database, organization);
     res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);

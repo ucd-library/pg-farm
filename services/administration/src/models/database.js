@@ -78,9 +78,14 @@ class Database {
     // make sure the name is prefixed with inst- (instance) prefix
     // this is to avoid conflicts with accessing the postgres instance
     // by name 
-    if( opts.name.startsWith('inst-') ) {
-      opts.name = opts.name.replace(/^inst-/, '');
+    opts.name = opts.name.replace(/^inst-/, '');
+
+    let orgName = '';
+    if( opts.organization ) {
+      orgName = await this.models.organization.get(opts.organization);
+      orgName = orgName.name+'-';
     }
+    opts.pgrest_hostname = `rest-${orgName}${opts.name}`;
 
     logger.info('Creating database', title, opts);
 

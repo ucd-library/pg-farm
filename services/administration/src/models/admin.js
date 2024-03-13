@@ -72,7 +72,7 @@ class AdminModel {
 
     // create instance if not provided
     if( !opts.instance ) {
-      opts.instance = 'inst-'+name;
+      opts.instance = name;
     }
 
     let instance = await this.models.instance.exists(opts.instance, opts.organization);
@@ -81,7 +81,8 @@ class AdminModel {
       if( opts.organization ) iOpts.organization = opts.organization;
       instance = await this.models.instance.create(opts.instance, iOpts);
     }
-    await this.startInstance(opts.instance, opts.organization);
+
+    await this.startInstance(instance.name, opts.organization);
 
     // ensure the public user and pg user password update
     await this.models.instance.initInstanceDb(instance.name, opts.organization);
@@ -100,7 +101,7 @@ class AdminModel {
     await this.models.pgRest.initDb(instance.name, opts.organization, database.database_name);
 
     // start pg rest once instance is running
-    await this.models.pgRest.start(instance.name, opts.organization);
+    await this.models.pgRest.start(database.database_name, opts.organization);
   }
 
   /**
@@ -221,8 +222,11 @@ class AdminModel {
 
 
     if( this.instancesStarting[iid] ) {
+      logger.info('Instance already starting', instance.hostname);
       return this.instancesStarting[iid].promise;
     }
+
+    logger.info('Checking instance health', instance.hostname);
 
     this.instancesStarting[iid] = {};
     this.instancesStarting[iid].promise = new Promise((resolve, reject) => {
@@ -236,35 +240,46 @@ class AdminModel {
     );
 
     // TODO: split out pgRest and instance test.
-    if (!isPortAlive) {
-      logger.info('Port test failed, starting instance', instance.hostname);
-      
-      try {
-        let pgRestPromise = this.models.pgRest.start(instance.instance_id, instance.organization_id);
-          pgRestPromise.catch(e => {
-            logger.error('Error starting pgRest', e);
-          });
+    if (isPortAlive) {
+      logger.info('Instance running', instance.hostname);
+      this.resolveStart(instance);
+      return false;
+    }
 
-        await this.models.instance.start(instance.instance_id, instance.organization_id);
-        await utils.waitUntil(instance.hostname, instance.port);
-        if( opts.waitForPgRest ) {
-          await pgRestPromise;
-          await utils.waitUntil('pgrest-'+instance.name, config.pgRest.port);
-          await waitForPgRestDb('http://pgrest-'+instance.name, config.pgRest.port);
-        }
-      } catch(e) {
-        logger.error('Error starting instance', e);
-        this.rejectStart(instance, e);
-        return;
+    logger.info('Port test failed, starting instance', instance.hostname);
+    
+    try {
+
+      let proms = [];
+
+      if( opts.startPgRest ) {
+        let dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
+        proms = dbs.map(db => {
+          return this.models.pgRest.start(db.database_id, db.organization_id);
+        })
       }
 
-      this.resolveStart(instance);
+      proms.push(this.models.instance.start(instance.instance_id, instance.organization_id));
 
-      return true;
+      await utils.waitUntil(instance.hostname, instance.port);
+      if( opts.waitForPgRest ) {
+        // wait for all instances to be deploy
+        await Promise.all(proms);
+
+        // wait for first instance to come alive
+        let firstHostname = dbs[0].pgrest_hostname;
+        await utils.waitUntil(firstHostname, config.pgRest.port);
+        await waitForPgRestDb(firstHostname, config.pgRest.port);
+      }
+    } catch(e) {
+      logger.error('Error starting instance', e);
+      this.rejectStart(instance, e);
+      return;
     }
 
     this.resolveStart(instance);
-    return false;
+
+    return true;
   }
 
   rejectStart(instance, e) {

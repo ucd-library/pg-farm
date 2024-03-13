@@ -4,9 +4,7 @@ import keycloak from '../../lib/keycloak.js';
 import config from '../../lib/config.js';
 import utils from '../../lib/utils.js';
 import logger from '../../lib/logger.js';
-import adminClient from '../../lib/pg-admin-client.js';
 import {admin, user as userModel, instance} from '../../administration/src/models/index.js';
-import instanceStart from '../../lib/instance-start.js';
 
 // let pgPassConnection = null;
 // if( config.proxy.password.type === 'pg' ) {
@@ -306,9 +304,9 @@ class ProxyConnection extends EventEmitter {
       // }
   
       let startTime = Date.now();
-      let started = await instanceStart.start(
+      let started = await admin.startInstance(
         this.startupProperties.database, 
-        this.instance
+        this.dbOrganization
       )
   
       if( started === true ) {
@@ -416,9 +414,9 @@ class ProxyConnection extends EventEmitter {
 
     try {
       logger.info('Starting instance', this.instance.name);
-      await instanceStart.start(
+      await admin.startInstance(
         this.startupProperties.database, 
-        this.instance
+        this.dbOrganization
       );
 
       logger.info('Waiting for instance tcp port', this.instance.name);

@@ -18,7 +18,9 @@ spec:
         command: ["/services/pg-rest/run.sh"]
         imagePullPolicy: Always
         env:
-        - name: PGREST_INSTANCE_NAME
+        - name: PGREST_DATABASE_NAME
+          value: 
+        - name: PGREST_ORGANIZATION_NAME
           value: 
         resources:
           limits:

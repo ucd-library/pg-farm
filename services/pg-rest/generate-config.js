@@ -1,7 +1,7 @@
 import {pgRest} from '../administration/src/models/index.js';
 import fs from 'fs';
 
-let name = process.env.PGREST_INSTANCE_NAME;
+let name = process.env.PGREST_DATABASE_NAME;
 let org = process.env.PGREST_ORGANIZATION_NAME;
 
 async function run() {

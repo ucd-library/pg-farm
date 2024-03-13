@@ -152,6 +152,14 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
+  /**
+   * @method getInstanceDatabases
+   * @description get all databases for an instance
+   * 
+   * @param {*} nameOrId 
+   * @param {*} orgNameOrId 
+   * @returns 
+   */
   async getInstanceDatabases(nameOrId='', orgNameOrId=null) {
     let instance = await this.getInstance(nameOrId, orgNameOrId);
 
@@ -303,10 +311,10 @@ class PgFarmAdminClient {
   async createDatabase(title, opts) {
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.DATABASE}
-      (title, name, instance_id, organization_id, short_description, description, tags, url)
-      VALUES ($1, $2, ${this.schema}.get_instance_id($3, $4), ${this.schema}.get_organization_id($4), $5, $6, $7, $8)
+      (title, name, instance_id, organization_id, pgrest_hostname, short_description, description, tags, url)
+      VALUES ($1, $2, ${this.schema}.get_instance_id($3, $4), ${this.schema}.get_organization_id($4), $5, $6, $7, $8, $9)
       RETURNING *
-    `, [title, opts.name, opts.instance, opts.organization, 
+    `, [title, opts.name, opts.instance, opts.organization, opts.pgrest_hostname,
         opts.short_description, opts.description, opts.tags, opts.url]);
 
     return resp.rows[0];

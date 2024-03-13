@@ -52,7 +52,10 @@ class Instance {
     };
   }
 
-  async get(nameOrId, orgNameOrId) {
+  async get(nameOrId='', orgNameOrId=null) {
+    if( !modelUtils.isUUID(nameOrId) && !nameOrId.match(/^inst-/) ) {
+      nameOrId = 'inst-'+nameOrId;
+    }
     return client.getInstance(nameOrId, orgNameOrId);
   }
 
@@ -95,10 +98,13 @@ class Instance {
     
     // make sure instance's always start with 'inst-'
     // this lets us know its an instance and not a database by name
-    if( name.startsWith('inst-') ) {
-      name = name.replace(/^inst-/, '');
-    }
-    name = 'inst-'+name.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    name = 'inst-'+name
+      .replace(/^inst-/, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]/g, '_');
+    
+    let shortName = name.replace(/^inst-/, '');
 
     let exists = await this.exists(name, opts.organization);
     if( exists ) {
@@ -112,12 +118,13 @@ class Instance {
       orgName = org.name+'-';
     }
 
-    if( !opts.hostname ) {
-      opts.hostname = orgName+name.replace(/^inst-/, '');
-    } else {
-      opts.hostname = orgName+opts.hostname.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-    }
-    opts.hostname = 'pg-inst-'+opts.hostname;
+    // if( !opts.hostname ) {
+    //   opts.hostname = orgName+name.replace(/^inst-/, '');
+    // } else {
+    //   opts.hostname = orgName+opts.hostname.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    // }
+
+    opts.hostname = 'inst-'+orgName+shortName;
 
     logger.info('Creating instance', name, opts);
     await client.createInstance(name, opts);

@@ -95,22 +95,18 @@ class KubectlWrapper {
    * @returns {Promise<Object>}
    */
   async apply(file, opts={}  ) {
-    console.log('apply', file, opts)
     await this.init();
-    console.log('apply', 1)
+
     if( opts.isJson || typeof file === 'object' ) {
       file = yaml.dump(file);
     }
 
     let output = '';
     if ( opts.stdin ) {
-      console.log('apply', 2)
       output = await this.exec(`kubectl apply -f - -o json`, {}, { input: file });
     } else {
-      console.log('apply', 3)
       output = await this.exec(`kubectl apply -f ${file} -o json`);
     }
-    console.log('apply', 4, output)
 
     return JSON.parse(output);
   }

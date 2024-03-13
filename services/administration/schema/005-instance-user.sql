@@ -80,6 +80,7 @@ CREATE OR REPLACE VIEW pgfarm.instance_database_user AS
     i.name as instance_name,
     db.name as database_name,
     db.title as database_title,
+    db.pgrest_hostname as pgrest_hostname,
     db.database_id as database_id,
     iu.instance_user_id,
     u.username,
