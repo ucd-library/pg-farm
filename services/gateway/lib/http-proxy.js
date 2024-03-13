@@ -3,7 +3,7 @@ import {database, admin} from '../../administration/src/models/index.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 
-const dbRouteRegex = /^\/api\/db\/(w+)\/(\w+)(\/|$)/;
+const dbRouteRegex = /^\/api\/db\/(\w+)\/(\w+)(\/|$)/;
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
@@ -46,6 +46,10 @@ async function middleware(req, res) {
       res.status(404).send('Database not found');
       return;
     }
+
+    let db = await database.get(dbName, orgName);
+    host = 'http://'+db.pgrest_hostname+':'+config.pgRest.port;
+
   } else if( path === '/api/db' || path === '/api/db/' ) {
     path = '/api/admin/instance';
   }
