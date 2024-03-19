@@ -218,7 +218,7 @@ class AdminModel {
     } else {
       instance = await this.models.instance.get(nameOrId, orgNameOrId);
     }
-    let iid = instance.id;
+    let iid = instance.instance_id || instance.id;
 
 
     if( this.instancesStarting[iid] ) {
@@ -234,19 +234,19 @@ class AdminModel {
       this.instancesStarting[iid].reject = reject;
     });
 
-    let isPortAlive = await utils.isAlive(
-      instance.hostname,
-      instance.port
+    let health = await utils.getHealth(
+      instance.name,
+      instance.organization_name
     );
 
     // TODO: split out pgRest and instance test.
-    if (isPortAlive) {
+    if (health.instanceState === 'RUN' && health.tcpStatus.instance?.isAlive) {
       logger.info('Instance running', instance.hostname);
       this.resolveStart(instance);
       return false;
     }
 
-    logger.info('Port test failed, starting instance', instance.hostname);
+    logger.info('Health test failed, starting instance', instance.hostname);
     
     try {
 
@@ -283,17 +283,19 @@ class AdminModel {
   }
 
   rejectStart(instance, e) {
-    if( !this.instancesStarting[instance.instance_id] ) return;
+    let id = instance.instance_id || instance.id;
+    if( !this.instancesStarting[id] ) return;
   
-    this.instancesStarting[instance.instance_id].reject(e);
-    delete this.instancesStarting[instance.instance_id];
+    this.instancesStarting[id].reject(e);
+    delete this.instancesStarting[id];
   }
   
   resolveStart(instance) {
-    if( !this.instancesStarting[instance.instance_id] ) return;
+    let id = instance.instance_id || instance.id;
+    if( !this.instancesStarting[id] ) return;
   
-    this.instancesStarting[instance.instance_id].resolve(instance);
-    delete this.instancesStarting[instance.instance_id];
+    this.instancesStarting[id].resolve(instance);
+    delete this.instancesStarting[id];
   }
 
 }

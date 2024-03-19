@@ -12,7 +12,8 @@
     "administration": "node administration/src/index.js",
     "proxy": "node pg-proxy/lib/proxy.js",
     "gateway": "node gateway/index.js",
-    "pg-helper" : "node pg-helpers/server.js"
+    "pg-helper" : "node pg-helpers/server.js",
+    "health-probe" : "node health-probe/index.js"
   },
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",

@@ -31,6 +31,16 @@ cork-template \
 
 cork-template \
   -c ./config.sh \
+  -t $TEMPLATE_ROOT/health-probe-service.yaml \
+  -o $DEPLOYMENT_DIR/health-probe-service.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/health-probe-deployment.yaml \
+  -o $DEPLOYMENT_DIR/health-probe-deployment.yaml
+
+cork-template \
+  -c ./config.sh \
   -t $TEMPLATE_ROOT/admin-db-statefulset.yaml \
   -o $DEPLOYMENT_DIR/admin-db-statefulset.yaml
 

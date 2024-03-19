@@ -25,6 +25,13 @@ if( env.GOOGLE_APPLICATION_CREDENTIALS ) {
 
 let DEFAULT_IMAGE_TAG = env.PG_FARM_REPO_TAG || env.PG_FARM_REPO_BRANCH || 'main';
 
+// k8s env collision
+let healthProbePort = env.HEALTH_PROBE_PORT || '3000';
+if( healthProbePort.match(/^tcp:/) ) {
+  healthProbePort = healthProbePort.split(':').pop();
+}
+
+
 const config = {
 
   appUrl : env.APP_URL || 'http://localhost:3000',
@@ -117,6 +124,7 @@ const config = {
 
   pgInstance : {
     name : env.PG_INSTANCE_NAME || '', // set for running pg instances
+    port : 5432,
     image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
     adminRole : env.PG_INSTANCE_ADMIN_ROLE || 'postgres',
     adminInitPassword : env.PG_INSTANCE_ADMIN_INIT_PASSWORD || 'postgres',
@@ -165,7 +173,13 @@ const config = {
       }
     },
     debug : env.PROXY_DEBUG === 'true' // Enable debug logging
-  }
+  },
+
+  healthProbe : {
+    port : parseInt(healthProbePort),
+    host : env.HEALTH_PROBE_HOSTNAME || 'health-probe',
+    interval : env.HEALTH_PROBE_INTERVAL || 1000*60,
+  },
 
 }
 

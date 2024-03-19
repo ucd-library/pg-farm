@@ -164,7 +164,7 @@ class PgFarmAdminClient {
     let instance = await this.getInstance(nameOrId, orgNameOrId);
 
     let res = await client.query(
-      `select * from instance_database where instance_id = $1;`, 
+      `select * from ${config.adminDb.views.INSTANCE_DATABASE} where instance_id = $1;`, 
       [instance.instance_id]
     );
 

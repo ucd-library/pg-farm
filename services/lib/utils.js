@@ -1,7 +1,10 @@
 import crypto from 'crypto';
 import net from 'net';
+import fetch from 'node-fetch';
+import config from './config.js';
 
 const DELAY_TIME = 2500;
+const TIMEOUT = 5000;
 
 class PgFarmUtils {
 
@@ -15,6 +18,11 @@ class PgFarmUtils {
    */
   generatePassword(length = 32) {
     return crypto.randomBytes(length).toString('base64')
+  }
+
+  async getHealth(instNameOrId, orgNameOrId='_') {
+    let resp = await fetch(`http://${config.healthProbe.host}:${config.healthProbe.port}/health/${orgNameOrId}/${instNameOrId}`);
+    return resp.json();
   }
 
   /**
@@ -55,11 +63,15 @@ class PgFarmUtils {
    * 
    * @returns {Promise<Boolean>}
    */
-  isAlive(host, port) {
+  isAlive(host, port, timeout) {
     port = parseInt(port);
   
     return new Promise((resolve, reject) => {
       let client = new net.Socket();
+      client.setTimeout(timeout || TIMEOUT, () => {
+        resolve(false);
+        client.destroy();
+      });
       client.connect(port, host, function() {
         resolve(true);
         client.destroy();
@@ -88,6 +100,17 @@ class PgFarmUtils {
 
 function attempt(host, port, opts) {
   let client = new net.Socket();
+
+  client.setTimeout(opts.timeout || TIMEOUT, () => {
+    opts.attempt++;
+    if( opts.maxAttempts > 0 && opts.attempt >= opts.maxAttempts ) {
+      opts.reject('Max attempts reached ('+opts.maxAttempts+') waiting for '+host+':'+port+' to respond');
+      return;
+    }
+
+    setTimeout(() => attempt(host, port, opts), opts.delayTime);
+    client.destroy(); 
+  });
   client.connect(port, host, function() {
     opts.resolve();
     client.destroy();

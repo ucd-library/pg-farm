@@ -48,8 +48,20 @@ class KubectlWrapper {
 
   async getClusters() {
     await this.init();
-    let stdout = await exec('kubectl config get-clusters');
+    let {stdout} = await exec('kubectl config get-clusters');
     return stdout.split('\n').filter((line) => line.trim() !== '');
+  }
+
+  async getPods() {
+    await this.init();
+    let {stdout} = await exec('kubectl get pods -o jsonpath-as-json="{.items[*].metadata.name}"');
+    return JSON.parse(stdout);
+  }
+
+  async getServices() {
+    await this.init();
+    let {stdout} = await exec('kubectl get service -o jsonpath-as-json="{.items[*].metadata.name}"');
+    return JSON.parse(stdout);
   }
 
   /**
@@ -61,7 +73,7 @@ class KubectlWrapper {
    */
   async setContext(context) {
     await this.init();
-    let stdout = await exec(`kubectl config use-context ${context}`);
+    let {stdout} = await exec(`kubectl config use-context ${context}`);
     return stdout.trim();
   }
 
@@ -73,7 +85,7 @@ class KubectlWrapper {
    */
   async currentContext() {
     await this.init();
-    let stdout = await exec('kubectl config current-context');
+    let {stdout} = await exec('kubectl config current-context');
     return stdout.trim();
   }
 

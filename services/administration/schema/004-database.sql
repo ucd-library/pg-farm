@@ -78,6 +78,7 @@ CREATE OR REPLACE VIEW pgfarm.instance_database AS
     o.organization_id as organization_id,
     i.hostname as instance_hostname,
     i.name as instance_name,
+    i.state as instance_state,
     i.instance_id as instance_id,
     i.port as instance_port,
     db.name as database_name,
