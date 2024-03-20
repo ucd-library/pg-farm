@@ -41,6 +41,8 @@ spec:
           mountPath: /var/lib/postgresql/data
         - name: gcs-fuse
           mountPath: /backups
+        - name: pg-socket
+          mountPath: /var/run/postgresql
       - name: pg-helper
         image: 
         args: ["npm", "run", "pg-helper"]
@@ -59,6 +61,8 @@ spec:
         volumeMounts:
         - name: gcs-fuse
           mountPath: /backups
+        - name: pg-socket
+          mountPath: /var/run/postgresql
       serviceAccountName: pg-farm-ksa
       nodeSelector:
         intendedfor: instance-pool
@@ -66,6 +70,8 @@ spec:
       - name: gcs-fuse
         persistentVolumeClaim:
           claimName: gcs-fuse-pvc
+      - name: pg-socket
+        emptyDir: {}
 
   volumeClaimTemplates:
   - metadata:

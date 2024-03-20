@@ -56,6 +56,25 @@ router.get('/:organization/:instance/start', keycloak.protect('admin'), async (r
   }
 });
 
+router.get('/:organization/:instance/restart', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let instance = req.params.instance;
+    if( !instance.startsWith('inst-') ) {
+      instance = 'inst-'+instance;
+    }
+
+    let resp = await instanceModel.restart(instance, organization);
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.post('/:organization/:instance/backup', keycloak.protect('admin'), async (req, res) => {
   try {
     let organization = req.params.organization;

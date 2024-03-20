@@ -52,6 +52,10 @@ class Instance {
     };
   }
 
+  list() {
+    return client.getInstances();
+  }
+
   async get(nameOrId='', orgNameOrId=null) {
     if( !modelUtils.isUUID(nameOrId) && !nameOrId.match(/^inst-/) ) {
       nameOrId = 'inst-'+nameOrId;
@@ -339,7 +343,24 @@ class Instance {
     return  {pgResult, pgServiceResult};
   }
 
+  async restart(instNameOrId, orgNameOrId=null) {
+    let instance = await this.get(instNameOrId, orgNameOrId);
+    let hostname = instance.hostname;
 
+    let pgResult;
+
+    try {
+      pgResult = await kubectl.restart('statefulset', hostname);
+    } catch(e) {
+      logger.warn('Error deleting service', e.message);
+      pgResult = {
+        message : e.message,
+        stack : e.stacks
+      }
+    }
+
+    return pgResult;
+  }
 
 
 }

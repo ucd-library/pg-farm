@@ -22,9 +22,27 @@ class HealthProbe {
     }
   }
 
+  /**
+   * @method start
+   * @description Start the health probe.  This will start the checkAlive method
+   * and run it at the interval specified in the config.
+   */
   start() {
     this.checkAlive();
     setInterval(() => this.checkAlive(), config.healthProbe.interval);
+  }
+
+
+  /**
+   * @method allStatus
+   * @description Get the current status of all instances
+   * 
+   * @returns {Promise<Array>}
+   **/
+  async allStatus() {
+    let instances = await this.models.instance.list();
+    let promises = instances.map((instance) => this.getStatus(instance.name, instance.organization_id));
+    return Promise.all(promises);
   }
 
   /**
@@ -38,7 +56,8 @@ class HealthProbe {
    * @returns {Promise<Object>}
    */
   async getStatus(nameOrId='', orgNameOrId=null) {
-    let databases = await pgClient.getInstanceDatabases(nameOrId, orgNameOrId);
+    let instance = await this.models.instance.get(nameOrId, orgNameOrId);
+    let databases = await pgClient.getInstanceDatabases(instance.name, orgNameOrId);
     if( databases.length === 0 ) {
       throw new Error('Instance not found');
     }
@@ -49,9 +68,12 @@ class HealthProbe {
     });
 
     return {
-      timestamp : Date.now(),
+      name : instance.name,
+      id : instance.id,
+      organizationId : instance.organization_id,
+      timestamp : new Date().toISOString(),
       listServicesTimestamp : this.services.timestamp,
-      instanceState : databases[0].instance_state,
+      state : databases[0].instance_state,
       tcpStatus : {
         instance : this.tcpStatus.inst[databases[0].instance_hostname],
         pgRest : dbStatus
@@ -68,7 +90,7 @@ class HealthProbe {
     let pods = await kubectl.getServices();
 
     this.services = {
-      timestamp : Date.now(),
+      timestamp : new Date().toISOString(),
       rest : pods.filter((pod) => REST_REGEX.test(pod)),
       inst : pods.filter((pod) => INST_REGEX.test(pod))
     }
@@ -109,9 +131,13 @@ class HealthProbe {
 
   async isAlive(type, host, port) {
     let isAlive = await utils.isAlive(host, port);
-    this.tcpStatus[type][host] = {timestamp: Date.now(), isAlive};
+    this.tcpStatus[type][host] = {
+      timestamp: new Date().toISOString(), 
+      isAlive
+    };
   }
 
 }
 
-export default HealthProbe
+const instance = new HealthProbe();
+export default instance;

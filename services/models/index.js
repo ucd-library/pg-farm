@@ -1,17 +1,21 @@
 import admin from './admin.js';
-import instance from './instance.js';
+import backup from './backup.js';
 import database from './database.js';
+import healthProbe from './health-probe.js';
+import instance from './instance.js';
 import organization from './organization.js';
-import user from './user.js';
 import pgRest from './pg-rest.js';
+import user from './user.js';
 
 const models = {
   admin,
-  instance,
+  backup,
   database,
-  user,
+  healthProbe,
+  instance,
+  organization,
   pgRest,
-  organization
+  user
 };
 
 for( let name in models ) {
@@ -20,9 +24,11 @@ for( let name in models ) {
 
 export {
   admin,
-  instance,
+  backup,
   database,
-  user,
+  healthProbe,
+  instance,
+  organization,
   pgRest,
-  organization
+  user
 }

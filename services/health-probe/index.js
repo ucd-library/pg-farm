@@ -1,10 +1,21 @@
 import express from 'express';
-import HealthProbe from '../models/health-probe.js';
+import {healthProbe} from '../models/index.js';
 import config from '../lib/config.js';
 
 const app = express();
-const model = new HealthProbe();
-model.start();
+healthProbe.start();
+
+app.get('/health', async (req, res) => {
+  try {
+    res.json(await healthProbe.allStatus());
+  } catch(e) {
+    res.status(500).send({
+      error : true,
+      message: e.message,
+      stack : e.stack
+    });
+  }
+});
 
 app.get('/health/:organization/:instance', async (req, res) => {
   try {
@@ -13,7 +24,7 @@ app.get('/health/:organization/:instance', async (req, res) => {
       orgName = null;
     }
     let instanceName = req.params.instance;
-    res.json(await model.getStatus(instanceName, orgName));
+    res.json(await healthProbe.getStatus(instanceName, orgName));
   } catch(e) {
     res.status(500).send({
       error : true,

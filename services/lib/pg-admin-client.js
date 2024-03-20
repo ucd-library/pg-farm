@@ -153,6 +153,19 @@ class PgFarmAdminClient {
   }
 
   /**
+   * @method getInstances
+   * @description get all instances
+   * 
+   * @returns {Promise<Array>}
+   */
+  async getInstances() {
+    let res = await client.query(
+      `SELECT * FROM ${config.adminDb.tables.INSTANCE}`
+    );
+    return res.rows;
+  }
+
+  /**
    * @method getInstanceDatabases
    * @description get all databases for an instance
    * 

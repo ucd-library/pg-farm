@@ -8,6 +8,7 @@ class BackupModel {
 
   async runPgDump(hostname, database) {
     let file = `/backups/${hostname}/${database}.backup`;
+    logger.info(`Backing up ${hostname} ${database} to ${file}`);
     let dir = path.dirname(file);
 
     await fs.mkdir(dir, { recursive: true });
@@ -17,6 +18,8 @@ class BackupModel {
 
   async runPgRestore(hostname, database) {
     let file = `/backups/${hostname}/${database}.backup`;
+
+    logger.info(`Restoring up ${hostname} ${database} from ${file}`);
 
     return exec(`pg_restore --clean -U postgres -d ${database} ${file}`);
   }
@@ -34,11 +37,11 @@ class BackupModel {
     let hostname = databases[0].instance_hostname;
     databases = databases.map(db => db.database_name);
 
-    logger.info(`Backing up databases from host ${hostname}:`, databases);
-
     if( !databases.includes('postgres') ) {
       databases.push('postgres');
     }
+
+    logger.info(`Backing up databases from host ${hostname}:`, databases);
 
     for( let database of databases ) {
       await this.runPgDump(hostname, database);
@@ -52,20 +55,20 @@ class BackupModel {
    * @param {String} instNameOrId instance id or name
    * @param {String} orgNameOrId organization name or id
    */
-  async backup(instNameOrId, orgNameOrId) {
+  async restore(instNameOrId, orgNameOrId) {
     logger.info(`Restoring databases for instance ${instNameOrId} in org ${orgNameOrId}`);
     let databases = await client.getInstanceDatabases(instNameOrId, orgNameOrId);
     let hostname = databases[0].instance_hostname;
     databases = databases.map(db => db.database_name);
 
-    logger.info(`Backing up databases from host ${hostname}:`, databases);
+    logger.info(`Restoring up databases from host ${hostname}:`, databases);
 
     if( databases.includes('postgres') ) {
       databases.splice(databases.indexOf('postgres'), 1);
     }
 
     // First, restore the postgres database
-    await this.runPgDump(hostname, 'postgres');
+    await this.runPgRestore(hostname, 'postgres');
 
     for( let database of databases ) {
       await this.runPgRestore(hostname, database);

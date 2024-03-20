@@ -60,6 +60,21 @@ class Instances {
     console.log(`Started instance ${instance}`);
   }
 
+  async restart(instance) {
+    instance = formatInstName(instance);
+
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/restart`, {
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to restart instance', await resp.text());
+      return;
+    }
+
+    console.log(`Restarted instance ${instance}`);
+  }
+
 
   async backup(instance) {
     instance = formatInstName(instance);
