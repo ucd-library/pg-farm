@@ -14,8 +14,9 @@ program.command('create')
 
 program.command('start <instance>')
   .description('Manually start an postgres instance (requires admin access to instance)')
-  .action(instanceName => {
-    instance.start(instanceName);
+  .option('-f, --force', 'Force start the instance. This will reapply k8s config.')
+  .action((instanceName, opts) => {
+    instance.start(instanceName, opts);
   });
 
 program.command('stop <instance>')
@@ -23,6 +24,12 @@ program.command('stop <instance>')
   .option('-f, --force', 'Force stop the instance.  Required for ALWAYS availability instances.')
   .action(instanceName => {
     instance.stop(instanceName);
+  });
+
+program.command('backup <instance>')
+  .description('Backup postgres instance (requires admin access to instance)')
+  .action(instanceName => {
+    instance.backup(instanceName);
   });
 
 program.parse(process.argv);

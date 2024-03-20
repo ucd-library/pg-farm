@@ -238,13 +238,17 @@ class AdminModel {
     );
 
     // TODO: split out pgRest and instance test.
-    if (health.instanceState === 'RUN' && health.tcpStatus.instance?.isAlive) {
+    if (health.instanceState === 'RUN' && health.tcpStatus.instance?.isAlive && !opts.force) {
       logger.info('Instance running', instance.hostname);
       this.resolveStart(instance);
       return false;
     }
 
-    logger.info('Health test failed, starting instance', instance.hostname);
+    if( opts.force ) {
+      logger.info('Force starting instance', instance.hostname);
+    } else {
+      logger.info('Health test failed, starting instance', instance.hostname);
+    }
     
     try {
 

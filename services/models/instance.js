@@ -240,6 +240,8 @@ class Instance {
       return;
     }
 
+    logger.info('Apply k8s config for instance', instNameOrId, orgNameOrId);
+
     let instance = await this.get(instNameOrId, orgNameOrId);
     let customProps = await client.getInstanceConfig(instNameOrId);
     let instanceImage = customProps.image || config.pgInstance.image;
@@ -257,13 +259,23 @@ class Instance {
     let template = spec.template;
     template.metadata.labels.app = hostname;
 
+    // main pg container
     let container = template.spec.containers[0];
     container.image = instanceImage;
     container.name = hostname;
     container.volumeMounts[0].name = hostname+'-ps';
 
+    // helper container
     container = template.spec.containers[1];
     container.image = config.pgHelper.image;
+    container.env.push({
+      name : 'PG_INSTANCE_NAME',
+      value : instance.name
+    });
+    container.env.push({
+      name : 'PG_INSTANCE_ORGANIZATION',
+      value : instance.organization_id
+    });
 
     spec.volumeClaimTemplates[0].metadata.name = hostname+'-ps';
 

@@ -1,5 +1,5 @@
 import express from 'express';
-import HealthProbe from '../models/model.js';
+import HealthProbe from '../models/health-probe.js';
 import config from '../lib/config.js';
 
 const app = express();

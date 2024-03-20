@@ -5,6 +5,8 @@ import {config} from './config.js';
 class Instances {
 
   async create(opts) {
+    // instance = formatInstName(instance);
+
     let resp = await fetch(`${config.host}/api/admin/instance`, {
       method: 'POST',
       headers: headers({
@@ -23,6 +25,8 @@ class Instances {
   }
 
   async stop(instance) {
+    instance = formatInstName(instance);
+
     let resp = await fetch(`${config.host}/api/admin/instance/${instance}/stop`, {
       headers: headers()
     });
@@ -35,8 +39,16 @@ class Instances {
     console.log(`Stopped instance ${instance}`);
   }
 
-  async start(instance) {
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/start`, {
+  async start(instance, opts={}) {
+    instance = formatInstName(instance);
+
+    let params = new URLSearchParams(opts);
+    if( opts.force ) {
+      params.set('force', true);
+    }
+    params = params.size > 0 ? '?'+params.toString() : '';
+
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/start${params}`, {
       headers: headers()
     });
 
@@ -48,6 +60,32 @@ class Instances {
     console.log(`Started instance ${instance}`);
   }
 
+
+  async backup(instance) {
+    instance = formatInstName(instance);
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/backup`, {
+      method: 'POST',
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to backup instance', await resp.text());
+      return;
+    }
+
+    console.log(`Started instance backup: ${instance}`);
+  }
+
+}
+
+function formatInstName(name) {
+  if( !name.match(/\//) ) {
+    name = '_/'+name;
+  }
+  if( !name.match(/\/inst-/) ) {
+    name = name.split('/').join('/inst-');
+  }
+  return name;
 }
 
 const instance = new Instances();

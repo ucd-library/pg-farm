@@ -21,16 +21,6 @@ mkdir $DEPLOYMENT_DIR
 
 cork-template \
   -c ./config.sh \
-  -t $TEMPLATE_ROOT/proxy-deployment.yaml \
-  -o $DEPLOYMENT_DIR/proxy-deployment.yaml
-
-cork-template \
-  -c ./config.sh \
-  -t $TEMPLATE_ROOT/proxy-service.yaml \
-  -o $DEPLOYMENT_DIR/proxy-service.yaml
-
-cork-template \
-  -c ./config.sh \
   -t $TEMPLATE_ROOT/health-probe-service.yaml \
   -o $DEPLOYMENT_DIR/health-probe-service.yaml
 

@@ -124,6 +124,7 @@ const config = {
 
   pgInstance : {
     name : env.PG_INSTANCE_NAME || '', // set for running pg instances
+    organization : env.PG_INSTANCE_ORGANIZATION || null, // set for running pg instances
     port : 5432,
     image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
     adminRole : env.PG_INSTANCE_ADMIN_ROLE || 'postgres',

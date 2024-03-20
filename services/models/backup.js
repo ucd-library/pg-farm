@@ -1,8 +1,8 @@
 import path from 'path';
 import fs from 'fs/promises';
-import exec from '../../lib/exec.js';
-import client from '../../lib/pg-admin-client.js';
-import logger from '../../lib/logger.js';
+import exec from '../lib/exec.js';
+import client from '../lib/pg-admin-client.js';
+import logger from '../lib/logger.js';
 
 class BackupModel {
 

@@ -11,9 +11,6 @@ YAML_DIR=$ROOT_DIR/k8s
 kubectl apply -f $YAML_DIR/admin-db-statefulset.yaml
 kubectl apply -f $YAML_DIR/admin-db-service.yaml
 
-kubectl apply -f $YAML_DIR/proxy-deployment.yaml
-kubectl apply -f $YAML_DIR/proxy-service.yaml
-
 kubectl apply -f $YAML_DIR/health-probe-deployment.yaml
 kubectl apply -f $YAML_DIR/health-probe-service.yaml
 
@@ -23,7 +20,6 @@ kubectl apply -f $YAML_DIR/admin-service.yaml
 kubectl apply -f $YAML_DIR/gateway-deployment.yaml
 kubectl apply -f $YAML_DIR/gateway-service.yaml
 
-kubectl rollout restart deployment pg-proxy
 kubectl rollout restart deployment admin
 kubectl rollout restart deployment health-probe
 kubectl rollout restart deployment gateway

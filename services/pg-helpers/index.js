@@ -6,7 +6,7 @@ const app = express();
 
 app.post('/backup', async (req, res) => {
   try {
-    await model.backup(config.pgInstance.name);
+    await model.backup(config.pgInstance.name, config.pgInstance.organization);
     res.status(200).send('Backup started');
   } catch (e) {
     console.error('backup start failed', e);

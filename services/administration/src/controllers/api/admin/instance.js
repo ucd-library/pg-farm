@@ -47,7 +47,9 @@ router.get('/:organization/:instance/start', keycloak.protect('admin'), async (r
       instance = 'inst-'+instance;
     }
 
-    let resp = await model.startInstance(instance, organization);
+    let force = req.query.force === 'true';
+
+    let resp = await model.startInstance(instance, organization, {force});
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
