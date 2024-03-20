@@ -1,7 +1,7 @@
 import net from 'net';
 import ProxyMonitor from './monitor.js';
-import utils from '../../lib/utils.js';
-import logger from '../../lib/logger.js';
+import utils from '../../../lib/utils.js';
+import logger from '../../../lib/logger.js';
 import {v4 as uui4} from 'uuid';
 
 class PgFarmTcpServer {

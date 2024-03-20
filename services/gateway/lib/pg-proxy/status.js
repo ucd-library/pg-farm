@@ -1,7 +1,7 @@
-import keycloak from '../../lib/keycloak.js';
-import metrics from '../../lib/metrics/index.js';
+import keycloak from '../../../lib/keycloak.js';
+import metrics from '../../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
-import logger from '../../lib/logger.js';
+import logger from '../../../lib/logger.js';
 
 const metricRoot = 'pgfarm.pg-proxy.';
 

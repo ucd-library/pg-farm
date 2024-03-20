@@ -1,5 +1,5 @@
 import express from 'express';
-import model from './models/backup.js';
+import model from '../models/backup.js';
 import config from '../lib/config.js';
 
 const app = express();

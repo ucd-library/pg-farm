@@ -1,7 +1,7 @@
-import client from '../../../lib/pg-admin-client.js';
-import config from '../../../lib/config.js';
-import kubectl from '../../../lib/kubectl.js';
-import logger from '../../../lib/logger.js';
+import client from '../lib/pg-admin-client.js';
+import config from '../lib/config.js';
+import kubectl from '../lib/kubectl.js';
+import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 
 class Instance {

@@ -1,6 +1,5 @@
 import {Router} from 'express';
-import model from '../../../models/admin.js';
-import instanceModel from '../../../models/instance.js';
+import {admin as model, instance as instanceModel} from '../../../../../models/index.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
 import fetch from 'node-fetch';

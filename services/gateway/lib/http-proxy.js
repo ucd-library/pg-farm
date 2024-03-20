@@ -1,5 +1,5 @@
 import httpProxy from 'http-proxy';
-import {database, admin} from '../../administration/src/models/index.js';
+import {database, admin} from '../../models/index.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 

@@ -1,5 +1,5 @@
-import logger from '../../../lib/logger.js';
-import client from '../../../lib/pg-admin-client.js';
+import logger from '../lib/logger.js';
+import client from '../lib/pg-admin-client.js';
 
 class OrganizationModel {
 

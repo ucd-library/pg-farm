@@ -2,17 +2,15 @@
   "name": "pg-farm-service",
   "version": "0.0.1",
   "description": "Handles custom services for PG Farm",
-  "main": "pg-proxy/lib/proxy.js",
+  "main": "administration/src/index.js",
   "type": "module",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
-    "authenticator": "node authenticator/server.js",
     "administration": "node administration/src/index.js",
-    "proxy": "node pg-proxy/lib/proxy.js",
     "gateway": "node gateway/index.js",
-    "pg-helper" : "node pg-helpers/server.js",
+    "pg-helper" : "node pg-helpers/index.js",
     "health-probe" : "node health-probe/index.js"
   },
   "author": "jrmerz@ucdavis.edu",

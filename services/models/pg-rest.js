@@ -1,10 +1,10 @@
 import pgFormat from 'pg-format';
-import client from '../../../lib/pg-admin-client.js';
-import kubectl from '../../../lib/kubectl.js';
-import config from '../../../lib/config.js';
-import keycloak from '../../../lib/keycloak.js';
-import pgInstClient from '../../../lib/pg-instance-client.js';
-import logger from '../../../lib/logger.js';
+import client from '../lib/pg-admin-client.js';
+import kubectl from '../lib/kubectl.js';
+import config from '../lib/config.js';
+import keycloak from '../lib/keycloak.js';
+import pgInstClient from '../lib/pg-instance-client.js';
+import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 
 class PgRest {

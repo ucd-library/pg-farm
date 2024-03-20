@@ -1,7 +1,7 @@
-import metrics from "../metrics/index.js";
+import metrics from "../../../lib/metrics/index.js";
 import {ValueType} from '@opentelemetry/api';
-import logger from '../logger.js';
-import config from '../config.js';
+import logger from '../../../lib/logger.js';
+import config from '../../../lib/config.js';
 
 const SERVER_EVENTS = [
   'close',

@@ -1,9 +1,9 @@
 import { auth } from 'express-openid-connect';
 import fs from 'fs/promises';
 import path from 'path';
-import keycloak from '../lib/keycloak.js';
-import config from '../lib/config.js';
-import pgAdminClient from '../lib/pg-admin-client.js';
+import keycloak from '../../../../lib/keycloak.js';
+import config from '../../../../lib/config.js';
+import pgAdminClient from '../../../../lib/pg-admin-client.js';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

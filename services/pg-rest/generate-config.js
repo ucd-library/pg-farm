@@ -1,4 +1,4 @@
-import {pgRest} from '../administration/src/models/index.js';
+import {pgRest} from '../models/index.js';
 import fs from 'fs';
 
 let name = process.env.PGREST_DATABASE_NAME;

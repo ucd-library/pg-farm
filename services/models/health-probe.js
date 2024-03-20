@@ -1,7 +1,7 @@
-import kubectl from '../../lib/kubectl.js';
-import config from '../../lib/config.js';
-import utils from '../../lib/utils.js';
-import pgClient from '../../lib/pg-admin-client.js'
+import kubectl from '../lib/kubectl.js';
+import config from '../lib/config.js';
+import utils from '../lib/utils.js';
+import pgClient from '../lib/pg-admin-client.js'
 
 const INST_REGEX = /^inst-/;
 const REST_REGEX = /^rest-/;

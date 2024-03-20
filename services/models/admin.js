@@ -1,9 +1,9 @@
-import client from '../../../lib/pg-admin-client.js';
-import pgInstClient from '../../../lib/pg-instance-client.js';
-import utils from '../../../lib/utils.js';
-import kubectl from '../../../lib/kubectl.js';
-import config from '../../../lib/config.js';
-import logger from '../../../lib/logger.js';
+import client from '../lib/pg-admin-client.js';
+import pgInstClient from '../lib/pg-instance-client.js';
+import utils from '../lib/utils.js';
+import kubectl from '../lib/kubectl.js';
+import config from '../lib/config.js';
+import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -12,14 +12,12 @@ import pgFormat from 'pg-format';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-let schemaPath = path.join(__dirname, '..', '..', 'schema');
+let schemaPath = path.join(__dirname, '..', 'administration', 'schema');
 
 class AdminModel {
 
   constructor() {
     this.instancesStarting = {};
-
-    this.initSchema();
   }
 
   async initSchema() {

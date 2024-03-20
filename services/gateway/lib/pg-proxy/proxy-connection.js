@@ -1,10 +1,10 @@
 import tls from 'tls';
 import { EventEmitter } from 'node:events';
-import keycloak from '../../lib/keycloak.js';
-import config from '../../lib/config.js';
-import utils from '../../lib/utils.js';
-import logger from '../../lib/logger.js';
-import {admin, user as userModel, instance} from '../../administration/src/models/index.js';
+import keycloak from '../../../lib/keycloak.js';
+import config from '../../../lib/config.js';
+import utils from '../../../lib/utils.js';
+import logger from '../../../lib/logger.js';
+import {admin, user as userModel, instance} from '../../../models/index.js';
 
 // let pgPassConnection = null;
 // if( config.proxy.password.type === 'pg' ) {

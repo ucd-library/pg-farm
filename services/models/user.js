@@ -1,9 +1,9 @@
-import client from '../../../lib/pg-admin-client.js';
-import pgInstClient from '../../../lib/pg-instance-client.js';
+import client from '../lib/pg-admin-client.js';
+import pgInstClient from '../lib/pg-instance-client.js';
 import pgFormat from 'pg-format';
-import logger from '../../../lib/logger.js';
-import config from '../../../lib/config.js';
-import utils from '../../../lib/utils.js';
+import logger from '../lib/logger.js';
+import config from '../lib/config.js';
+import utils from '../lib/utils.js';
 
 class User {
 
