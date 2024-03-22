@@ -118,7 +118,10 @@ class AdminModel {
 
   async stopInstance(instNameOrId, orgNameOrId) {
     await this.models.instance.stop(instNameOrId, orgNameOrId);
-    await this.models.pgRest.stop(instNameOrId, orgNameOrId);
+    let dbs = await client.getInstanceDatabases(instNameOrId, orgNameOrId);
+    for( let db of dbs ) {
+      await this.models.pgRest.stop(db.database_id, orgNameOrId);
+    }
   }
 
   /**
@@ -238,7 +241,7 @@ class AdminModel {
     );
 
     // TODO: split out pgRest and instance test.
-    if (health.instanceState === 'RUN' && health.tcpStatus.instance?.isAlive && !opts.force) {
+    if (health.state === 'RUN' && health.tcpStatus.instance?.isAlive && !opts.force) {
       logger.info('Instance running', instance.hostname);
       this.resolveStart(instance);
       return false;
@@ -247,15 +250,20 @@ class AdminModel {
     if( opts.force ) {
       logger.info('Force starting instance', instance.hostname);
     } else {
-      logger.info('Health test failed, starting instance', instance.hostname);
+      logger.info('Health test failed, starting instance', {
+        hostname: instance.hostname,
+        instanceState: health.state,
+        tcpStatus: health.tcpStatus.instance
+      });
     }
     
     try {
 
       let proms = [];
 
+      let dbs;
       if( opts.startPgRest ) {
-        let dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
+        dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
         proms = dbs.map(db => {
           return this.models.pgRest.start(db.database_id, db.organization_id);
         })
@@ -264,7 +272,7 @@ class AdminModel {
       proms.push(this.models.instance.start(instance.instance_id, instance.organization_id));
 
       await utils.waitUntil(instance.hostname, instance.port);
-      if( opts.waitForPgRest ) {
+      if( opts.startPgRest && opts.waitForPgRest && dbs.length ) {
         // wait for all instances to be deploy
         await Promise.all(proms);
 
@@ -320,7 +328,7 @@ async function waitForPgRestDb(host, port, maxAttempts=10, delayTime=500) {
   let attempts = 0;
 
   while( !isAlive && attempts < maxAttempts ) {
-    let resp = await fetch(`${host}:${port}`);
+    let resp = await fetch(`http://${host}:${port}`);
     isAlive = (resp.status !== 503);
     
     if( !isAlive ) {

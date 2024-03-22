@@ -2,9 +2,14 @@ import kubectl from '../lib/kubectl.js';
 import config from '../lib/config.js';
 import utils from '../lib/utils.js';
 import pgClient from '../lib/pg-admin-client.js'
+import metrics from '../lib/metrics/index.js';
+import {ValueType} from '@opentelemetry/api';
 
 const INST_REGEX = /^inst-/;
 const REST_REGEX = /^rest-/;
+
+const metricRoot = 'pgfarm.instance.';
+const STATES = ['CREATING', 'RUN', 'SLEEP', 'ARCHIVE', 'ARCHIVING', 'RESTORING'];
 
 class HealthProbe {
 
@@ -30,6 +35,63 @@ class HealthProbe {
   start() {
     this.checkAlive();
     setInterval(() => this.checkAlive(), config.healthProbe.interval);
+    
+    if( !metrics.meterProvider ) {
+      return;
+    }
+
+    const meter = metrics.meterProvider.getMeter('default');
+    const instState = meter.createObservableGauge(metricRoot+'state',  {
+      description: 'State of the instance',
+      unit: '',
+      valueType: ValueType.INT,
+    });
+
+    let stateMap = {};
+    instState.addCallback(async result => {
+      let instances = await this.allStatus();
+
+      let lastStateMap = stateMap;
+      stateMap = {};
+
+      instances.forEach((instance) => {
+        let alive = instance?.tcpStatus?.instance?.isAlive ? 'active' : 'dead';
+        if( !stateMap[instance.state] ) {
+          stateMap[instance.state] = {};
+        }
+        if( !stateMap[instance.state][alive] ) {
+          stateMap[instance.state][alive] = 0;
+        }
+        stateMap[instance.state][alive]++;
+      });
+
+      for( let state in lastStateMap ) {
+        for( let alive in lastStateMap[state] ) {
+          if( !stateMap[state] ) {
+            result.observe(0, {
+              state, 
+              tcpState: alive
+            });
+            continue
+          }
+          if( !stateMap[state][alive] ) {
+            result.observe(0, {
+              state, 
+              tcpState: alive
+            });
+          }
+        }
+      }
+
+      for( let state in stateMap ) {
+        for( let alive in stateMap[state] ) {
+          result.observe(stateMap[state][alive], {
+            state, 
+            tcpState: alive
+          });
+        }
+      }
+    });
   }
 
 

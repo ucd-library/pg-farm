@@ -52,6 +52,27 @@ CREATE TABLE IF NOT EXISTS pgfarm.instance (
 );
 CREATE INDEX IF NOT EXISTS instance_name_idx ON pgfarm.instance(name);
 
+CREATE TABLE IF NOT EXISTS pgfarm.instance_state_history (
+  instance_state_history_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id),
+  state instance_state NOT NULL,
+  timestamp timestamp NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION update_instance_state_history()
+  RETURNS TRIGGER AS $$
+  BEGIN
+    INSERT INTO pgfarm.instance_state_history(instance_id, state)
+    VALUES (OLD.instance_id, OLD.state);
+    RETURN NEW;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER update_instance_state_history_trigger
+  BEFORE UPDATE ON pgfarm.instance
+  FOR EACH ROW
+  EXECUTE FUNCTION update_instance_state_history();
+
 CREATE OR REPLACE FUNCTION get_instance_id(name_or_id text, org_name_or_id text)
   RETURNS UUID AS $$
   DECLARE

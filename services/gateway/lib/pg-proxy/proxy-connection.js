@@ -204,7 +204,10 @@ class ProxyConnection extends EventEmitter {
 
       // check for query message, if so, emit stats
       if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
-        this.emitStat('query', {database: this.startupProperties.database});
+        this.emitStat('query', {
+          database: this.startupProperties.database,
+          databaseId : this.pgFarmUser.database_id
+        });
       }
 
       // else, just proxy message
@@ -841,8 +844,7 @@ class ProxyConnection extends EventEmitter {
    * @param {Buffer} data 
    */
   debug(socket, data) {
-    // if (!this.debugEnabled) return;
-  
+    if (!this.debugEnabled) return;
 
     if (data instanceof Buffer) {
       logger.info({

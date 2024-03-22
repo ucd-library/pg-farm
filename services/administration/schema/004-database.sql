@@ -1,5 +1,14 @@
 set search_path to pgfarm, public;
 
+DO $$ BEGIN
+  CREATE TYPE pgfarm.database_event_type AS ENUM (
+    'QUERY',
+    'PGREST_REQUEST'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE IF NOT EXISTS pgfarm.database (
   database_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id),
@@ -37,6 +46,30 @@ CREATE OR REPLACE TRIGGER check_org_id_create_trigger
   FOR EACH ROW
   EXECUTE FUNCTION check_organization_id();
 
+CREATE TABLE IF NOT EXISTS pgfarm.database_last_event (
+  database_event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  database_id UUID NOT NULL REFERENCES pgfarm.database(database_id),
+  event_type database_event_type NOT NULL,
+  timestamp timestamp NOT NULL DEFAULT now(),
+  UNIQUE (database_id, event_type)
+);
+
+CREATE OR REPLACE FUNCTION update_database_last_event(database_id_in UUID, event_type_in database_event_type)
+  RETURNS UUID AS $$
+  DECLARE
+    eid UUID;
+  BEGIN
+
+    INSERT INTO pgfarm.database_last_event (database_id, event_type)
+    VALUES (database_id_in, event_type_in)
+    ON CONFLICT (database_id, event_type) DO UPDATE
+    SET timestamp = now()
+    RETURNING database_event_id INTO eid;
+
+    RETURN eid;
+  END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
   RETURNS UUID AS $$
@@ -47,7 +80,7 @@ CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
 
     IF org_name_or_id IS NULL THEN
       SELECT database_id INTO dbid FROM pgfarm.database
-      WHERE name = name_or_id OR instance_id=try_cast_uuid(name_or_id);
+      WHERE name = name_or_id OR database_id=try_cast_uuid(name_or_id);
 
       IF dbid IS NULL THEN
         RAISE EXCEPTION 'Database not found: %', name_or_id;
@@ -58,7 +91,7 @@ CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
 
       SELECT database_id INTO dbid FROM pgfarm.database
       WHERE 
-        (name = name_or_id OR instance_id=try_cast_uuid(name_or_id)) AND
+        (name = name_or_id OR database_id=try_cast_uuid(name_or_id)) AND
         organization_id = oid;
 
       IF dbid IS NULL THEN

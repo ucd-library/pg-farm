@@ -10,7 +10,8 @@ const client = new PG.Pool({
   host : config.adminDb.host,
   database : config.adminDb.database,
   password : config.adminDb.password,
-  port : config.adminDb.port
+  port : config.adminDb.port,
+  options : '--search_path=public,pgfarm'
 });
 client.on('error', (err) => {
   logger.error('PG admin db client error', err);
@@ -28,7 +29,8 @@ class PgFarmAdminClient {
     this.enums = [
       'instance_user_type',
       'instance_availability',
-      'instance_state'
+      'instance_state',
+      'database_event_type'
     ]
 
     this.INVALID_UPDATE_PROPS = {
@@ -469,6 +471,21 @@ class PgFarmAdminClient {
     }
 
     return resp.rows[0].token;
+  }
+
+  /**
+   * @method updateDatabaseLastEvent
+   * @description update the last event for a database, example
+   * last time a user queried the database
+   * 
+   * @param {String} dbId uuid of the database
+   * @param {String} event database_event_type
+   * @returns {Promise<Object>}
+   */
+  updateDatabaseLastEvent(dbId, event) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.update_database_last_event($1::UUID, $2::database_event_type)
+    `, [dbId, event]);
   }
 
 

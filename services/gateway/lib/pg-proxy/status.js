@@ -1,5 +1,6 @@
 import keycloak from '../../../lib/keycloak.js';
 import metrics from '../../../lib/metrics/index.js';
+import client from '../../../lib/pg-admin-client.js';
 import {ValueType} from '@opentelemetry/api';
 import logger from '../../../lib/logger.js';
 
@@ -65,14 +66,16 @@ class ProxyStatus {
   }
 
   _onSocketMessage(msg, proxyConnection) {
-    let dbName = msg.database || proxyConnection.startupProperties?.database;
+    let dbName = msg?.data?.database || proxyConnection.startupProperties?.database;
 
 
     if( msg.type === 'query' ) {
       // if( !this.data.queryCount[dbName]  ) {
       //   this.data.queryCount[dbName] = 0;
       // }
-      
+      client.updateDatabaseLastEvent(msg.data.databaseId, 'QUERY')
+        .catch(e => logger.error('Error updating database last event: ', e));
+
       this.data.queryCount++;
     } else if( msg.type === 'instance-start' ) {
       this.data.instanceStarts.push(msg.data);

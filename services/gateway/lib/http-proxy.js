@@ -1,5 +1,6 @@
 import httpProxy from 'http-proxy';
 import {database, admin} from '../../models/index.js';
+import client from '../../lib/pg-admin-client.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 
@@ -49,6 +50,9 @@ async function middleware(req, res) {
 
     let db = await database.get(dbName, orgName);
     host = 'http://'+db.pgrest_hostname+':'+config.pgRest.port;
+
+    client.updateDatabaseLastEvent(db.database_id, 'PGREST_REQUEST')
+      .catch(e => logger.error('Error updating database last event: ', e));
 
   } else if( path === '/api/db' || path === '/api/db/' ) {
     path = '/api/admin/instance';
