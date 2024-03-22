@@ -62,8 +62,10 @@ CREATE TABLE IF NOT EXISTS pgfarm.instance_state_history (
 CREATE OR REPLACE FUNCTION update_instance_state_history()
   RETURNS TRIGGER AS $$
   BEGIN
-    INSERT INTO pgfarm.instance_state_history(instance_id, state)
-    VALUES (OLD.instance_id, OLD.state);
+    IF OLD.state <> NEW.state THEN
+      INSERT INTO pgfarm.instance_state_history(instance_id, state)
+      VALUES (OLD.instance_id, OLD.state);
+    END IF;
     RETURN NEW;
   END;
 $$ LANGUAGE plpgsql;

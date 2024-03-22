@@ -10,8 +10,8 @@
   "scripts": {
     "administration": "node administration/src/index.js",
     "gateway": "node gateway/index.js",
-    "pg-helper" : "node pg-helpers/index.js",
-    "health-probe" : "node health-probe/index.js"
+    "pg-helper": "node pg-helpers/index.js",
+    "health-probe": "node health-probe/index.js"
   },
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",
@@ -26,6 +26,7 @@
     "body-parser": "^1.20.2",
     "bunyan": "^1.8.15",
     "clone": "^2.1.2",
+    "cron": "^3.1.6",
     "express": "^4.18.2",
     "express-openid-connect": "^2.17.1",
     "http-proxy": "^1.18.1",

@@ -160,11 +160,32 @@ class PgFarmAdminClient {
    * 
    * @returns {Promise<Array>}
    */
-  async getInstances() {
+  async getInstances(state=null) {
+    let where = '', params = [];
+    if( state ) {
+      params.push(state);
+      where = `WHERE state = $${params.length}`;
+    }
     let res = await client.query(
-      `SELECT * FROM ${config.adminDb.tables.INSTANCE}`
+      `SELECT * FROM ${config.adminDb.tables.INSTANCE} ${where}`,
+      params
     );
     return res.rows;
+  }
+
+  async getLastDatabaseEvent(instId) {
+    let res = await client.query(`
+      SELECT * FROM ${config.adminDb.views.DATABASE_EVENT}
+      WHERE instance_id = $1
+      ORDER BY timestamp DESC
+      LIMIT 1
+    `, [instId]);
+
+    if( res.rows.length === 0 ) {
+      return null;
+    }
+
+    return res.rows[0];
   }
 
   /**

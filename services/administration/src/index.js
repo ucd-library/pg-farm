@@ -5,6 +5,7 @@ import api from './controllers/api.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import {admin} from '../../models/index.js';
+import './lib/cron/index.js';
 
 const app = express();
 

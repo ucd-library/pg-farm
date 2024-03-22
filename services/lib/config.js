@@ -73,6 +73,10 @@ const config = {
     }
   },
 
+  backup : {
+    cron : env.BACKUP_CRON || '0 0 * * *',
+  },
+
   // Keycloak configuration
   oidc : {
     tokenCacheTTL : env.OIDC_TOKEN_CACHE_TTL || 1000*60*5,
@@ -114,11 +118,12 @@ const config = {
       get DATABASE() { return config.adminDb.schema+'.database' },
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_USER() { return config.adminDb.schema+'.instance_user' },
-      get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' },
+      get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' }
     },
     views : {
       get INSTANCE_DATABASE() { return config.adminDb.schema+'.instance_database' },
-      get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' }
+      get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' },
+      get DATABASE_EVENT() { return config.adminDb.schema+'.database_last_event_view' },
     }
   },
 
@@ -132,7 +137,9 @@ const config = {
     publicRole : {
       username : env.PG_INSTANCE_PUBLIC_ROLE || 'pgfarm-public',
       password : env.PG_INSTANCE_PUBLIC_PASSWORD || 'go-aggies',
-    }
+    },
+    // this should be a couple hours after the backup cron
+    shutdownCron : env.PG_INSTANCE_SHUTDOWN_CRON || '0 4 * * *',
   },
 
   pgRest : {

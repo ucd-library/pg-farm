@@ -52,10 +52,28 @@ class Instance {
     };
   }
 
-  list() {
-    return client.getInstances();
+  /**
+   * @method list
+   * @description list all instances
+   * 
+   * @param {String} state Optional.  Filter by state
+   * 
+   * @returns {Promise<Array>}
+   **/
+  list(state=null) {
+    return client.getInstances(state);
   }
 
+  /**
+   * @method get
+   * @description get instance by name or id.  The name can
+   * omit the 'inst-' prefix and it will be added automatically.
+   * 
+   * @param {String} nameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * 
+   * @returns {Promise<Object>}
+   **/
   async get(nameOrId='', orgNameOrId=null) {
     if( !modelUtils.isUUID(nameOrId) && !nameOrId.match(/^inst-/) ) {
       nameOrId = 'inst-'+nameOrId;
@@ -77,6 +95,16 @@ class Instance {
     return this.get(database.instance_id);
   }
 
+  /**
+   * @method exists
+   * @description check if an instance exists.  Wraps the get method
+   * and catches the error if the instance does not exist.
+   * 
+   * @param {String} name instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * 
+   * @returns {Promise<Boolean>}
+   **/
   async exists(name, orgNameOrId) {
     try {
       let instance = await this.get(name, orgNameOrId);
@@ -306,6 +334,14 @@ class Instance {
     return {pgResult, pgServiceResult};
   }
 
+  /**
+   * @method stop
+   * @description Stop a postgres instance and service in k8s (kubectl delete)
+   * 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * @returns {Promise<Object>}
+   */
   async stop(instNameOrId, orgNameOrId) {
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to SLEEP');
@@ -343,6 +379,15 @@ class Instance {
     return  {pgResult, pgServiceResult};
   }
 
+  /**
+   * @method restart
+   * @description Restart an instance.  This will run the kubectl
+   * rollout restart command on the statefulset for the instance.
+   * 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * @returns 
+   */
   async restart(instNameOrId, orgNameOrId=null) {
     let instance = await this.get(instNameOrId, orgNameOrId);
     let hostname = instance.hostname;
@@ -362,6 +407,43 @@ class Instance {
     return pgResult;
   }
 
+  /**
+   * @method sleepInstances
+   * @description Sleep instances that have been idle for too long.  Query
+   * all running instances.  Then check the last database event for each
+   * instance.  If the instance has been idle for longer than the availibility
+   * time, shut it down.
+   */
+  async sleepInstances() {
+    let active = await client.getInstances(this.STATES.RUN);
+    let now = Date.now();
+    
+    for( let instance of active ) {
+      if( instance.availability === 'ALWAYS' ) {
+        continue;
+      }
+
+      let e = await client.getLastDatabaseEvent(instance.instance_id);
+      if( !e ) {
+        logger.warn('No database events found for instance, shutting down', instance.instance_id);
+        await this.stop(instance.instance_id, instance.organization_id);
+        continue;
+      }
+
+      let lastEvent = new Date(e.timestamp).getTime();
+      let diff = now - lastEvent;
+      let allowedTime = this.AVAILABLE_STATES[instance.state] || this.AVAILABLE_STATES.LOW;
+
+      if( diff > allowedTime ) {
+        logger.info('Instance has been idle for too long, shutting down',{
+          lastEvent,
+          availability: instance.availability,
+          now, diff, allowedTime
+        });
+        await this.stop(instance.instance_id, instance.organization_id);
+      }
+    }
+  }
 
 }
 

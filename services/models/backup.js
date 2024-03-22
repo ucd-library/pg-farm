@@ -25,6 +25,28 @@ class BackupModel {
   }
 
   /**
+   * @method remoteBackupAll
+   * @description Backs up all databases for all instances.  This is a remote operation
+   * calling the helper container to perform the backup for each instance.  It does not
+   * wait for the backup to complete, just sends the request to the instance to start the
+   * backup.  This only backups up running instances.
+   */
+  async remoteBackupAll() {
+    let instances = await client.getInstances();
+    for( let instance of instances ) {
+      if( instance.status !== 'RUN' ) continue;
+
+      logger.info(`Starting backup for instance ${instance.hostname}`);
+
+      fetch(
+        `http://${instance.hostname}:3000/backup`,
+        {method: 'POST'}
+      )
+      .catch(e => logger.error('Error starting backup for instance', instance, e));
+    }
+  }
+
+  /**
    * @method backup
    * @description Backs up all databases for a given instance in an organization
    * 

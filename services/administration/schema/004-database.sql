@@ -54,6 +54,25 @@ CREATE TABLE IF NOT EXISTS pgfarm.database_last_event (
   UNIQUE (database_id, event_type)
 );
 
+CREATE OR REPLACE VIEW pgfarm.database_last_event_view AS
+  SELECT
+    dle.database_event_id,
+    dle.database_id,
+    dle.event_type,
+    dle.timestamp,
+    db.name as database_name,
+    db.title as database_title,
+    db.database_id as database_id,
+    i.name as instance_name,
+    i.instance_id as instance_id,
+    i.hostname as instance_hostname,
+    o.name as organization_name,
+    o.organization_id as organization_id
+  FROM pgfarm.database_last_event dle
+  JOIN pgfarm.database db ON db.database_id = dle.database_id
+  JOIN pgfarm.instance i ON i.instance_id = db.instance_id
+  JOIN pgfarm.organization o ON o.organization_id = i.organization_id;
+
 CREATE OR REPLACE FUNCTION update_database_last_event(database_id_in UUID, event_type_in database_event_type)
   RETURNS UUID AS $$
   DECLARE
