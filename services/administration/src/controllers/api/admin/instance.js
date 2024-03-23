@@ -49,7 +49,11 @@ router.get('/:organization/:instance/start', keycloak.protect('admin'), async (r
 
     let force = req.query.force === 'true';
 
-    let resp = await model.startInstance(instance, organization, {force});
+    let resp = await model.startInstance(instance, organization, {
+      force,
+      waitForPgRest: true,
+      startPgRest: true
+    });
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);

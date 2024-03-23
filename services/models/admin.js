@@ -276,10 +276,12 @@ class AdminModel {
         // wait for all instances to be deploy
         await Promise.all(proms);
 
-        // wait for first instance to come alive
-        let firstHostname = dbs[0].pgrest_hostname;
-        await utils.waitUntil(firstHostname, config.pgRest.port);
-        await waitForPgRestDb(firstHostname, config.pgRest.port);
+        // wait for instances to come alive        
+        proms = dbs.map(async db => {
+          await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
+          await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
+        });
+        await Promise.all(proms);
       }
     } catch(e) {
       logger.error('Error starting instance', e);

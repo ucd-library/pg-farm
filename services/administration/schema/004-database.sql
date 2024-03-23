@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS pgfarm.database_last_event (
 CREATE OR REPLACE VIEW pgfarm.database_last_event_view AS
   SELECT
     dle.database_event_id,
-    dle.database_id,
     dle.event_type,
     dle.timestamp,
     db.name as database_name,
