@@ -34,7 +34,7 @@ class BackupModel {
   async remoteBackupAll() {
     let instances = await client.getInstances();
     for( let instance of instances ) {
-      if( instance.status !== 'RUN' ) continue;
+      if( instance.state !== 'RUN' ) continue;
 
       logger.info(`Starting backup for instance ${instance.hostname}`);
 
