@@ -419,6 +419,24 @@ class PgFarmAdminClient {
   }
 
   /**
+   * @method getInstanceUsers
+   * @description get all users for instance.
+   * 
+   * @param {String} instId instance id
+   * 
+   * @returns {Promise<Object>}
+   */
+  async getInstanceUsers(instId) {
+    let resp = await client.query(`
+      select * from pgfarm.instance_user iu 
+      left join pgfarm.user u on iu.user_id = u.user_id 
+      where iu.instance_id = $1;
+    `, [instId]);
+
+    return resp.rows;
+  }
+
+  /**
    * @method getInstanceUserForDb
    * @description get instance user given a specific database and organization
    * 

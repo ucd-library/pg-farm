@@ -130,6 +130,8 @@ server-port = ${config.pgRest.port}`
     let database = await this.models.database.get(dbNameOrId, orgNameOrId);
     let hostname = database.pgrest_hostname;
 
+    logger.info('Stopping PostgREST: '+hostname);
+
     let pgrestResult, pgrestServiceResult;
 
     try {

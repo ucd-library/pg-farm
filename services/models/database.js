@@ -12,23 +12,45 @@ class Database {
    * 
    * @param {String} dbNameOrId PG Farm instance name or ID 
    * @param {String} orgNameOrId PG Farm organization name or ID 
-   * @param {String} username optional.  Defaults to 'postgres'
+   * @param {Object} opts
+   * @param {String} opts.username optional.  Defaults to 'postgres'
+   * @param {Boolean} opts.useSocket optional.  If true, returns a connection object for a unix socket
    * 
    * @returns {Promise<Object>}
    */
-  async getConnection(dbNameOrId, orgNameOrId=null, username='postgres') {
+  async getConnection(dbNameOrId, orgNameOrId=null, opts={}) {
+
+    if( !opts.username ) {
+      opts.username = 'postgres';
+    }
+
+    let db;
+    if( dbNameOrId === 'postgres' ) {
+      db = {name: 'postgres'};
+      opts.useSocket = true;
+    } else {
+      db = await this.get(dbNameOrId, orgNameOrId);
+    }
+
+    if( opts.useSocket ) {
+      return {
+        host : '/var/run/postgresql',
+        user : opts.username,
+        database : db.name || db.database_name
+      }
+    }
+
     let user;
     try {
-      user = await this.models.user.get(dbNameOrId, orgNameOrId, username);
+      user = await this.models.user.get(dbNameOrId, orgNameOrId, opts.username);
     } catch(e) { 
       if( username === 'postgres' ) {
-        let db = await this.get(dbNameOrId, orgNameOrId);
         let instance = await this.models.instance.get(db.instance_id);
         return {
           host : instance.hostname,
           port : instance.port,
           user : username,
-          database : db.name,
+          database : db.name || db.database_name,
           password : config.pgInstance.adminInitPassword
         }
       }

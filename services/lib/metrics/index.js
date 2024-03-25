@@ -24,9 +24,11 @@ function init() {
   var traceExporter, metricExporter;
   if( env.METRICS_EXPORT_GC === 'true' ) {
     let exporters = gcExport();
-    traceExporter = exporters.traceExporter;
-    metricExporter = exporters.metricExporter;
-    meterProvider = exporters.meterProvider;
+    if( exporters ) {
+      // traceExporter = exporters.traceExporter;
+      metricExporter = exporters.metricExporter;
+      meterProvider = exporters.meterProvider;
+    }
   
   // This option is mostly for debugging the telemetry
   } 
@@ -37,6 +39,10 @@ function init() {
   //     resource: new Resource(resourceAttributes())
   //   });
   // }
+
+  if( !metricExporter ) {
+    return;
+  }
 
   let serviceName = env.SERVICE_NAME || 'pg-farm';
 

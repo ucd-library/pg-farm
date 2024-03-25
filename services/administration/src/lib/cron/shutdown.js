@@ -1,11 +1,11 @@
-import { CronJob } from 'cron';
+import cron from '../../../../lib/cron.js';
 import config from '../../../../lib/config.js';
-import {instance} from '../../../../models/index.js';
+import {admin} from '../../../../models/index.js';
 import logger from '../../../../lib/logger.js';
 
-const job = new CronJob(config.pgInstance.shutdownCron, () => {
+const job = cron(config.pgInstance.shutdownCron, () => {
   logger.info('Running shutdown cron job');
-  instance.sleepInstances()
+  admin.sleepInstances()
     .catch((err) => {
       logger.error('Error running shutdown cron job', err);
     });

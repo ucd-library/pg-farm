@@ -2,6 +2,7 @@ import path from 'path';
 import yaml from 'js-yaml';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import exec from '../lib/exec.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let k8sTemplatePath = path.join(__dirname, '..', 'administration', 'k8s');
@@ -35,6 +36,62 @@ class ModelUtils {
   isUUID(nameOrId='') {
     return uuidRegex.test(nameOrId);
   };
+
+  /**
+   * @method awaitForGsFuseSync
+   * @description Waits for a local file to sync with a GCS file.  This checks 
+   * the crc32c hash of the file on both the local filesystem and GCS. It will
+   * resolve when the crc32c hashes match.
+   * 
+   * @param {String} localFile full path to local fs file
+   * @param {String} gcsFile full path to GCS file, including gs:// prefix
+   * @param {Number} timeout time in seconds to wait before rejecting.  Default is 300 seconds (5min).
+   * 
+   * @returns 
+   */
+  awaitForGsFuseSync(localFile, gcsFile, timeout=300) {
+    return new Promise((resolve, reject) => {
+      let timeoutId = setTimeout(() => {
+        clearInterval(interval);
+        reject('Timeout waiting for file to sync');
+      }, timeout * 1000);
+
+      let interval = setInterval(async () => {
+        try {
+          let localResp = await this.runGsutils(`hash -m ${localFile}`);
+          let props = localResp[Object.keys(localResp)[0]];
+          let localCrc32c = props['Hash (crc32c)'];
+
+          let gcsResp = await this.runGsutils(`ls -L ${gcsFile}`);
+          props = gcsResp[Object.keys(gcsResp)[0]];
+          let gcsCrc32c = props['Hash (crc32c)'];
+
+          if( localCrc32c === gcsCrc32c ) {
+            clearTimeout(timeoutId);
+            clearInterval(interval);
+            resolve();
+          }
+        } catch(e) {
+          clearTimeout(timeoutId);
+          clearInterval(interval);
+          reject(e);
+        }
+      }, 1000);
+    });
+  }
+
+  /**
+   * @method runGsutils
+   * @description Runs a gsutil command and returns the stdout
+   * as JSON.
+   * 
+   * @param {String} cmd gsutil command to run.  
+   */
+  async runGsutils(cmd='') {
+    cmd.replace(/^gsutil/, '');
+    let {stdout, stderr} = await exec(`gsutil ${cmd}`);
+    return yaml.load(stdout);
+  }
 }
 
 const instance = new ModelUtils();

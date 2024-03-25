@@ -75,6 +75,7 @@ const config = {
 
   backup : {
     cron : env.BACKUP_CRON || '0 0 * * *',
+    bucket : env.BACKUP_BUCKET || 'pg-farm-backups'
   },
 
   // Keycloak configuration

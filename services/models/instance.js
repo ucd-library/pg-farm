@@ -262,10 +262,13 @@ class Instance {
    * @description Starts a postgres instance and service in k8s
    * 
    * @param {String} instNameOrId PG Farm instance name or ID 
+   * @param {String} orgNameOrId PG Farm organization name or ID
+   * @param {Object} opts
+   * @param {Boolean} opts.isRestoring set to true if the instance is being restored.  Will set state to RESTORING
    * 
    * @returns {Promise}
    */
-  async start(instNameOrId, orgNameOrId) {
+  async start(instNameOrId, orgNameOrId, opts={}) {
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to RUN');
       this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
@@ -328,8 +331,11 @@ class Instance {
     });
     logger.info('Applied instance k8s service config', hostname);
 
-
-    await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
+    if( opts.isRestoring ) {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RESTORING);
+    } else {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
+    }
 
     return {pgResult, pgServiceResult};
   }
@@ -340,9 +346,12 @@ class Instance {
    * 
    * @param {String} instNameOrId instance name or id
    * @param {String} orgNameOrId organization name or id
+   * @param {Object} opts
+   * @param {Boolean} opts.isArchived set to true if the instance has been archived.  will set state to ARCHIVE
+   * 
    * @returns {Promise<Object>}
    */
-  async stop(instNameOrId, orgNameOrId) {
+  async stop(instNameOrId, orgNameOrId, opts={}) {
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to SLEEP');
       await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.SLEEP);
@@ -351,6 +360,8 @@ class Instance {
 
     let instance = await this.get(instNameOrId, orgNameOrId);
     let hostname = instance.hostname;
+
+    logger.info('Stopping instance', hostname);
 
     let pgResult, pgServiceResult;
 
@@ -374,7 +385,11 @@ class Instance {
       }
     }
 
-    await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.SLEEP);
+    if( opts.isArchived ) {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.ARCHIVE);
+    } else {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.SLEEP);
+    }
 
     return  {pgResult, pgServiceResult};
   }
@@ -407,42 +422,17 @@ class Instance {
     return pgResult;
   }
 
-  /**
-   * @method sleepInstances
-   * @description Sleep instances that have been idle for too long.  Query
-   * all running instances.  Then check the last database event for each
-   * instance.  If the instance has been idle for longer than the availibility
-   * time, shut it down.
-   */
-  async sleepInstances() {
-    let active = await client.getInstances(this.STATES.RUN);
-    let now = Date.now();
-    
-    for( let instance of active ) {
-      if( instance.availability === 'ALWAYS' ) {
-        continue;
-      }
-
-      let e = await client.getLastDatabaseEvent(instance.instance_id);
-      if( !e ) {
-        logger.warn('No database events found for instance, shutting down', instance.instance_id);
-        await this.stop(instance.instance_id, instance.organization_id);
-        continue;
-      }
-
-      let lastEvent = new Date(e.timestamp).getTime();
-      let diff = now - lastEvent;
-      let allowedTime = this.AVAILABLE_STATES[instance.state] || this.AVAILABLE_STATES.LOW;
-
-      if( diff > allowedTime ) {
-        logger.info('Instance has been idle for too long, shutting down',{
-          lastEvent,
-          availability: instance.availability,
-          now, diff, allowedTime
-        });
-        await this.stop(instance.instance_id, instance.organization_id);
-      }
+  async remoteSyncUsers(instNameOrId, orgNameOrId=null) {
+    let instance = await client.getInstance(instNameOrId, orgNameOrId);
+    if( instance.state !== 'RUN' ) {
+      throw new Error('Instance must be RUN state to sync users: '+instance.name);
     }
+
+    logger.info(`Rpc request to resync users for instance ${instance.hostname}`);
+    return fetch(
+      `http://${instance.hostname}:3000/sync-users`,
+      {method: 'POST'}
+    )
   }
 
 }

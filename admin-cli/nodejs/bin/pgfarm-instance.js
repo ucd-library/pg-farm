@@ -13,29 +13,47 @@ program.command('create')
   });
 
 program.command('start <instance>')
-  .description('Manually start an postgres instance (requires admin access to instance)')
+  .description('Manually start an postgres instance (admin only)')
   .option('-f, --force', 'Force start the instance. This will reapply k8s config.')
   .action((instanceName, opts) => {
     instance.start(instanceName, opts);
   });
 
 program.command('restart <instance>')
-  .description('Manually restart an postgres instance (requires admin access to instance)')
+  .description('Manually restart an postgres instance (admin only)')
   .action((instanceName) => {
     instance.restart(instanceName);
   });
 
 program.command('stop <instance>')
-  .description('Manually stop an postgres instance (requires admin access to instance)')
+  .description('Manually stop an postgres instance (admin only)')
   .option('-f, --force', 'Force stop the instance.  Required for ALWAYS availability instances.')
   .action(instanceName => {
     instance.stop(instanceName);
   });
 
 program.command('backup <instance>')
-  .description('Backup postgres instance (requires admin access to instance)')
+  .description('Backup postgres instance (admin only)')
   .action(instanceName => {
     instance.backup(instanceName);
   });
 
-program.parse(process.argv);
+program.command('archive <instance>')
+  .description('Archive postgres instance (admin only)')
+  .action(instanceName => {
+    instance.archive(instanceName);
+  });
+
+program.command('restore <instance>')
+  .description('Restore postgres instance from archive (admin only)')
+  .action(instanceName => {
+    instance.restore(instanceName);
+  });
+
+program.command('sync-users <instance>')
+  .description('Sync postgres instance user (admin only)')
+  .action(instanceName => {
+    instance.syncUsers(instanceName);
+  });
+
+  program.parse(process.argv);

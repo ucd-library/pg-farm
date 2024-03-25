@@ -116,12 +116,59 @@ class AdminModel {
   }
 
 
-  async stopInstance(instNameOrId, orgNameOrId) {
-    await this.models.instance.stop(instNameOrId, orgNameOrId);
+  /**
+   * @method stopInstance
+   * @description Stops a running instance.  This will also stop all pgRest
+   * services associated with the instance.
+   * 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * @param {Object} opts
+   * @param {Boolean} opts.isArchived set to true if the instance has been archived.  will set state to ARCHIVE
+   * 
+   * @returns {Promise}
+   */
+  async stopInstance(instNameOrId, orgNameOrId, opts={}) {
+    await this.models.instance.stop(instNameOrId, orgNameOrId, opts);
     let dbs = await client.getInstanceDatabases(instNameOrId, orgNameOrId);
     for( let db of dbs ) {
       await this.models.pgRest.stop(db.database_id, orgNameOrId);
     }
+  }
+
+  /**
+   * @method restoreInstance
+   * @description Restores a database instance from a backup.  This will 
+   * start the instance in restoring state and then run the restore on the
+   * pg-helper container.
+   * 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * 
+   * @returns {Promise}
+   **/
+  async restoreInstance(instNameOrId, orgNameOrId) {
+    // start the instance in restoring state
+    await this.models.instance.start(instNameOrId, orgNameOrId, {isRestoring: true});
+    // run the restore on the pg-helper container
+    await this.models.backup.remoteRestore(instNameOrId, orgNameOrId);
+  }
+
+  /**
+   * @method archiveInstance
+   * @description Archives an instance.  This will call the archive function
+   * on the pg-helper container.  The pg-helper container will set the 
+   * instance state to ARCHIVING, stop all pgRest services, and then run the
+   * pg_dump for each database, check that all backups have synced to GCS, and
+   * then set the instance state to ARCHIVE.
+   * 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * 
+   * @returns {Promise}
+   **/
+  async archiveInstance(instNameOrId, orgNameOrId) {
+    await this.models.instance.remoteArchive(instNameOrId, orgNameOrId);
   }
 
   /**
@@ -136,11 +183,17 @@ class AdminModel {
    * 
    * @returns {Promise}
    */
-  async syncInstanceUsers(instNameOrId, updatePassword=false) {
-    let users = await client.getInstanceUsers(instNameOrId);
-    let con = await client.getConnection(instNameOrId);
+  async syncInstanceUsers(instNameOrId, orgNameOrId, updatePassword=false) {
+    logger.info('Syncing instance users', instNameOrId, orgNameOrId);
+
+    let instance = await this.models.instance.get(instNameOrId, orgNameOrId);
+    let users = await client.getInstanceUsers(instance.instance_id);
+    let con = await this.models.database.getConnection('postgres', orgNameOrId, {useSocket: true});
 
     for( let user of users ) {
+      if( !['ADMIN', 'PUBLIC', 'USER'].includes(user.type) ) {
+        continue;
+      }
 
       // get db user
       let result = await pgInstClient.query(
@@ -151,21 +204,23 @@ class AdminModel {
       let exists = (result.rows.length > 0);
 
       if( exists ) {
+        logger.info('User exists', user.username, 'updating password');
         if( updatePassword ) {
           await this.resetPassword(instNameOrId, user.username);
         } else {
-          let formattedQuery = pgFormat('ALTER USER %s WITH PASSWORD %L', user.username, user.password);
+          let formattedQuery = pgFormat('ALTER USER "%s" WITH PASSWORD %L', user.username, user.password);
           await pgInstClient.query(con, formattedQuery);
         }
       } else {
-        let formattedQuery = pgFormat('CREATE USER %s WITH PASSWORD %L', user.username, user.password);
+        logger.info('User does not exist', user.username, 'creating user');
+        let formattedQuery = pgFormat('CREATE ROLE "%s" WITH LOGIN PASSWORD %L', user.username, user.password);
         await pgInstClient.query(con, formattedQuery);
       }
     }
   }
 
   /**
-   * @method getInstances
+   * @method getDatabases
    * @description Returns a list of instances.  If username is provided, only
    * instances that the user has access to will be returned.
    * 
@@ -209,6 +264,45 @@ class AdminModel {
     }
 
     return resp;
+  }
+
+  /**
+   * @method sleepInstances
+   * @description Sleep instances that have been idle for too long.  Query
+   * all running instances.  Then check the last database event for each
+   * instance.  If the instance has been idle for longer than the availibility
+   * time, shut it down.
+   */
+  async sleepInstances() {
+    let active = await client.getInstances(this.STATES.RUN);
+    let now = Date.now();
+    
+    for( let instance of active ) {
+      if( instance.availability === 'ALWAYS' ) {
+        continue;
+      }
+
+      let e = await client.getLastDatabaseEvent(instance.instance_id);
+      if( !e ) {
+        logger.warn('No database events found for instance, shutting down', instance.instance_id);
+        await this.stopInstance(instance.instance_id, instance.organization_id);
+        continue;
+      }
+
+      let lastEvent = new Date(e.timestamp).getTime();
+      let diff = now - lastEvent;
+      let allowedTime = this.AVAILABLE_STATES[instance.state] || this.AVAILABLE_STATES.LOW;
+
+      if( diff > allowedTime ) {
+        logger.info('Instance has been idle for too long, shutting down',{
+          instance,
+          lastEvent: e,
+          availability: instance.availability,
+          now, diff, allowedTime
+        });
+        await this.stopInstance(instance.instance_id, instance.organization_id);
+      }
+    }
   }
 
   async startInstance(nameOrId, orgNameOrId, opts={}) {

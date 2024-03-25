@@ -75,11 +75,12 @@ router.get('/:organization/:database/init', keycloak.protect('admin'), async (re
     if( organization === '_' ) {
       organization = null;
     }
-    let database = req.params.database;
+    let dbName = req.params.database;
 
-    let inst = await instance.getByDatabase(database, organization);
+    let inst = await instance.getByDatabase(dbName, organization);
     await instance.initInstanceDb(inst.instance_id, organization);
-    await pgRest.initDb(inst.instance_id, organization, database);
+    await database.ensurePgDatabase(inst.name, organization, dbName);
+    await pgRest.initDb(inst.instance_id, organization, dbName);
 
     res.status(200).json({success: true});
   } catch(e) {

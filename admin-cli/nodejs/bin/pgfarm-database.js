@@ -13,7 +13,7 @@ program.command('create')
   });
 
 program.command('add-user <org/database> <user>')
-  .description('Add a user to an database (requires admin access to instance)')
+  .description('Add a user to an database (admin only)')
   .action((dbName, user) => {
     database.addUser(dbName, user);
   });

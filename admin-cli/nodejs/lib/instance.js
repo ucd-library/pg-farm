@@ -91,6 +91,51 @@ class Instances {
     console.log(`Started instance backup: ${instance}`);
   }
 
+  async archive(instance) {
+    instance = formatInstName(instance);
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/archive`, {
+      method: 'POST',
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to archive instance', await resp.text());
+      return;
+    }
+
+    console.log(`Started instance archive: ${instance}`);
+  }
+
+  async restore(instance) {
+    instance = formatInstName(instance);
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/restore`, {
+      method: 'POST',
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to restore instance', await resp.text());
+      return;
+    }
+
+    console.log(`Started instance restore: ${instance}`);
+  }
+
+  async syncUsers(instance) {
+    instance = formatInstName(instance);
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/sync-users`, {
+      method: 'POST',
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to sync instance users', await resp.text());
+      return;
+    }
+
+    console.log(`Instance user syncd: ${instance}`);
+  }
+
 }
 
 function formatInstName(name) {
