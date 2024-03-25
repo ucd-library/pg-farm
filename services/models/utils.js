@@ -51,34 +51,39 @@ class ModelUtils {
    */
   awaitForGsFuseSync(localFile, gcsFile, timeout=300) {
     return new Promise((resolve, reject) => {
-      let timeoutId = setTimeout(() => {
-        clearInterval(interval);
-        reject('Timeout waiting for file to sync');
+      let opts = {resolve, reject};
+
+      setTimeout(() => {
+        opts.cancelled = true;
       }, timeout * 1000);
 
-      let interval = setInterval(async () => {
-        try {
-          let localResp = await this.runGsutils(`hash -m ${localFile}`);
-          let props = localResp[Object.keys(localResp)[0]];
-          let localCrc32c = props['Hash (crc32c)'];
-
-          let gcsResp = await this.runGsutils(`ls -L ${gcsFile}`);
-          props = gcsResp[Object.keys(gcsResp)[0]];
-          let gcsCrc32c = props['Hash (crc32c)'];
-
-          if( localCrc32c === gcsCrc32c ) {
-            clearTimeout(timeoutId);
-            clearInterval(interval);
-            resolve();
-          }
-        } catch(e) {
-          clearTimeout(timeoutId);
-          clearInterval(interval);
-          reject(e);
-        }
-      }, 1000);
+      this.checkForGsFuseSync(localFile, gcsFile, opts);
     });
   }
+
+  async checkForGsFuseSync(localFile, gcsFile, opts={}) {
+    let localResp = await this.runGsutils(`hash ${localFile}`);
+    let props = localResp[Object.keys(localResp)[0]];
+    let localCrc32c = props['Hash (crc32c)'];
+
+    let gcsResp = await this.runGsutils(`ls -L ${gcsFile}`);
+    props = gcsResp[Object.keys(gcsResp)[0]];
+    let gcsCrc32c = props['Hash (crc32c)'];
+
+
+    if (localCrc32c === gcsCrc32c) {
+      return opts.resolve(true);
+    }
+
+    if( opts.cancelled ) {
+      return opts.reject(false);
+    }
+
+    setTimeout(() => {
+      this.checkForGsFuseSync(localFile, gcsFile, opts);
+    }, 1000);
+  }
+
 
   /**
    * @method runGsutils
@@ -90,7 +95,7 @@ class ModelUtils {
   async runGsutils(cmd='') {
     cmd.replace(/^gsutil/, '');
     let {stdout, stderr} = await exec(`gsutil ${cmd}`);
-    return yaml.load(stdout);
+    return yaml.load(stdout.replace(/\t/g, '  '));
   }
 }
 

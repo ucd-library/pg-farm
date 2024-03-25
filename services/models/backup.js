@@ -4,6 +4,7 @@ import exec from '../lib/exec.js';
 import client from '../lib/pg-admin-client.js';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
+import utils from './utils.js';
 
 class BackupModel {
 
@@ -70,7 +71,7 @@ class BackupModel {
       throw new Error('Instance must be RUN state to archive databases '+instance.name);
     }
 
-    logger.info(`Rpc request to restore for instance ${instance.hostname}`);
+    logger.info(`Rpc request to archive for instance ${instance.hostname}`);
     return fetch(
       `http://${instance.hostname}:3000/archive`,
       {method: 'POST'}
@@ -153,7 +154,8 @@ class BackupModel {
       throw new Error('Instance must be in RUN state to archive databases', instance);
     }
 
-    await this.models.instance.setInstanceState(instNameOrId, orgNameOrId, this.STATES.ARCHIVING);
+    let STATES = this.models.instance.STATES;
+    await this.models.instance.setInstanceState(instNameOrId, orgNameOrId, STATES.ARCHIVING);
 
     // first kill the pg rest services
     let dbs = await client.getInstanceDatabases(instNameOrId, orgNameOrId)
@@ -167,11 +169,11 @@ class BackupModel {
       let local = this.getBackupFile(resp.hostname, database);
       let remote = `gs://${config.backup.bucket}/${resp.hostname}/${database}.backup`;
 
-      await this.utils.awaitForGsFuseSync(local, remote);
+      await utils.awaitForGsFuseSync(local, remote);
       logger.info('GCS filesync validated', local, remote);
     }
 
-    await this.models.admin.stopInstance(instNameOrId, orgNameOrId, {isArchived: true});
+    await this.models.instance.stop(instNameOrId, orgNameOrId, {isArchived: true});
 
     // TODO: should this be a manual process?
     // logger.warn(`removing k8s pvc ${resp.hostname}-ps-${resp.hostname}-0`);
