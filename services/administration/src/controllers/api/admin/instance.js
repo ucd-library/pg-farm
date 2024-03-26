@@ -92,7 +92,7 @@ router.post('/:organization/:instance/archive', keycloak.protect('admin'), async
 router.post('/:organization/:instance/restore', keycloak.protect('admin'), async (req, res) => {
   try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await backup.remoteRestore(instance, organization);
+    let resp = await model.restoreInstance(instance, organization);
     res.status(resp.status).send(await resp.text());
   } catch(e) {
     handleError(res, e);

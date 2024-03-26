@@ -12,6 +12,27 @@ class BackupModel {
     return `/backups/${hostname}/${database}.backup`;
   }
 
+  getRolesFile(hostname) {
+    return `/backups/${hostname}/roles.sql`;
+  }
+
+  async dumpRoles(hostname) {
+    let file = this.getRolesFile(hostname);
+    logger.info(`Backing up roles for ${hostname} to ${file}`);
+    
+    
+    let dir = path.dirname(file);
+    await fs.mkdir(dir, { recursive: true });
+
+    return exec(`pg_dumpall --roles-only -U postgres > ${file}`)
+  }
+
+  async restoreRoles(hostname) {
+    let file = this.getRolesFile(hostname);
+    logger.info(`Restoring roles for ${hostname} from ${file}`);
+    return exec(`psql -U postgres -f ${file}`);
+  }
+
   async runPgDump(hostname, database) {
     let file = this.getBackupFile(hostname, database);
     logger.info(`Backing up ${hostname} ${database} to ${file}`);
@@ -27,7 +48,14 @@ class BackupModel {
 
     logger.info(`Restoring up ${hostname} ${database} from ${file}`);
 
-    return exec(`pg_restore --clean -U postgres -d ${database} ${file}`);
+    // if the database is not postgres, we need to create it first
+    let flags = [];
+    if( database !== 'postgres' ) {
+      flags.push('--create');
+    }
+    flags = flags.join(' ');
+
+    return exec(`pg_restore --clean ${flags} --if-exists -U postgres -d postgres ${file}`);
   }
 
   /**
@@ -54,8 +82,8 @@ class BackupModel {
 
   async remoteRestore(instNameOrId, orgNameOrId=null) {
     let instance = await client.getInstance(instNameOrId, orgNameOrId);
-    if( instance.state !== 'ARCHIVE' ) {
-      throw new Error('Instance must be ARCHIVE state to restore databases'+instance.name);
+    if( instance.state !== 'RESTORING' ) {
+      throw new Error('Instance must be RESTORING state to restore databases: '+instance.name);
     }
 
     logger.info(`Rpc request to restore for instance ${instance.hostname}`);
@@ -94,6 +122,8 @@ class BackupModel {
     if( !databases.includes('postgres') ) {
       databases.push('postgres');
     }
+
+    await this.dumpRoles(hostname);
 
     logger.info(`Backing up databases from host ${hostname}:`, databases);
 
@@ -136,14 +166,18 @@ class BackupModel {
       databases.splice(databases.indexOf('postgres'), 1);
     }
 
-    // First, restore the postgres database
+    // First, restore the roles
+    await this.restoreRoles(hostname);
+
+    // Then, restore the postgres database
     await this.runPgRestore(hostname, 'postgres');
 
+    // Finally, restore the other databases
     for( let database of databases ) {
       await this.runPgRestore(hostname, database);
     }
 
-    await this.models.admin.startInstance(instNameOrId, orgNameOrId);
+    await this.models.admin.startInstance(instNameOrId, orgNameOrId, {startPgRest:true});
   }
 
   async archive(instNameOrId, orgNameOrId) {

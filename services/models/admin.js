@@ -149,9 +149,16 @@ class AdminModel {
    **/
   async restoreInstance(instNameOrId, orgNameOrId) {
     // start the instance in restoring state
-    await this.models.instance.start(instNameOrId, orgNameOrId, {isRestoring: true});
+    await this.models.instance.start(instNameOrId, orgNameOrId, {
+      isRestoring: true
+    });
+
+    // wait for the instance to accept connections
+    let instance = await this.models.instance.get(instNameOrId, orgNameOrId);
+    await utils.waitUntil(instance.hostname, instance.port);
+
     // run the restore on the pg-helper container
-    await this.models.backup.remoteRestore(instNameOrId, orgNameOrId);
+    return this.models.backup.remoteRestore(instNameOrId, orgNameOrId);
   }
 
   /**

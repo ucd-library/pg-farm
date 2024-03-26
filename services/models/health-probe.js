@@ -67,6 +67,8 @@ class HealthProbe {
 
       for( let state in lastStateMap ) {
         for( let alive in lastStateMap[state] ) {
+          if( lastStateMap[state][alive] <= 0 ) continue;
+
           if( !stateMap[state] ) {
             result.observe(0, {
               state, 

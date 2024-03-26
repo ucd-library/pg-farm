@@ -37,6 +37,7 @@ class ProxyConnection extends EventEmitter {
     this.SSL_REQUEST = 0x04D2162F;
 
     this.ALLOWED_USER_TYPES = ['ADMIN', 'USER', 'PUBLIC'];
+    this.ALLOWED_INSTANCE_STATES = ['RUN', 'SLEEP'];
 
     this.MESSAGE_CODES = {
       PASSWORD: 0x70,
@@ -167,7 +168,7 @@ class ProxyConnection extends EventEmitter {
           // this checks if user has access to database
           let success = await this.checkUserAccess();
           if (!success) {
-            logger.info('invalid user access, closing connection', this.getConnectionInfo());
+            logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
             this.closeSockets();
             return;
           }
@@ -274,6 +275,18 @@ class ProxyConnection extends EventEmitter {
         'Invalid Username',
         `The username provided (${this.startupProperties.user}) is not registered with the database (${orgText}${this.startupProperties.database}).`,
         'Make sure you are using the correct username and that your account has been registered with PG Farm.',
+        this.clientSocket
+      );
+      return false;
+    }
+
+    if( !this.ALLOWED_INSTANCE_STATES.includes(this.pgFarmUser.instance_state) ) {
+      this.sendNotice(
+        'ERROR',
+        '57P01',
+        'Instance Not Running',
+        `The database (${orgText}${this.startupProperties.database}) is in a ${this.pgFarmUser.instance_state} state.`,
+        'Please contact the PG Farm administrators about database access.',
         this.clientSocket
       );
       return false;
