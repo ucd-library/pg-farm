@@ -36,9 +36,21 @@ class AdminModel {
     }
   }
 
+  /**
+   * @method createUser
+   * @description Creates a new user in the database.  This will also grant
+   * the role to the pgrest authenticator user.
+   * 
+   * @param {*} instNameOrId 
+   * @param {*} orgNameOrId 
+   * @param {*} user 
+   * @param {*} type 
+   */
   async createUser(instNameOrId, orgNameOrId, user, type='USER') {
-    console.log({instNameOrId, orgNameOrId, user, type})
-    return this.models.user.create(instNameOrId, orgNameOrId, user, type);
+    await this.models.user.create(instNameOrId, orgNameOrId, user, type);
+    if( ['USER', 'ADMIN'].includes(type) ) {
+      await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user);
+    }
   }
 
   /**
@@ -96,7 +108,7 @@ class AdminModel {
     }
 
     // initialize the database for PostgREST roles and schem
-    await this.models.pgRest.initDb(instance.name, opts.organization, database.database_name);
+    await this.models.pgRest.initDb(instance.name, opts.organization);
 
     // start pg rest once instance is running
     await this.models.pgRest.start(database.database_name, opts.organization);
@@ -222,6 +234,11 @@ class AdminModel {
         logger.info('User does not exist', user.username, 'creating user');
         let formattedQuery = pgFormat('CREATE ROLE "%s" WITH LOGIN PASSWORD %L', user.username, user.password);
         await pgInstClient.query(con, formattedQuery);
+      }
+
+      // grant the users role to the authenticator user4
+      if( user.username !== config.pgInstance.adminRole ) {
+        await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user.username, con);
       }
     }
   }
@@ -354,7 +371,7 @@ class AdminModel {
       logger.info('Health test failed, starting instance', {
         hostname: instance.hostname,
         instanceState: health.state,
-        tcpStatus: health.tcpStatus.instance
+        tcpStatus: health?.tcpStatus?.instance
       });
     }
     

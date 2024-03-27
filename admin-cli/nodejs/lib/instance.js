@@ -24,6 +24,22 @@ class Instances {
     console.log(`Created instance ${opts.name} with id ${body.id}`);
   }
 
+  async addUser(name, user) {
+    instance = formatInstName(instance);
+
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/${user}`, {
+      method: 'PUT',
+      headers: headers()
+    });
+
+    if( resp.status !== 204 ) {
+      console.error(resp.status, 'Unable to add user', await resp.text());
+      return;
+    }
+
+    console.log(`Added user ${user} to instance ${instance}`);
+  }
+
   async stop(instance) {
     instance = formatInstName(instance);
 

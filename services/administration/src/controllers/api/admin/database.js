@@ -30,29 +30,6 @@ router.get('/', keycloak.setUser, async (req, res) => {
   }
 });
 
-router.put('/:organization/:database/:user', keycloak.protect('admin'), async (req, res) => {
-  try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-
-    let database = req.params.database;
-    let user = req.params.user.replace(/@.*$/, '');
-
-    // do not let api create special users, for now
-    let type = req.query.type || 'USER';
-    if( type !== 'USER' && type !== 'ADMIN' ) {
-      throw new Error('Invalid type: '+type);
-    }
-
-    let id = await model.createUser(database, organization, user);
-    res.status(204).json({id});
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
 
 router.get('/:organization/:database/restart/api', keycloak.protect('admin'), async (req, res) => {
   try {
@@ -80,7 +57,7 @@ router.get('/:organization/:database/init', keycloak.protect('admin'), async (re
     let inst = await instance.getByDatabase(dbName, organization);
     await instance.initInstanceDb(inst.instance_id, organization);
     await database.ensurePgDatabase(inst.name, organization, dbName);
-    await pgRest.initDb(inst.instance_id, organization, dbName);
+    await pgRest.initDb(inst.instance_id, organization);
 
     res.status(200).json({success: true});
   } catch(e) {

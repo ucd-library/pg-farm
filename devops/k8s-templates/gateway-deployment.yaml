@@ -19,6 +19,8 @@ spec:
         env:
         - name: LOG_LEVEL
           value: "info"
+        - name: PROXY_DEBUG
+          value: "false"
         - name : "GOOGLE_APPLICATION_CREDENTIALS"
           value : "/etc/google/service-account.json"
         - name : "APP_URL"

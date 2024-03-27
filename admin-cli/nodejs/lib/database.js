@@ -72,23 +72,6 @@ class Database {
     }
   }
 
-  async addUser(name, user) {
-    let {organization, database} = this.parseOrg(name);
-    if( !organization ) organization = '_';
-
-    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/${user}`, {
-      method: 'PUT',
-      headers: headers()
-    });
-
-    if( resp.status !== 204 ) {
-      console.error(resp.status, 'Unable to add user', await resp.text());
-      return;
-    }
-
-    console.log(`Added user ${user} to database ${database}`);
-  }
-
   async restartApi(name) {
     let {organization, database} = this.parseOrg(name);
     if( !organization ) organization = '_';

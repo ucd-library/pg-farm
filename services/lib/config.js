@@ -133,7 +133,7 @@ const config = {
     organization : env.PG_INSTANCE_ORGANIZATION || null, // set for running pg instances
     port : 5432,
     image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
-    adminRole : env.PG_INSTANCE_ADMIN_ROLE || 'postgres',
+    adminRole : 'postgres',
     adminInitPassword : env.PG_INSTANCE_ADMIN_INIT_PASSWORD || 'postgres',
     publicRole : {
       username : env.PG_INSTANCE_PUBLIC_ROLE || 'pgfarm-public',

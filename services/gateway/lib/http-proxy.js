@@ -3,15 +3,20 @@ import {database, admin} from '../../models/index.js';
 import client from '../../lib/pg-admin-client.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
+import metrics from '../../lib/metrics/index.js';
+import {ValueType} from '@opentelemetry/api';
 
-const dbRouteRegex = /^\/api\/db\/(\w+)\/(\w+)(\/|$)/;
+const dbRouteRegex = /^\/api\/db\/([-|\w]+)\/([-|\w]+)(\/|$)/;
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
   DEFAULT_HOST += ':'+config.gateway.http.targetPort;
 }
 
+const metricRoot = 'pgfarm.http-proxy.';
+
 let proxy;
+let pgRestQueryCount = 0; 
 
 function init() {
   proxy = httpProxy.createProxyServer({
@@ -20,6 +25,21 @@ function init() {
   proxy.on('error', (err, req, res) => {
     logger.error('HTTP proxy error: ', err);
     res.status(500).send('Internal server error');
+  });
+
+  if( !metrics.meterProvider ) {
+    return;
+  }
+
+  const meter = metrics.meterProvider.getMeter('default');
+  const pgRestQueries = meter.createObservableGauge(metricRoot+'pg-rest-query',  {
+    description: 'Number of PG Rest HTTP queries sent to a PG Farm database',
+    unit: '',
+    valueType: ValueType.INT,
+  });
+  pgRestQueries.addCallback(async result => {
+    result.observe(pgRestQueryCount);
+    pgRestQueryCount = 0;
   });
 }
 
@@ -53,6 +73,8 @@ async function middleware(req, res) {
 
     client.updateDatabaseLastEvent(db.database_id, 'PGREST_REQUEST')
       .catch(e => logger.error('Error updating database last event: ', e));
+
+    pgRestQueryCount++;
 
   } else if( path === '/api/db' || path === '/api/db/' ) {
     path = '/api/admin/instance';

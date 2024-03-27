@@ -12,12 +12,6 @@ program.command('create')
     database.create(options);
   });
 
-program.command('add-user <org/database> <user>')
-  .description('Add a user to an database (admin only)')
-  .action((dbName, user) => {
-    database.addUser(dbName, user);
-  });
-
 program.command('list')
   .description('List databases')
   .option('-m, --mine', 'List only databases I have an account on')

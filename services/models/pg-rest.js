@@ -41,9 +41,12 @@ server-port = ${config.pgRest.port}`
    * @description Initialize the database for PostgREST roles and schema
    * 
    * @param {String} instNameOrId 
+   * @param {String} orgNameOrId
+   * 
+   * @returns {Promise}
    */
-  async initDb(instNameOrId, orgNameOrId=null, dbNameOrId) {
-    let con = await this.models.database.getConnection(dbNameOrId, orgNameOrId);
+  async initDb(instNameOrId, orgNameOrId=null) {
+    let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
 
     // add authenticator user
     logger.info('Ensuring authenticator user: '+config.pgRest.authenticator.username+' on instance: '+instNameOrId+' for organization: '+orgNameOrId)
@@ -61,9 +64,34 @@ server-port = ${config.pgRest.port}`
     await pgInstClient.query(con, formattedQuery);
 
     // grant the public role to the authenticator user
-    logger.info('Granting public role to authenticator user on instance: '+instNameOrId+' for organization: '+orgNameOrId)
-    formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
-      config.pgInstance.publicRole.username, config.pgRest.authenticator.username
+    await this.grantUserAccess(instNameOrId, orgNameOrId, config.pgInstance.publicRole.username, con);
+  }
+
+  /**
+   * @method grantUserAccess
+   * @description Grant pgrest authenticator the role of the given user.  This allows the authenticator
+   * to impersonate the user when making requests to the database via a JWT token.
+   * 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * @param {String} username username to grant access
+   * @param {Object} con optional.  A postgres connection object
+   * 
+   * @returns {Promise}
+   */
+  async grantUserAccess(instNameOrId, orgNameOrId=null, username, con=null) {
+    if( username === config.pgInstance.adminRole ) {
+      logger.warn('Cannot grant authenticator access to admin role: '+username);
+      return;
+    }
+    
+    if( !con ) {
+      con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
+    }
+
+    logger.info('Granting role "'+username+'" to authenticator user on instance: '+instNameOrId+' for organization: '+orgNameOrId)
+    let formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
+      username, config.pgRest.authenticator.username
     );
     await pgInstClient.query(con, formattedQuery);
   }

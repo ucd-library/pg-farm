@@ -37,7 +37,13 @@ class PgFarmTcpServer {
   }
 
   createProxyConnection(host, port, incomingSocket) {
-    let sessionId = this.sockets.get(incomingSocket).session;
+    let socketInfo = this.sockets.get(incomingSocket);
+    if( !socketInfo ) {
+      logger.error('Socket not found');
+      return;
+    }
+
+    let sessionId = socketInfo.session;
 
     const socket = net.createConnection({ 
       host, port
@@ -82,14 +88,17 @@ class PgFarmTcpServer {
         }
 
         socket.removeAllListeners();
-        socket.destroy();
-      });
+        socket.destroySoon();
 
-      let sockets = this.sessions.get(session);
-      for( let s of sockets ) {
-        if( s === socket ) continue;
-        s.end();
-      }
+        // TODO: fix so we can support server moves
+        for( let s of sockets ) {
+          // if( s === socket ) continue;
+          s.destroySoon();
+        }
+      }, 100);
+
+      // let sockets = this.sessions.get(session);
+      
     });
 
     socket.on('timeout', () => {

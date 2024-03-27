@@ -31,16 +31,16 @@ class Instance {
    * postgres database for a given instance name and organization
    * 
    * 
-   * @param {*} nameOrId 
-   * @param {*} orgNameOrId 
+   * @param {String} instNameOrId 
+   * @param {String} orgNameOrId 
    * @returns 
    */
-  async getConnection(nameOrId, orgNameOrId=null) {
-    let instance = await this.get(nameOrId, orgNameOrId);
+  async getConnection(instNameOrId, orgNameOrId=null) {
+    let instance = await this.get(instNameOrId, orgNameOrId);
 
     let pgUser = {};
     try {
-      pgUser = await this.models.user.get(nameOrId, orgNameOrId, config.pgInstance.adminRole);
+      pgUser = await this.models.user.get(instNameOrId, orgNameOrId, config.pgInstance.adminRole);
     } catch(e) {}
 
     return {
@@ -134,7 +134,7 @@ class Instance {
       .replace(/^inst-/, '')
       .toLowerCase()
       .trim()
-      .replace(/[^a-z0-9]/g, '_');
+      .replace(/[^a-z0-9]/g, '-');
     
     let shortName = name.replace(/^inst-/, '');
 

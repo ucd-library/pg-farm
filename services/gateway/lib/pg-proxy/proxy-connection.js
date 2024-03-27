@@ -31,7 +31,8 @@ class ProxyConnection extends EventEmitter {
 
     this.clientSocket = clientSocket;
     this.server = server;
-    this.firstMessage = true;
+    this.firstMessage = true; // if this is the first message from the client
+    this.sslHandled = false; // if ssl request has been handled
     this.targetPort = config.proxy.targetPort;
 
     this.SSL_REQUEST = 0x04D2162F;
@@ -143,16 +144,25 @@ class ProxyConnection extends EventEmitter {
 
       // check for SSL message
       if (this.firstMessage &&
-        data.length >= 4 &&
-        data.readInt32BE(4) === this.SSL_REQUEST) {
+        data.length == 8 ) {
+        
+        if( !this.sslHandled && data.readInt32BE(4) === this.SSL_REQUEST ) {
+          logger.info('client handling ssl request', this.getConnectionInfo());
+          this.sslHandled = true;
 
-        logger.info('client handling ssl request', this.getConnectionInfo());
-
-        if (!config.proxy.tls.enabled) {
-          this.clientSocket.write(Buffer.from('N', 'utf8'));
+          if (!config.proxy.tls.enabled) {
+            this.clientSocket.write(Buffer.from('N', 'utf8'));
+          } else {
+            this.clientSocket.write(Buffer.from('S', 'utf8'));
+            new tls.TLSSocket(this.clientSocket, tlsOptions);
+          }
         } else {
-          this.clientSocket.write(Buffer.from('S', 'utf8'));
-          new tls.TLSSocket(this.clientSocket, tlsOptions);
+          logger.warn('unknown startup message after handling ssl request', {
+            data : data.toString('hex'),
+            length : data.length,
+            payloadLength : data.readInt32BE(0),
+            payload : data.readInt32BE(4)
+          });
         }
 
         return;
@@ -189,11 +199,12 @@ class ProxyConnection extends EventEmitter {
 
       // intercept the password message and handle it
       if (data.length && data[0] === this.MESSAGE_CODES.PASSWORD) {
-        this.starting = true;
-
+        
         // TODO: currently I'm just allowing the known public user to login with a
         // password.  Should I let any user marked as public in??
         if( this.startupProperties.user !== config.pgInstance.publicRole.username ) {
+          this.starting = true;
+
           logger.info('client handling jwt auth', this.getConnectionInfo());
           this.handleJwt(data);
           return;
@@ -245,8 +256,8 @@ class ProxyConnection extends EventEmitter {
   }
 
   async checkUserAccess() {
-    if (!this.startupProperties) return;
-    if (!this.startupProperties.database) return;
+    if (!this.startupProperties) return false;
+    if (!this.startupProperties.database) return false;
 
     logger.info('Initializing server socket', this.getConnectionInfo());
 
@@ -342,6 +353,12 @@ class ProxyConnection extends EventEmitter {
         this.instance.port,
         this.clientSocket
       );
+
+      if( !this.serverSocket ) {
+        logger.error('Error creating server socket', this.getConnectionInfo());
+        this.closeSockets();
+        return;
+      }
   
       // When the target server sends data, forward it to the client
       this.serverSocket.on('data', async data => {
@@ -409,7 +426,7 @@ class ProxyConnection extends EventEmitter {
           let isAlive = await utils.isAlive(this.instance.hostname, this.instance.port);
           if( !isAlive ) {
             this.emitStat('socket-closed', {socket: 'server'});
-            this.serverSocket.destroy();
+            this.serverSocket.destroySoon();
             this.reconnect();
             return;
           }
@@ -472,6 +489,7 @@ class ProxyConnection extends EventEmitter {
       if (type === this.AUTHENTICATION_CODE.CLEARTEXT_PASSWORD) {
         logger.info('Sending pg instance connect user password');
         this.sendUserPassword();
+        return false;
 
         // pg is acknowledging the password on reconnects
       } else if (type === this.AUTHENTICATION_CODE.OK) {
@@ -487,10 +505,14 @@ class ProxyConnection extends EventEmitter {
 
         // if we have received any messages from the client while disconnected, send them now
 
-        logger.info('Reconnected', this.instance.name, this.instance.port);
+        logger.info('Connected', this.instance.name, this.instance.port);
         return true;
       }
     }
+
+    // possibly a bad login.  But this state needs research
+    logger.info('Proxying server message during connect dance', data[0]);
+    this.serverSocket.write(data);
 
     return false;
   }

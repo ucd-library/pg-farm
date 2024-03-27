@@ -86,7 +86,7 @@ class PgFarmUtils {
   closeSocket(socket) {
     return new Promise((resolve, reject) => {
       socket.end(() => {
-        socket.destroy();
+        socket.destroySoon();
         resolve();
       });
     });
