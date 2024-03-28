@@ -26,16 +26,51 @@ const tlsOptions = {
 
 class ProxyConnection extends EventEmitter {
 
+  /**
+   * @constructor
+   * @description create a new proxy connection
+   * 
+   * @param {Socket} clientSocket incoming client socket
+   * @param {PgFarmTcpServer} server tcp server
+   */
   constructor(clientSocket, server) {
     super();
 
     this.clientSocket = clientSocket;
+    this.serverSocket = null;
     this.server = server;
-    this.firstMessage = true; // if this is the first message from the client
-    this.sslHandled = false; // if ssl request has been handled
-    this.targetPort = config.proxy.targetPort;
+
+    // have we sent the clients startup message
+    this.startupMessageHandled = false; 
+
+    // if ssl request has been handled
+    this.sslHandled = false; 
+
+    // if we are intercepting server auth messages and logging user in
+    // via the password stored in the pg farm database
+    this.handlingJwtAuth = false;
+
+    // for replaying startup message on reconnect
+    this.pgFarmUser = null;
+
+    // original startup message
+    this.startUpMsg = null;
+    this.startUpMsgSent = false;
+
+    // captured shutdown message.  Used for silently reconnecting
+    this.shutdownMsg = null;
+
+    // pending messages while reconnecting
+    this.pendingMessages = [];
+
+    // if we are waiting for a reconnect.  This is the time of the reconnect
+    this.awaitingReconnect = null;
+
+    // this.targetPort = config.proxy.targetPort;
 
     this.SSL_REQUEST = 0x04D2162F;
+    this.GSSAPI_REQUEST = 0x04D21630;
+    this.GSSAPI_RESPONSE = Buffer.from('G', 'utf8'); // from server debug
 
     this.ALLOWED_USER_TYPES = ['ADMIN', 'USER', 'PUBLIC'];
     this.ALLOWED_INSTANCE_STATES = ['RUN', 'SLEEP'];
@@ -96,15 +131,6 @@ class ProxyConnection extends EventEmitter {
       logger.warn('Proxy debug enabled');
     }
 
-
-    // for replaying startup message on reconnect
-    this.pgFarmUser = null;
-    this.startUpMsg = null;
-    this.shutdownMsg = null;
-    this.pendingMessages = [];
-    this.awaitingReconnect = null;
-    this.starting = false;
-
     this.init();
   }
 
@@ -137,16 +163,18 @@ class ProxyConnection extends EventEmitter {
       this.debug('client', data);
 
       // if we are attempting reconnect, just buffer the message
-      if (this.awaitingReconnect || this.starting) {
+      if (this.awaitingReconnect || this.handlingJwtAuth) {
         this.pendingMessages.push(data);
         return;
       }
 
-      // check for SSL message
-      if (this.firstMessage &&
+      // check for SSL and special auth messages
+      if (!this.startupMessageHandled &&
         data.length == 8 ) {
         
-        if( !this.sslHandled && data.readInt32BE(4) === this.SSL_REQUEST ) {
+        let code = data.readInt32BE(4);
+
+        if( !this.sslHandled && code === this.SSL_REQUEST ) {
           logger.info('client handling ssl request', this.getConnectionInfo());
           this.sslHandled = true;
 
@@ -156,6 +184,9 @@ class ProxyConnection extends EventEmitter {
             this.clientSocket.write(Buffer.from('S', 'utf8'));
             new tls.TLSSocket(this.clientSocket, tlsOptions);
           }
+        } else if (code === this.GSSAPI_REQUEST) {
+          logger.info('responding to gssapi request', this.getConnectionInfo());
+          this.clientSocket.write(this.GSSAPI_RESPONSE);
         } else {
           logger.warn('unknown startup message after handling ssl request', {
             data : data.toString('hex'),
@@ -169,7 +200,7 @@ class ProxyConnection extends EventEmitter {
       }
 
       // first message provides the connection properties
-      if (this.firstMessage) {
+      if ( !this.startupMessageHandled ) {
         logger.info('client handling startup message', data.length, this.getConnectionInfo());
         this.parseStartupMessage(data);
         logger.info('startup message parsed', this.getConnectionInfo());
@@ -192,26 +223,28 @@ class ProxyConnection extends EventEmitter {
         // now just proxy messsage
         logger.info('client startup message parsed', this.getConnectionInfo());
 
-        this.requestPassword(this.clientSocket);
-
-        return;
+        // if public user, just create a direct connection
+        if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
+          logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
+          await this.createServerSocket(); // this sends startup message on connect
+          return;
+        // if not public user, request password, start jwt/auth intercept
+        } else {
+          this.requestPassword(this.clientSocket);
+          return;
+        }
       }
 
       // intercept the password message and handle it
-      if (data.length && data[0] === this.MESSAGE_CODES.PASSWORD) {
-        
-        // TODO: currently I'm just allowing the known public user to login with a
-        // password.  Should I let any user marked as public in??
-        if( this.startupProperties.user !== config.pgInstance.publicRole.username ) {
-          this.starting = true;
+      if (data.length && 
+          data[0] === this.MESSAGE_CODES.PASSWORD &&
+          this.pgFarmUser?.user_type !== 'PUBLIC') {
 
-          logger.info('client handling jwt auth', this.getConnectionInfo());
-          this.handleJwt(data);
-          return;
-        } else {
-          await this.createServerSocket();
-          logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
-        }
+        this.handlingJwtAuth = true;
+
+        logger.info('client handling jwt auth', this.getConnectionInfo());
+        this.handleJwt(data);
+        return;
       }
 
       // check for query message, if so, emit stats
@@ -274,7 +307,7 @@ class ProxyConnection extends EventEmitter {
     let userError = false;
     if( !this.pgFarmUser ) {
       userError = true;
-    } else if( !this.ALLOWED_USER_TYPES.includes(this.pgFarmUser.type || this.pgFarmUser.user_type) ) {
+    } else if( !this.ALLOWED_USER_TYPES.includes(this.pgFarmUser.user_type) ) {
       userError = true;
     }
 
@@ -313,6 +346,8 @@ class ProxyConnection extends EventEmitter {
   createServerSocket() {
     return new Promise(async (resolve, reject) => {
 
+      logger.info('Creating server socket', this.getConnectionInfo());
+
       this.instance = await instance.getByDatabase(
         this.startupProperties.database,
         this.dbOrganization
@@ -334,7 +369,7 @@ class ProxyConnection extends EventEmitter {
       let started = await admin.startInstance(
         this.startupProperties.database, 
         this.dbOrganization
-      )
+      );
   
       if( started === true ) {
         this.emitStat('instance-start', {
@@ -345,9 +380,7 @@ class ProxyConnection extends EventEmitter {
         });
       }
 
-
-      let first = true;
-
+      // TODO: should we throw error if serverSocket is already set?
       this.serverSocket = this.server.createProxyConnection(
         this.instance.hostname,
         this.instance.port,
@@ -376,10 +409,10 @@ class ProxyConnection extends EventEmitter {
           }
         }
 
-        if( this.starting ) {
-          let completed = this.handleReconnectServerMessage(data);
+        if( this.handlingJwtAuth ) {
+          let completed = this.interceptServerAuth(data);
           if( completed ) {
-            this.starting = false;
+            this.handlingJwtAuth = false;
           } else {
             return;
           }
@@ -388,7 +421,7 @@ class ProxyConnection extends EventEmitter {
         // hijack the authentication ok message and send password to quietly 
         // reestablish connection
         if (this.awaitingReconnect) {
-          let completed = this.handleReconnectServerMessage(data);
+          let completed = this.interceptServerAuth(data);
           if( completed ) {
             this.awaitingReconnect = null;
           } else {
@@ -402,17 +435,20 @@ class ProxyConnection extends EventEmitter {
       });
   
       this.serverSocket.on('connect', () => {
-        if( first ) {
-          logger.info('Server socket connected', this.getConnectionInfo());
+        logger.info('Server socket connected', this.getConnectionInfo());
+
+        if( !this.startUpMsgSent && this.startUpMsg  ) {
+          logger.info('Sending startup message', this.getConnectionInfo());
           this.serverSocket.write(this.startUpMsg);
-          resolve();
-          first = false;
+          this.startUpMsgSent = true;
         }
 
-        if (this.awaitingReconnect) {
+        if (this.awaitingReconnect && this.startUpMsg) {
           logger.info('Resending startup message', this.instance.name, this.instance.port, this.startupProperties.user);
           this.serverSocket.write(this.startUpMsg);
         }
+
+        resolve();
       });
   
   
@@ -467,18 +503,20 @@ class ProxyConnection extends EventEmitter {
 
     logger.info('Reconnect server detected, establishing connection', this.instance.name, this.instance.port);
 
-    this.createServerSocket();
+    await this.createServerSocket();
   }
 
   /**
-   * @method handleReconnectServerMessage
-   * @description handle the reconnect messages from the server.  This quietly logs
-   * a user back in.  So the proxy will handle these messages without the client knowing
-   * about them
+   * @method interceptServerAuth
+   * @description handle the auth messages from the server.  This quietly logs
+   * a userin.  So the proxy will handle these messages without the client knowing
+   * about them.  Returns true if the authentication is complete.
    * 
-   * @param {Buffer} data 
+   * @param {Buffer} data server message
+   * 
+   * @returns {Boolean} true if the authentication is complete
    */
-  handleReconnectServerMessage(data) {
+  interceptServerAuth(data) {
     // after the reconnect startup message is resent, pg will send the password message
     if (data.length && data[0] === this.MESSAGE_CODES.SEND_PASSWORD) {
 
@@ -568,7 +606,7 @@ class ProxyConnection extends EventEmitter {
       this.debug('client', 'ignoring message, no properties.  Still waiting for startup.');
       return;
     } else {
-      this.firstMessage = false;
+      this.startupMessageHandled = true;
     }
 
     if( startupProperties.database && startupProperties.database.match('/') ) {
@@ -668,7 +706,7 @@ class ProxyConnection extends EventEmitter {
     (this.parsedJwt.roles || []).forEach(role => roles.add(role));
     (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
 
-    let userType = this.pgFarmUser.type || this.pgFarmUser.user_type;
+    let userType = this.pgFarmUser.user_type;
     let isAdminAndPGuser = (
       (userType === 'ADMIN' || roles.has('admin')) &&
       this.startupProperties.user === 'postgres'

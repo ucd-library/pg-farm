@@ -57,6 +57,16 @@ class User {
     } else { // get current password.  make sure its set on the instance db
       logger.info('Instance user already exists: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
       password = user.password;
+
+      if( type !== user.type ) {
+        logger.info('Updating user type: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId, typew);
+        await client.query(
+          `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
+          SET type = $4 
+          WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
+          [username, instNameOrId, orgNameOrId, type]
+        );
+      }
     }
 
     // postgres user already exists.  Update password

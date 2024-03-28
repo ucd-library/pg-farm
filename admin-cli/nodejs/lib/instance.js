@@ -24,10 +24,16 @@ class Instances {
     console.log(`Created instance ${opts.name} with id ${body.id}`);
   }
 
-  async addUser(name, user) {
+  async addUser(instance, user, opts={}) {
     instance = formatInstName(instance);
 
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/${user}`, {
+    let flags = [];
+    if( opts.admin ) {
+      flags.push('type=ADMIN');
+    }
+    flags = flags.length > 0 ? '?'+flags.join('&') : '';
+
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/${user}${flags}`, {
       method: 'PUT',
       headers: headers()
     });

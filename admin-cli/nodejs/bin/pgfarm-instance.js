@@ -5,7 +5,7 @@ const program = new Command();
 
 
 program.command('create')
-  .description('Create a new instance PG Farm postgres instance (requires admin access)')
+  .description('Create a new instance PG Farm postgres instance (admin only)')
   .requiredOption('-n, --name <name>', 'Instance name')
   .option('-a, --availability <availability>', 'Availability of the instance (ALWAYS, HIGH, MEDIUM, LOW)')
   .action(options => {
@@ -13,9 +13,10 @@ program.command('create')
   });
 
 program.command('add-user <org/instance> <user>')
-  .description('Add a user to an database (admin only)')
-  .action((instanceName, user) => {
-    instance.addUser(instanceName, user);
+  .description('Add a user to an database (instance admin only)')
+  .option('-a, --admin', 'Grant admin privileges to the user')
+  .action((instanceName, user, opts) => {
+    instance.addUser(instanceName, user, opts);
   });
 
 program.command('start <org/instance>')

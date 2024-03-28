@@ -259,22 +259,24 @@ class KeycloakUtils {
 
     let authorize = function (req, res, next)  {
       this.setUser(req, res, () => {
+
+        let reqRoles = roles.map(role => {
+          for( let param in req.params ) {
+            role = role.replace('{'+param+'}', req.params[param]);
+          } 
+          return role;
+        });
+
         // no user
         if( !req.user ) return res.status(403).send('Unauthorized');
 
         // there is a user and no roles required, good to go
-        if( roles.length === 0 ) {
+        if( reqRoles.length === 0 ) {
           return next();
         }
 
-        for( let role of roles ) {
+        for( let role of reqRoles ) {
           if( req.user.roles.includes(role) ) {
-            return next();
-          }
-
-          // check for instance role
-          // These are stored in the PG Farm database instance user table
-          if( req.params.instance && req.user.roles.includes(req.params.instance+'-'+role) ) {
             return next();
           }
         }

@@ -16,8 +16,11 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.put('/:organization/:instance/:user', keycloak.protect('admin'), async (req, res) => {
-  try {
+router.put('/:organization/:instance/:user', 
+  keycloak.protect(['admin','{instance}-admin']), 
+  async (req, res) => {
+  
+    try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
     let user = req.params.user.replace(/@.*$/, '');
 
@@ -27,7 +30,7 @@ router.put('/:organization/:instance/:user', keycloak.protect('admin'), async (r
       throw new Error('Invalid type: '+type);
     }
 
-    let id = await model.createUser(database, organization, user);
+    let id = await model.createUser(database, organization, user, type);
     res.status(204).json({id});
   } catch(e) {
     handleError(res, e);
