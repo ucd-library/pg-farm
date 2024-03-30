@@ -298,7 +298,7 @@ class AdminModel {
    * time, shut it down.
    */
   async sleepInstances() {
-    let active = await client.getInstances(this.STATES.RUN);
+    let active = await client.getInstances(this.models.instance.STATES.RUN);
     let now = Date.now();
     
     for( let instance of active ) {
