@@ -104,6 +104,26 @@ class Database {
     console.log(`Re-ran init for database ${database}`);
   }
 
+  async link(name, remoteName) {
+    let local = this.parseOrg(name);
+    if( !local.organization ) local.organization = '_';
+
+    let remote = this.parseOrg(remoteName);
+    if( !remote.organization ) remote.organization = '_';
+
+    let resp = await fetch(`${config.host}/api/admin/database/${local.organization}/${local.database}/link/${remote.organization}/${remote.database}`, {
+      headers: headers(),
+      method: 'POST',
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to link database', await resp.text());
+      return;
+    }
+
+    console.log(`Link for ${name} to ${remoteName}`);
+  }
+
 }
 
 const database = new Database();

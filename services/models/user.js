@@ -4,6 +4,8 @@ import pgFormat from 'pg-format';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import utils from '../lib/utils.js';
+import fetch from 'node-fetch';
+
 
 class User {
 
@@ -149,6 +151,33 @@ class User {
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
       [username, instNameOrId, orgNameOrId, password]
     );
+  }
+
+  /**
+   * @method grantSchemaAccess
+   * @description Grants a user access to a schema running multiple
+   * grant queries for what users need to access the schema.
+   * 
+   * @param {String} schemaName 
+   * @param {String} roleName 
+   * @param {String|Array} permissions Defaults to ALL.
+   */
+  async grantSchemaAccess(schemaName, roleName, permissions='ALL') {
+    let con = await this.models.database.getConnection('postgres');
+    await pgInstClient.grantSchemaUsage(con, schemaName, roleName); 
+    await pgInstClient.grantAllTableAccess(con, schemaName, roleName, permissions);
+    await pgInstClient.grantFnUsage(con, schemaName, roleName);
+  }
+
+  async remoteGrantSchemaAccess(dbName, dbOrg, schemaName, roleName, permissions='ALL') {
+    if( Array.isArray(permissions) ) {
+      permissions = permissions.join(',');
+    }
+    let db = await this.models.database.get(dbName, dbOrg);
+    return fetch(
+      `http://${db.instance_hostname}:3000/grant/schema-access/${schemaName}/${roleName}?permissions=${permissions}`,
+      { method: 'POST' }
+    )
   }
 
 }

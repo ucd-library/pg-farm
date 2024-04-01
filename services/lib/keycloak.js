@@ -236,11 +236,14 @@ class KeycloakUtils {
     }
 
     // check for the instance name in the request. add role name if found
-    let instanceName = req.params.instance;
-    if( instanceName ) {
+    let instName = req.params.instance;
+    let orgName = req.params.organization;
+    let dbName = req.params.database;
+
+    if( (instName || dbName) && orgName ) {
       try {
-        let resp = await adminClient.getUser(instanceName, user.username);
-        roles.add(instanceName+'-'+resp.type.toLowerCase());
+        let resp = await adminClient.getUser(instName || dbName, user.username);
+        roles.add((instName || dbName)+'-'+resp.type.toLowerCase());
       } catch(e) {}
     }
   
@@ -272,6 +275,10 @@ class KeycloakUtils {
 
         // there is a user and no roles required, good to go
         if( reqRoles.length === 0 ) {
+          return next();
+        }
+
+        if( req.user.roles.includes('admin') ) {
           return next();
         }
 

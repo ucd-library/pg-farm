@@ -1,6 +1,7 @@
 import PG from 'pg';
 import pgFormat from 'pg-format';
 import logger from './logger.js';
+import config from './config.js';
 
 /**
  * @class PGInstance
@@ -64,7 +65,61 @@ class PGInstance {
   }
 
   async ensurePgSchema(connection, schemaName) {
-    let query = pgFormat(`CREATE SCHEMA IF NOT EXISTS %s`, schemaName);
+    let query = pgFormat(`CREATE SCHEMA IF NOT EXISTS "%s"`, schemaName);
+    return this.query(connection, query);
+  }
+
+  /**
+   * @method grantAllTableAccess
+   * 
+   * @param {*} connection 
+   * @param {*} schemaName 
+   * @param {*} roleName 
+   * @param {*} permission 
+   * @returns 
+   */
+  grantAllTableAccess(connection, schemaName, roleName, permission='ALL') {
+    if( Array.isArray(permission) ) { 
+      permission = permission.join(', ');
+    }
+    let query = pgFormat(`GRANT ${permission} ON ALL TABLES IN SCHEMA "%s" TO "%s"`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+  grantSchemaUsage(connection, schemaName, roleName) {
+    let query = pgFormat(`GRANT USAGE ON SCHEMA "%s" TO "%s"`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+  grantFnUsage(connection, schemaName, roleName) {
+    let query = pgFormat(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA "%s" to "%s"`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+  enableExtension(connection, extensionName) {
+    let query = pgFormat(`CREATE EXTENSION IF NOT EXISTS %s`, extensionName);
+    return this.query(connection, query);
+  }
+
+  createForeignDataWrapper(connection, databaseName) {
+    let host = new URL(config.appUrl).hostname;
+    let query = pgFormat(`CREATE SERVER IF NOT EXISTS "%s" FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host '%s', port '5432', dbname '%s');`, databaseName, host, databaseName);
+    console.log(query);
+    return this.query(connection, query);
+  }
+
+  createFdwUserMapping(connection, serverName, opts={}) {
+    if( !opts.roleName ) opts.roleName = 'public';
+    if( !opts.remoteRole ) opts.remoteRole = config.pgInstance.publicRole;
+    let query = pgFormat(`CREATE USER MAPPING IF NOT EXISTS FOR "%s" SERVER "%s" OPTIONS (user '%s', password '%s');`, opts.roleName, serverName, opts.remoteRole.username, opts.remoteRole.password);
+    return this.query(connection, query);
+  }
+
+  importForeignSchema(connection, serverName, opts={}) {
+    if( !opts.remoteSchema ) opts.remoteSchema = config.pgRest.schema;
+    if( !opts.localSchema ) opts.localSchema = serverName.split('/').pop();
+    console.log(serverName, opts);
+    let query = pgFormat(`IMPORT FOREIGN SCHEMA "%s" FROM SERVER "%s" INTO "%s";`, opts.remoteSchema, serverName, opts.localSchema);
     return this.query(connection, query);
   }
 

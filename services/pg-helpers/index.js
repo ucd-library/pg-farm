@@ -1,5 +1,5 @@
 import express from 'express';
-import {backup as model, admin} from '../models/index.js';
+import {backup as model, admin, user, database} from '../models/index.js';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 
@@ -49,6 +49,42 @@ app.post('/sync-users', async (req, res) => {
   }
 });
 
+app.post('/grant/schema-access/:schema/:user', async (req, res) => {
+  try {
+    let permissions = req.query.permissions || 'ALL';
+    await user.grantSchemaAccess(
+      req.params.schema, 
+      req.params.user,
+      permissions
+    );
+    res.status(200).send('granted schema access');
+  } catch (e) {
+    logger.error('grant schema access failed', e);
+    res.status(500).send('grant schema access failed');
+  }
+});
+
+app.post('/:localDatabase/link/:organization/:database', async (req, res) => {
+  try {
+    let opts = req.body;
+    let org = req.params.organization;
+    if( org === '_' ) {
+      org = null;
+    }
+
+    await database.link(
+      req.params.localDatabase,
+      req.params.database, 
+      org,
+      opts
+    );
+    res.status(200).send('linked');
+  } catch (e) {
+    logger.error('link failed', e);
+    res.status(500).send('link failed');
+  }
+});
+
 app.listen(3000, () => {
-  logger.info('Backup service started on port 3000');
+  logger.info('Pg Helper service started on port 3000');
 });

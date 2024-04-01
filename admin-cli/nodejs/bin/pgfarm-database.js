@@ -32,4 +32,10 @@ program.command('init <org/database>')
     database.init(dbName);
   });
 
+program.command('link <org/database> <remoteOrg/remoteDatabase>')
+  .description('Link a remote database to a local database using foreign data wrappers')
+  .action((dbName, remoteDbName) => {
+    database.link(dbName, remoteDbName);
+  });
+
 program.parse(process.argv);

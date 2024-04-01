@@ -3,6 +3,7 @@ import pgInstClient from '../lib/pg-instance-client.js';
 import pgFormat from 'pg-format';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
+import fetch from 'node-fetch';
 
 class Database {
 
@@ -130,6 +131,58 @@ class Database {
     } catch(e) {
       logger.warn(`Failed to create database ${dbName} on host ${con.host}`, e.message);
     }
+  }
+
+  /**
+   * @method link
+   * @description Create a foreign data wrapper and link a database
+   * in pg-farm.  By default this will link the foriegn dataabases 
+   * api schema to the local database with a schema of the name
+   * of the remote database. Eg: "library/ca-base-layer".api -> "ca-base-layer"
+   * 
+   * @param {*} dbNameOrId 
+   * @param {*} orgNameOrId 
+   * @param {*} opts 
+   */
+  async link(localDb, remoteDb, remoteOrg, opts={}) {
+    localDb = await this.get(localDb, config.pgInstance.organization);
+    remoteDb = await this.models.database.get(remoteDb, remoteOrg);
+
+    // logger.info('Linking database', db.database_name, 'to organization', org.name);
+    let con = await this.models.database.getConnection(
+      localDb.database_name,
+      localDb.organization_name,
+      {useSocket: true}
+    );
+
+    let dbName = remoteDb.organization_name+'/'+remoteDb.database_name;
+
+    await pgInstClient.ensurePgSchema(con, remoteDb.database_name);
+    await pgInstClient.enableExtension(con, 'postgres_fdw');
+    await pgInstClient.createForeignDataWrapper(con, dbName);
+    try {
+      await pgInstClient.createFdwUserMapping(con, dbName, opts);
+    } catch(e) {
+      logger.warn('Failed to create user mapping', e.message);
+    }
+    await pgInstClient.importForeignSchema(con, dbName, opts);
+  }
+
+  async remoteLink(localDb, localOrg, remoteDb, remoteOrg=null, opts={}) {
+    localDb = await client.getDatabase(localDb, localOrg);
+    remoteDb = await client.getDatabase(remoteDb, remoteOrg);
+
+    logger.info(`Rpc request to link database ${localDb.instance_hostname}`);
+    return fetch(
+      `http://${localDb.instance_hostname}:3000/${localDb.database_name}/link/${remoteDb.organization_name}/${remoteDb.database_name}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(opts)
+      }
+    )
   }
 
 

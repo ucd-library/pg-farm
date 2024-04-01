@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {admin as model, pgRest, database, instance} from '../../../../../models/index.js';
+import {admin as model, pgRest, database, instance, user} from '../../../../../models/index.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
 
@@ -25,6 +25,50 @@ router.get('/', keycloak.setUser, async (req, res) => {
     }
 
     res.json(await model.getDatabases(opts));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/grant/schema-access/:schema/:user', keycloak.protect('*:admin'), async (req, res) => {
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let resp = await user.remoteGrantSchemaAccess(
+      req.params.database, 
+      organization, 
+      req.params.schema, 
+      req.params.user,
+      req.query.permissions
+    );
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.post('/:organization/:database/link/:remoteOrg/:remoteDb', keycloak.protect('*:admin'), async (req, res) => {
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+    let remoteOrg = req.params.remoteOrg;
+    if( remoteOrg === '_' ) {
+      remoteOrg = null;
+    }
+
+    let resp = await database.remoteLink(
+      req.params.database, 
+      organization,
+      req.params.remoteDb,
+      remoteOrg,
+      req.query
+    );
+    res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);
   }

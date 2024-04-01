@@ -311,6 +311,10 @@ class Instance {
       name : 'PG_INSTANCE_ORGANIZATION',
       value : instance.organization_id
     });
+    container.env.push({
+      name : 'APP_URL',
+      value : config.appUrl
+    })
 
     spec.volumeClaimTemplates[0].metadata.name = hostname+'-ps';
 
