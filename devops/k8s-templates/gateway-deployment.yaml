@@ -33,6 +33,10 @@ spec:
           value: "true"
         - name: SERVICE_NAME
           value: "gateway"
+        - name: GATEWAY_HTTPS_KEY
+          value: "/etc/pgfarm/certs/pgfarm.library.ucdavis.edu/pg-farm-https-key.key"
+        - name: GATEWAY_HTTPS_CERT
+          value: "/etc/pgfarm/certs/pgfarm.library.ucdavis.edu/pg-farm-https-secret.cer"
         envFrom:
         - secretRef:
             name: pg-farm-env
@@ -46,9 +50,14 @@ spec:
         volumeMounts:
           - mountPath: /etc/google
             name: service-account
+          - mountPath: /etc/pgfarm/certs/pgfarm.library.ucdavis.edu
+            name: pg-farm-https
       nodeSelector:
         intendedfor: services
       volumes:
       - name: service-account
         secret:
           secretName: pg-farm-service-account
+      - name: pg-farm-https
+        secret:
+          secretName: pg-farm-https

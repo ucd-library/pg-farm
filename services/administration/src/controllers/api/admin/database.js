@@ -14,7 +14,7 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.get('/', keycloak.setUser, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     let opts = {};
     if( req.query.onlyMine === 'true' ) {
@@ -30,7 +30,10 @@ router.get('/', keycloak.setUser, async (req, res) => {
   }
 });
 
-router.put('/:organization/:database/grant/:schema/:user/:permission', keycloak.protect('*:admin'), async (req, res) => {
+router.put('/:organization/:database/grant/:schema/:user/:permission', 
+  keycloak.protect('{instance}-admin'), 
+  async (req, res) => {
+  
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -50,8 +53,11 @@ router.put('/:organization/:database/grant/:schema/:user/:permission', keycloak.
   }
 });
 
-router.post('/:organization/:database/link/:remoteOrg/:remoteDb', keycloak.protect('*:admin'), async (req, res) => {
-  try {
+router.post('/:organization/:database/link/:remoteOrg/:remoteDb', 
+  keycloak.protect('{instance}-admin'), 
+  async (req, res) => {
+  
+    try {
     let organization = req.params.organization;
     if( organization === '_' ) {
       organization = null;

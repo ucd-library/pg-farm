@@ -206,6 +206,10 @@ class KeycloakUtils {
     //   return next();
     // }
 
+    if( req.user ) {
+      return next();
+    }
+
     let token = this.getJwtFromRequest(req);
     if( !token ) return next();
 
@@ -243,7 +247,8 @@ class KeycloakUtils {
     if( (instName || dbName) && orgName ) {
       try {
         let resp = await adminClient.getUser(instName || dbName, user.username);
-        roles.add((instName || dbName)+'-'+resp.type.toLowerCase());
+        roles.add(resp.instance_name+'-'+resp.type.toLowerCase());
+        if( !req.params.instance ) req.params.instance = resp.instance_name;
       } catch(e) {}
     }
   
@@ -263,12 +268,13 @@ class KeycloakUtils {
     let authorize = function (req, res, next)  {
       this.setUser(req, res, () => {
 
-        let reqRoles = roles.map(role => {
-          for( let param in req.params ) {
-            role = role.replace('{'+param+'}', req.params[param]);
-          } 
-          return role;
-        });
+        let reqRoles = roles;
+
+        // replace role instance template with instance name
+        if( req.params.instance ) {
+          reqRoles = reqRoles.map(role => role.replace('{instance}', req.params.instance));
+        }
+
 
         // no user
         if( !req.user ) return res.status(403).send('Unauthorized');
