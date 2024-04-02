@@ -69,6 +69,24 @@ class PGInstance {
     return this.query(connection, query);
   }
 
+  async getTableSequenceNames(con, schemaName, tableName) {
+    let resp = await this.query(con, `
+    SELECT
+        a.attname AS column_name,
+        s.relname AS sequence_name
+    FROM
+        pg_class t
+        JOIN pg_attribute a ON a.attrelid = t.oid
+        JOIN pg_depend d ON d.refobjid = t.oid AND d.refobjsubid = a.attnum
+        JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S'
+    WHERE
+        t.relname = $1 
+        AND t.relnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = $2);`,
+    [tableName, schemaName]);
+
+    return resp.rows.map(row => row.sequence_name)
+  };
+
   /**
    * @method grantAllTableAccess
    * 
@@ -76,9 +94,11 @@ class PGInstance {
    * @param {*} schemaName 
    * @param {*} roleName 
    * @param {*} permission 
+   * @param {*} tableName
+   * 
    * @returns 
    */
-  grantAllTableAccess(connection, schemaName, roleName, permission='ALL') {
+  grantTableAccess(connection, schemaName, roleName, permission='ALL', tableName='ALL TABLES') {
     if( Array.isArray(permission) ) { 
       permission = permission.join(', ');
     }
@@ -86,13 +106,27 @@ class PGInstance {
     return this.query(connection, query);
   }
 
-  grantSchemaUsage(connection, schemaName, roleName) {
-    let query = pgFormat(`GRANT USAGE ON SCHEMA "%s" TO "%s"`, schemaName, roleName);
+  grantSchemaUsage(connection, schemaName, roleName, permission='USAGE') {
+    if( Array.isArray(permission) ) {
+      permission = permission.join(', ');
+    }
+    let query = pgFormat(`GRANT ${permission} ON SCHEMA "%s" TO "%s"`, schemaName, roleName);
     return this.query(connection, query);
   }
 
   grantFnUsage(connection, schemaName, roleName) {
     let query = pgFormat(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA "%s" to "%s"`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+  grantSequenceUsage(connection, schemaName, roleName, seqName=null) {
+    let query;
+    if( !seqName ) {
+      query = pgFormat(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "%s" to "%s"`, schemaName, roleName);
+    } else {
+      query = pgFormat(`GRANT USAGE, SELECT ON "%s".${seqName} to "%s"`, schemaName, roleName);
+    }
+
     return this.query(connection, query);
   }
 
@@ -104,7 +138,6 @@ class PGInstance {
   createForeignDataWrapper(connection, databaseName) {
     let host = new URL(config.appUrl).hostname;
     let query = pgFormat(`CREATE SERVER IF NOT EXISTS "%s" FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host '%s', port '5432', dbname '%s');`, databaseName, host, databaseName);
-    console.log(query);
     return this.query(connection, query);
   }
 
@@ -118,7 +151,6 @@ class PGInstance {
   importForeignSchema(connection, serverName, opts={}) {
     if( !opts.remoteSchema ) opts.remoteSchema = config.pgRest.schema;
     if( !opts.localSchema ) opts.localSchema = serverName.split('/').pop();
-    console.log(serverName, opts);
     let query = pgFormat(`IMPORT FOREIGN SCHEMA "%s" FROM SERVER "%s" INTO "%s";`, opts.remoteSchema, serverName, opts.localSchema);
     return this.query(connection, query);
   }

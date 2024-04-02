@@ -153,30 +153,90 @@ class User {
     );
   }
 
-  /**
-   * @method grantSchemaAccess
-   * @description Grants a user access to a schema running multiple
-   * grant queries for what users need to access the schema.
-   * 
-   * @param {String} schemaName 
-   * @param {String} roleName 
-   * @param {String|Array} permissions Defaults to ALL.
-   */
-  async grantSchemaAccess(schemaName, roleName, permissions='ALL') {
-    let con = await this.models.database.getConnection('postgres');
-    await pgInstClient.grantSchemaUsage(con, schemaName, roleName); 
-    await pgInstClient.grantAllTableAccess(con, schemaName, roleName, permissions);
-    await pgInstClient.grantFnUsage(con, schemaName, roleName);
+  checkPermissionType(type) {
+    if( ['SELECT', 'ALL'].indexOf(type) === -1 ) {
+      throw new Error('Invalid permission type: '+type+'. Permission must be one of: SELECT or ALL');
+    }
   }
 
-  async remoteGrantSchemaAccess(dbName, dbOrg, schemaName, roleName, permissions='ALL') {
-    if( Array.isArray(permissions) ) {
-      permissions = permissions.join(',');
+  /**
+   * @method grant
+   * @description Simplified helper to grant a user access to a schema or table.
+   * 
+   * @param {String} dbNameOrId name or id of the database
+   * @param {String} orgNameOrId name or id of the organization
+   * @param {String} schemaName can include table name 
+   * @param {String} roleName username to give access 
+   * @param {String} permission must be one of 'SELECT' or 'ALL'.
+   * 
+   * 
+   * @returns 
+   */
+  async grant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='ALL') {
+    permission = permission.toUpperCase();
+    this.checkPermissionType(permission);
+
+    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+
+    let tableName = null;
+    if( schemaName.includes('.') ) {
+      let parts = schemaName.split('.');
+      schemaName = parts[0];
+      tableName = parts[1];
     }
-    let db = await this.models.database.get(dbName, dbOrg);
+
+    logger.info('running user grant', {
+      database,
+      schemaName,
+      tableName,
+      roleName,
+      permission,
+    });
+
+    let con = await this.models.database.getConnection(
+      database.database_name,
+      database.organization_name,
+      {useSocket: true}
+    );
+
+    // grant table access
+    if( tableName ) {
+      await pgInstClient.grantSchemaUsage(con, schemaName, roleName);
+      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission, tableName);
+
+      // grant sequence access if permission is ALL
+      // common pattern is for primary key's to be serial. So this is required for inserts
+      if( permission === 'ALL' ) {
+        let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
+        for( let seq of tableSeqs ) {
+          await pgInstClient.grantSequenceUsage(con, schemaName, roleName, seq);
+        }
+      }
+
+    // grant schema access
+    } else {
+      if( permission === 'ALL' ) {
+        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['CREATE', 'USAGE']);
+      }
+
+      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission);
+
+      // grant function access if permission is ALL
+      if( permission === 'ALL' ) {
+        await pgInstClient.grantFnUsage(con, schemaName, roleName);
+        await pgInstClient.grantSequenceUsage(con, schemaName, roleName);
+      }
+    }
+
+  }
+
+  async remoteGrant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='ALL') {
+    this.checkPermissionType(permission);
+
+    let db = await this.models.database.get(dbNameOrId, orgNameOrId);
     return fetch(
-      `http://${db.instance_hostname}:3000/grant/schema-access/${schemaName}/${roleName}?permissions=${permissions}`,
-      { method: 'POST' }
+      `http://${db.instance_hostname}:3000/grant/${db.database_name}/${schemaName}/${roleName}/${permission}`,
+      { method: 'PUT' }
     )
   }
 

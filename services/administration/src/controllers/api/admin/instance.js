@@ -30,7 +30,7 @@ router.put('/:organization/:instance/:user',
       throw new Error('Invalid type: '+type);
     }
 
-    let id = await model.createUser(database, organization, user, type);
+    let id = await model.createUser(instance, organization, user, type);
     res.status(204).json({id});
   } catch(e) {
     handleError(res, e);
@@ -119,6 +119,16 @@ router.post('/:organization/:instance/restore', keycloak.protect('admin'), async
     handleError(res, e);
   }
 });
+
+router.post('/sleep', keycloak.protect('admin'), async (req, res) => {
+  try {
+    await model.sleepInstances();
+    res.status(200).send('ok');
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 
 function getOrgAndIsntFromReq(req) {
   let organization = req.params.organization;

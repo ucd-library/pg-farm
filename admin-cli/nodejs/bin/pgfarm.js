@@ -19,5 +19,13 @@ program
   .command('instance', 'view/manage postgres instances')
   .command('auth', 'log in/out of PG Farm')
   .command('config', 'setup cli');
+  
+program
+  .command('admin-db-shell')
+  .description('Connect to a PG Farm database as an admin user.  returns kubectl shell command')
+  .action(() => {
+    console.log('kubectl exec --stdin --tty admin-db-0 -c admin-db -- psql -U postgres');
+  });
+
 
 program.parse(process.argv);

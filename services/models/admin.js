@@ -299,6 +299,7 @@ class AdminModel {
    */
   async sleepInstances() {
     let active = await client.getInstances(this.models.instance.STATES.RUN);
+    let availableStates = this.models.instance.AVAILABLE_STATES;
     let now = Date.now();
     
     for( let instance of active ) {
@@ -315,7 +316,7 @@ class AdminModel {
 
       let lastEvent = new Date(e.timestamp).getTime();
       let diff = now - lastEvent;
-      let allowedTime = this.AVAILABLE_STATES[instance.state] || this.AVAILABLE_STATES.LOW;
+      let allowedTime = availableStates[instance.availability] || availableStates.LOW;
 
       if( diff > allowedTime ) {
         logger.info('Instance has been idle for too long, shutting down',{

@@ -38,4 +38,6 @@ program.command('link <org/database> <remoteOrg/remoteDatabase>')
     database.link(dbName, remoteDbName);
   });
 
+program.command('grant', 'Helper methods for granting user access to a schema or table');
+
 program.parse(process.argv);

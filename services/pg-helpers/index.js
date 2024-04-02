@@ -49,13 +49,15 @@ app.post('/sync-users', async (req, res) => {
   }
 });
 
-app.post('/grant/schema-access/:schema/:user', async (req, res) => {
+app.put('/grant/:database/:schema/:user/:permission', async (req, res) => {
   try {
-    let permissions = req.query.permissions || 'ALL';
-    await user.grantSchemaAccess(
+
+    await user.grant(
+      req.params.database, 
+      config.pgInstance.organization,
       req.params.schema, 
       req.params.user,
-      permissions
+      req.params.permission
     );
     res.status(200).send('granted schema access');
   } catch (e) {

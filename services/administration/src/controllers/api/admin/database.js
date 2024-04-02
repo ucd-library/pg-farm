@@ -30,14 +30,14 @@ router.get('/', keycloak.setUser, async (req, res) => {
   }
 });
 
-router.get('/:organization/:database/grant/schema-access/:schema/:user', keycloak.protect('*:admin'), async (req, res) => {
+router.put('/:organization/:database/grant/:schema/:user/:permission', keycloak.protect('*:admin'), async (req, res) => {
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
       organization = null;
     }
 
-    let resp = await user.remoteGrantSchemaAccess(
+    let resp = await user.remoteGrant(
       req.params.database, 
       organization, 
       req.params.schema, 

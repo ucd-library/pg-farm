@@ -124,6 +124,24 @@ class Database {
     console.log(`Link for ${name} to ${remoteName}`);
   }
 
+  async grant(dbName, schemaTable, username, grantType, options) {
+    let {organization, database} = this.parseOrg(dbName);
+    if( !organization ) organization = '_';
+
+    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/grant/${schemaTable}/${username}/${grantType}`, {
+      headers: headers(),
+      method: 'PUT',
+      body: JSON.stringify(options)
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to grant', await resp.text());
+      return;
+    }
+
+    console.log(`Granted ${grantType} on ${schemaTable} to ${username}`);
+  }
+
 }
 
 const database = new Database();
