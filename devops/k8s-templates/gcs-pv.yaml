@@ -15,4 +15,4 @@ spec:
     - implicit-dirs
   csi:
     driver: gcsfuse.csi.storage.gke.io
-    volumeHandle: pg-farm-backups
+    volumeHandle: app-database-backups

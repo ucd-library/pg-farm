@@ -5,3 +5,6 @@ devops/k8s
 secrets
 service-account.json
 tests/connections/package-lock.json
+*.egg-info
+dist
+*.pyc

@@ -34,7 +34,7 @@ fi
 VERSION=${APP_TAG}.${BUILD_NUM}
 
 if [[ -z $REG_HOST ]]; then
-  REG_HOST=us-docker.pkg.dev/digital-ucdavis-edu/pg-farm
+  REG_HOST=us-docker.pkg.dev/pgfarm-419213/containers
 
   # set local-dev tags used by
   # local development docker-compose file
@@ -42,21 +42,22 @@ if [[ -z $REG_HOST ]]; then
     REG_HOST=localhost/local-dev
   fi
 fi
+PY_REG=https://us-docker.pkg.dev/pgfarm-419213/pip
 
-APP_URL=${APP_URL:-http://pgfarm.justinmerz.net}
+APP_URL=${APP_URL:-https://pgfarm.library.ucdavis.edu}
 
 # Postgres Instance
 PG_VERSION=16
 
 # Image Names
-PG_FARM_SERVICE_IMAGE=$REG_HOST/pg-farm-service
-PG_FARM_PG_INSTANCE_IMAGE=$REG_HOST/pg-farm-instance
+PG_FARM_SERVICE_IMAGE=$REG_HOST/pgfarm-service
+PG_FARM_PG_INSTANCE_IMAGE=$REG_HOST/pgfarm-instance
 
 # Google Cloud
-GC_PROJECT_ID=digital-ucdavis-edu
-GKE_CLUSTER_NAME=pg-farm
+GC_PROJECT_ID=pgfarm-419213
+GKE_CLUSTER_NAME=pgfarm
 GKE_CLUSTER_ZONE=us-central1-c
 GKE_EXTERNAL_IP=34.170.150.232
-GC_SA_NAME=pg-farm
-GKE_KSA_NAME=pg-farm-ksa
-GCS_BACKUP_BUCKET=pg-farm-backups
+GC_SA_NAME=pgfarm-app
+GKE_KSA_NAME=pgfarm-ksa
+GCS_BACKUP_BUCKET=app-database-backups

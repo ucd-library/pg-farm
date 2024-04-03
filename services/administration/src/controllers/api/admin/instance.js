@@ -2,7 +2,7 @@ import {Router} from 'express';
 import {admin as model, instance as instanceModel, backup} from '../../../../../models/index.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
-import fetch from 'node-fetch';
+import remoteExec from '../../../../../lib/pg-helper-remote-exec.js';
 
 const router = Router();
 
@@ -79,10 +79,7 @@ router.post('/:organization/:instance/backup', keycloak.protect('admin'), async 
     let {instance, organization} = getOrgAndIsntFromReq(req);
     instance = await instanceModel.get(instance, organization);
 
-    let url = `http://${instance.hostname}:3000/backup`;
-    let resp = await fetch(url, {
-      method: 'POST'
-    });
+    let resp = await remoteExec(instance.hostname, '/backup');
 
     res.status(resp.status).send(await resp.text());
   } catch(e) {

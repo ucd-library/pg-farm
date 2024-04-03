@@ -25,7 +25,7 @@ spec:
           value : "{{APP_URL}}"
         envFrom:
         - secretRef:
-            name: pg-farm-env
+            name: app-env
         resources:
           limits:
             memory: "2Gi"
@@ -41,4 +41,4 @@ spec:
       volumes:
       - name: service-account
         secret:
-          secretName: pg-farm-service-account
+          secretName: service-account

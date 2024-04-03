@@ -71,7 +71,7 @@ steps:
 
 substitutions:
   _CONFIG_BUCKET: ci-build-config
-  _CONFIG_PROJECT: pg-farm
+  _CONFIG_PROJECT: pgfarm
   _UCD_LIB_INITIATOR: unknown
   _GITHUB_EVENT: ''
   _GITHUB_ISSUE_NUMBER: ''

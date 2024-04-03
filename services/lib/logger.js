@@ -32,13 +32,13 @@ try {
 } catch(e) {}
 
 let logger = bunyan.createLogger({
-  name: (process.env.FIN_LOGGER_NAME || global.LOGGER_NAME || 'pg-farm')+'-'+host,
+  name: (process.env.FIN_LOGGER_NAME || global.LOGGER_NAME || 'pgfarm')+'-'+host,
   level: config.logging.level || 'info',
   streams: streams
 });
 
 let info = {
-  name: (process.env.FIN_LOGGER_NAME || global.LOGGER_NAME || 'pg-farm')+'-'+host,
+  name: (process.env.FIN_LOGGER_NAME || global.LOGGER_NAME || 'pgfarm')+'-'+host,
   level: config.logging.level || 'info',
   googleCloudLogging : {
     enabled : config.gc.serviceAccountExists,

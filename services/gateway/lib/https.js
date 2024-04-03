@@ -1,22 +1,74 @@
 import https from 'https';
 import express from 'express';
+import tls from 'tls';
 import {init, middleware} from './http-proxy.js';
 import fs from 'fs';
+import path from 'path';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 
+let defaultKey, defaultCert;
+
+
+function loadSecureContext(folder) {
+  let domain = folder.split('/').pop();
+  let files = fs.readdirSync(folder);
+  let cert, key;
+  
+  for( let file of files ) {
+    if( file.match(/\.key$/) ) {
+      if( !defaultKey ) {
+        defaultKey = path.join(folder, file)
+      } 
+      key = fs.readFileSync(path.join(folder, file));
+    } else if( file.match(/\.crt$/) ) {
+      if( !defaultCert ) {
+        defaultCert = path.join(folder, file);
+      }
+      cert = fs.readFileSync(path.join(folder, file));
+    }
+  }
+
+  if( !key || !cert ) {
+    logger.warn('Missing key or certificate for '+domain);
+    return null;
+  }
+  logger.info('Loaded key and certificate for '+domain);
+
+  return tls.createSecureContext({key, cert});
+}
+
 function start() {
-  if( !fs.existsSync(config.gateway.https.key) ||
-      !fs.existsSync(config.gateway.https.cert) ) {
-    logger.warn('Missing HTTPS key or certificate.  Not starting HTTPS service.');
+
+  if( !fs.existsSync(config.gateway.https.certFolder) ) {
+    logger.warn('Missing HTTPS certificate folder.  Not starting HTTPS service.');
+    return;
+  }
+
+  let domains = fs.readdirSync(config.gateway.https.certFolder);
+  let secureContexts = {};
+  for( let domain of domains ) {
+    let folder = path.join(config.gateway.https.certFolder, domain);
+    let ctx = loadSecureContext(folder);
+    if( ctx ) {
+      secureContexts[domain] = ctx;
+    }
+  }
+
+  let keys = Object.keys(secureContexts);
+  if( keys.length === 0 ) {
+    logger.warn('No valid keys/certificates found.  Not starting HTTPS service.');
     return;
   }
 
   const app = express();
 
   const certOpts = {
-    key: fs.readFileSync(config.gateway.https.key),
-    cert: fs.readFileSync(config.gateway.https.cert)
+    SNICallback: (domain, cb) => {
+      cb(null, secureContexts[domain]);
+    },
+    key: fs.readFileSync(defaultKey),
+    cert: fs.readFileSync(defaultCert)
   };
 
   init();

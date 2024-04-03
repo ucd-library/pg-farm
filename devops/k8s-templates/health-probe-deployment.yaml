@@ -31,7 +31,7 @@ spec:
           value: "health-probe"
         envFrom:
         - secretRef:
-            name: pg-farm-env
+            name: app-env
         resources:
           limits:
             memory: "1Gi"
@@ -47,4 +47,4 @@ spec:
       volumes:
       - name: service-account
         secret:
-          secretName: pg-farm-service-account
+          secretName: service-account

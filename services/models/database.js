@@ -1,9 +1,8 @@
 import client from '../lib/pg-admin-client.js';
 import pgInstClient from '../lib/pg-instance-client.js';
-import pgFormat from 'pg-format';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
-import fetch from 'node-fetch';
+import remoteExec from '../lib/pg-helper-remote-exec.js';
 
 class Database {
 
@@ -173,16 +172,16 @@ class Database {
     remoteDb = await client.getDatabase(remoteDb, remoteOrg);
 
     logger.info(`Rpc request to link database ${localDb.instance_hostname}`);
-    return fetch(
-      `http://${localDb.instance_hostname}:3000/${localDb.database_name}/link/${remoteDb.organization_name}/${remoteDb.database_name}`,
+    return remoteExec(
+      localDb.instance_hostname, 
+      `${localDb.database_name}/link/${remoteDb.organization_name}/${remoteDb.database_name}`, 
       {
-        method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(opts)
       }
-    )
+    );
   }
 
 

@@ -5,6 +5,7 @@ import client from '../lib/pg-admin-client.js';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import utils from './utils.js';
+import remoteExec from '../lib/pg-helper-remote-exec.js';
 
 class BackupModel {
 
@@ -72,11 +73,7 @@ class BackupModel {
 
       logger.info(`Starting backup for instance ${instance.hostname}`);
 
-      fetch(
-        `http://${instance.hostname}:3000/backup`,
-        {method: 'POST'}
-      )
-      .catch(e => logger.error('Error starting backup for instance', instance, e));
+      remoteExec(instance.hostname, '/backup');
     }
   }
 
@@ -87,10 +84,7 @@ class BackupModel {
     }
 
     logger.info(`Rpc request to restore for instance ${instance.hostname}`);
-    return fetch(
-      `http://${instance.hostname}:3000/restore`,
-      {method: 'POST'}
-    )
+    return remoteExec(instance.hostname, '/restore');
   }
 
   async remoteArchive(instNameOrId, orgNameOrId=null) {
@@ -100,10 +94,7 @@ class BackupModel {
     }
 
     logger.info(`Rpc request to archive for instance ${instance.hostname}`);
-    return fetch(
-      `http://${instance.hostname}:3000/archive`,
-      {method: 'POST'}
-    )
+    return remoteExec(instance.hostname, '/archive');
   }
 
   /**

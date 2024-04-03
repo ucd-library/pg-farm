@@ -14,23 +14,20 @@ source ./config.sh
 
 gcloud config set project ${GC_PROJECT_ID}
 
-gcloud secrets versions access latest --secret=pg-farm-service-account > $SECRET_DIR/service-account.json
-gcloud secrets versions access latest --secret=pg-farm-env > $SECRET_DIR/env
-gcloud secrets versions access latest --secret=pg-farm-https-cert > $SECRET_DIR/pg-farm-https-secret.cer
-gcloud secrets versions access latest --secret=pg-farm-https-key > $SECRET_DIR/pg-farm-https-key.key
+gcloud secrets versions access latest --secret=app-service-account > $SECRET_DIR/service-account.json
+gcloud secrets versions access latest --secret=app-env > $SECRET_DIR/env
+gcloud secrets versions access latest --secret=ssl-pgfarm-cert > $SECRET_DIR/ssl-pgfarm.crt
+gcloud secrets versions access latest --secret=ssl-pgfarm-key > $SECRET_DIR/ssl-pgfarm.key
 
-kubectl delete secret pg-farm-env || true
-kubectl create secret generic pg-farm-env \
+kubectl delete secret app-env || true
+kubectl create secret generic app-env \
   --from-env-file=$SECRET_DIR/env
 
-kubectl delete secret pg-farm-service-account || true
-kubectl create secret generic pg-farm-service-account \
+kubectl delete secret service-account || true
+kubectl create secret generic service-account \
  --from-file=service-account.json=$SECRET_DIR/service-account.json || true
 
-kubectl delete secret pg-farm-https-secret
-kubectl delete secret pg-farm-https-key
-
-kubectl delete secret pg-farm-https || true
-kubectl create secret generic pg-farm-https \
- --from-file=pg-farm-https-secret.cer=$SECRET_DIR/pg-farm-https-secret.cer \
- --from-file=pg-farm-https-key.key=$SECRET_DIR/pg-farm-https-key.key || true
+kubectl delete secret pgfarm-ssl || true
+kubectl create secret generic pgfarm-ssl \
+ --from-file=ssl-pgfarm.crt=$SECRET_DIR/ssl-pgfarm.crt \
+ --from-file=ssl-pgfarm.key=$SECRET_DIR/ssl-pgfarm.key || true

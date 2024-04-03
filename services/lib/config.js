@@ -51,8 +51,8 @@ const config = {
 
   jwt : {
     secret : env.JWT_SECRET || 'secretsecret',
-    cookieName : env.JWT_COOKIE_NAME || 'pg-farm-token',
-    header : env.JWT_HEADER || 'x-pg-farm-token'
+    cookieName : env.JWT_COOKIE_NAME || 'pgfarm-token',
+    header : env.JWT_HEADER || 'x-pgfarm-token'
   },
 
   gateway : {
@@ -68,14 +68,16 @@ const config = {
     },
     https : {
       port : 443,
-      key : env.GATEWAY_HTTPS_KEY || '/etc/pg-farm/gateway-tls-key.pem',
-      cert : env.GATEWAY_HTTPS_CERT || '/etc/pg-farm/gateway-tls-cert.pem'
+      certFolder : env.GATEWAY_HTTPS_CERT_FOLDER || '/etc/pgfarm/certs'
     }
   },
 
   backup : {
     cron : env.BACKUP_CRON || '0 0 * * *',
-    bucket : env.BACKUP_BUCKET || 'pg-farm-backups'
+    bucket : env.BACKUP_BUCKET || 'app-database-backups',
+    autoBackupEnabled : env.AUTO_BACKUP_ENABLED === 'true', // mostly used by admin database
+    autoBackupName : env.AUTO_BACKUP_NAME || 'pgfarm-admin-db',
+    
   },
 
   // Keycloak configuration
@@ -89,19 +91,18 @@ const config = {
   },
 
   gc : {
-    projectId : env.GC_PROJECT_ID || 'digital-ucdavis-edu',
+    projectId : env.GC_PROJECT_ID || 'pgfarm-419213',
     gke : {
       zone : env.GKE_ZONE || 'us-central1-c',
     },
     keyFilename : env.GOOGLE_APPLICATION_CREDENTIALS || '/etc/google/service-account.json',
-    bucket : env.GC_BUCKET || 'pg-farm',
     serviceAccountExists
   },
 
   k8s : {
     enabled : env.K8S_DISABLED === 'true' ? false : true,
     platform : 'gke',
-    cluster : env.K8S_CLUSTER || 'pg-farm',
+    cluster : env.K8S_CLUSTER || 'pgfarm',
     region : env.K8S_REGION || 'us-central1-c',
   },
   
@@ -132,7 +133,7 @@ const config = {
     name : env.PG_INSTANCE_NAME || '', // set for running pg instances
     organization : env.PG_INSTANCE_ORGANIZATION || null, // set for running pg instances
     port : 5432,
-    image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-instance:16',
+    image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/pgfarm-419213/containers/pgfarm-instance:16',
     adminRole : 'postgres',
     adminInitPassword : env.PG_INSTANCE_ADMIN_INIT_PASSWORD || 'postgres',
     publicRole : {
@@ -144,7 +145,7 @@ const config = {
   },
 
   pgRest : {
-    image : env.PG_REST_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-service:'+DEFAULT_IMAGE_TAG,
+    image : env.PG_REST_IMAGE || 'us-docker.pkg.dev/pgfarm-419213/containers/pgfarm-service:'+DEFAULT_IMAGE_TAG,
     authenticator : {
       username : env.PG_REST_AUTHENTICATOR_USERNAME || 'pgfarm-authenticator'
     },
@@ -153,7 +154,8 @@ const config = {
   },
 
   pgHelper : {
-    image : env.PG_HELPER_IMAGE || 'us-docker.pkg.dev/digital-ucdavis-edu/pg-farm/pg-farm-service:'+DEFAULT_IMAGE_TAG,
+    image : env.PG_HELPER_IMAGE || 'us-docker.pkg.dev/pgfarm-419213/containers/pgfarm-service:'+DEFAULT_IMAGE_TAG,
+    port : env.PG_HELPER_PORT || 3000
   },
 
   // Proxy configuration

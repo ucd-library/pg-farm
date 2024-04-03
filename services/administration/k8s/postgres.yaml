@@ -16,7 +16,7 @@ spec:
         gke-gcsfuse/volumes: "true"  
     spec:
       containers:
-      - name: 
+      - name: postgres
         image: pg
         args: ["-c", "max_connections=100"]
         imagePullPolicy: Always
@@ -67,7 +67,7 @@ spec:
           mountPath: /var/run/postgresql
         - name: service-account
           mountPath: /etc/google        
-      serviceAccountName: pg-farm-ksa
+      serviceAccountName: pgfarm-ksa
       nodeSelector:
         intendedfor: instance-pool
       volumes:
@@ -78,7 +78,7 @@ spec:
         emptyDir: {}
       - name: service-account
         secret:
-          secretName: pg-farm-service-account
+          secretName: service-account
 
   volumeClaimTemplates:
   - metadata:

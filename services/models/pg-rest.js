@@ -122,7 +122,7 @@ server-port = ${config.pgRest.port}`
 
     let container = template.spec.containers[0];
     container.image = config.pgRest.image;
-    container.name = hostname;
+    container.name = 'pgrest';
 
     container.env[0].value = database.database_name;
     container.env[1].value = orgName;

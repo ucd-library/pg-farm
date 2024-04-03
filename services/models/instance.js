@@ -3,6 +3,7 @@ import config from '../lib/config.js';
 import kubectl from '../lib/kubectl.js';
 import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
+import remoteExec from '../lib/pg-helper-remote-exec.js';
 
 class Instance {
 
@@ -297,7 +298,6 @@ class Instance {
     // main pg container
     let container = template.spec.containers[0];
     container.image = instanceImage;
-    container.name = hostname;
     container.volumeMounts[0].name = hostname+'-ps';
 
     // helper container
@@ -433,10 +433,8 @@ class Instance {
     }
 
     logger.info(`Rpc request to resync users for instance ${instance.hostname}`);
-    return fetch(
-      `http://${instance.hostname}:3000/sync-users`,
-      {method: 'POST'}
-    )
+    
+    return remoteExec(instance.hostname, '/sync-users');
   }
 
 }

@@ -26,20 +26,16 @@ spec:
         - name : "APP_URL"
           value : "{{APP_URL}}"
         - name : "GATEWAY_HTTP_ENABLED"
-          value : "true"
+          value : "false"
         - name: METRICS_ENABLED
           value: "true"
         - name: METRICS_EXPORT_GC
           value: "true"
         - name: SERVICE_NAME
           value: "gateway"
-        - name: GATEWAY_HTTPS_KEY
-          value: "/etc/pgfarm/certs/pgfarm.library.ucdavis.edu/pg-farm-https-key.key"
-        - name: GATEWAY_HTTPS_CERT
-          value: "/etc/pgfarm/certs/pgfarm.library.ucdavis.edu/pg-farm-https-secret.cer"
         envFrom:
         - secretRef:
-            name: pg-farm-env
+            name: app-env
         resources:
           limits:
             memory: "2Gi"
@@ -51,13 +47,13 @@ spec:
           - mountPath: /etc/google
             name: service-account
           - mountPath: /etc/pgfarm/certs/pgfarm.library.ucdavis.edu
-            name: pg-farm-https
+            name: pgfarm-ssl
       nodeSelector:
         intendedfor: services
       volumes:
       - name: service-account
         secret:
-          secretName: pg-farm-service-account
-      - name: pg-farm-https
+          secretName: service-account
+      - name: pgfarm-ssl
         secret:
-          secretName: pg-farm-https
+          secretName: pgfarm-ssl

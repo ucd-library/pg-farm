@@ -44,7 +44,7 @@ function init() {
     return;
   }
 
-  let serviceName = env.SERVICE_NAME || 'pg-farm';
+  let serviceName = env.SERVICE_NAME || 'pgfarm';
 
 
   const sdk = new NodeSDK({

@@ -1,11 +1,9 @@
 import client from '../lib/pg-admin-client.js';
 import pgInstClient from '../lib/pg-instance-client.js';
-import pgFormat from 'pg-format';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import utils from '../lib/utils.js';
-import fetch from 'node-fetch';
-
+import remoteExec from '../lib/pg-helper-remote-exec.js';
 
 class User {
 
@@ -234,10 +232,11 @@ class User {
     this.checkPermissionType(permission);
 
     let db = await this.models.database.get(dbNameOrId, orgNameOrId);
-    return fetch(
-      `http://${db.instance_hostname}:3000/grant/${db.database_name}/${schemaName}/${roleName}/${permission}`,
-      { method: 'PUT' }
-    )
+    return remoteExec(
+      db.instance_hostname, 
+      `/grant/${db.database_name}/${schemaName}/${roleName}/${permission}`,
+      {method: 'PUT'}
+    );
   }
 
 }
