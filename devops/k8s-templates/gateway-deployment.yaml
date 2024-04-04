@@ -33,6 +33,12 @@ spec:
           value: "true"
         - name: SERVICE_NAME
           value: "gateway"
+        - name: PROXY_TLS_CERT
+          value: "/etc/pgfarm/certs/pgfarm.library.ucdavis.edu/ssl-pgfarm.crt"
+        - name: PROXY_TLS_KEY
+          value: "/etc/pgfarm/certs/pgfarm.library.ucdavis.edu/ssl-pgfarm.key"
+        - name: PROXY_TLS_ENABLED
+          value: "true"
         envFrom:
         - secretRef:
             name: app-env

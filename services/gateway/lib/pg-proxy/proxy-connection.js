@@ -1,4 +1,5 @@
 import tls from 'tls';
+import fs from 'fs';
 import { EventEmitter } from 'node:events';
 import keycloak from '../../../lib/keycloak.js';
 import config from '../../../lib/config.js';
@@ -17,12 +18,15 @@ import {admin, user as userModel, instance} from '../../../models/index.js';
 //   });
 // }
 
-const tlsOptions = {
-  // Your TLS options go here, such as key, cert, etc.
-  // For example:
-  key: '',
-  cert: ''
-};
+let tlsOptions = {};
+if( config.proxy.tls.key && 
+    config.proxy.tls.cert && 
+    fs.existsSync(config.proxy.tls.key) &&
+    fs.existsSync(config.proxy.tls.cert) ) {
+
+  tlsOptions.key = fs.readFileSync(config.proxy.tls.key);
+  tlsOptions.cert = fs.readFileSync(config.proxy.tls.cert);
+}
 
 class ProxyConnection extends EventEmitter {
 
@@ -159,105 +163,122 @@ class ProxyConnection extends EventEmitter {
     logger.info('proxy handling new connection', this.clientSocket.remoteAddress);
 
     // When the client sends data, forward it to the target server
-    this.clientSocket.on('data', async data => {
-      this.debug('client', data);
+    this.clientSocket.on('data', data => this.onClientSocketData(data));
+  }
 
-      // if we are attempting reconnect, just buffer the message
-      if (this.awaitingReconnect || this.handlingJwtAuth) {
-        this.pendingMessages.push(data);
-        return;
-      }
+  async onClientSocketData(data, fromSecureSocket = false) {
+    this.debug('client'+(fromSecureSocket ? '-secure' : ''), data);
 
-      // check for SSL and special auth messages
-      if (!this.startupMessageHandled &&
-        data.length == 8 ) {
-        
-        let code = data.readInt32BE(4);
+    // if we are attempting reconnect, just buffer the message
+    if (this.awaitingReconnect || this.handlingJwtAuth) {
+      this.pendingMessages.push(data);
+      return;
+    }
 
-        if( !this.sslHandled && code === this.SSL_REQUEST ) {
-          logger.info('client handling ssl request', this.getConnectionInfo());
-          this.sslHandled = true;
+    // check for SSL and special auth messages
+    if (!this.startupMessageHandled &&
+      data.length == 8 ) {
+      
+      let code = data.readInt32BE(4);
 
-          if (!config.proxy.tls.enabled) {
-            this.clientSocket.write(Buffer.from('N', 'utf8'));
-          } else {
-            this.clientSocket.write(Buffer.from('S', 'utf8'));
-            new tls.TLSSocket(this.clientSocket, tlsOptions);
-          }
-        } else if (code === this.GSSAPI_REQUEST) {
-          logger.info('responding to gssapi request', this.getConnectionInfo());
-          this.clientSocket.write(this.GSSAPI_RESPONSE);
+      if( !this.sslHandled && code === this.SSL_REQUEST ) {
+        logger.info('client handling ssl request', this.getConnectionInfo());
+        this.sslHandled = true;
+
+        if (!config.proxy.tls.enabled) {
+          this.clientSocket.write(Buffer.from('N', 'utf8'));
         } else {
-          logger.warn('unknown startup message after handling ssl request', {
-            data : data.toString('hex'),
-            length : data.length,
-            payloadLength : data.readInt32BE(0),
-            payload : data.readInt32BE(4)
-          });
-        }
+          this.clientSocket.write(Buffer.from('S', 'utf8'));
 
-        return;
+          const secureContext = tls.createSecureContext(tlsOptions);
+          const secureSocket = new tls.TLSSocket(this.clientSocket, { 
+            isServer: true, 
+            secureContext,
+            server: this.server.server
+          });
+          secureSocket.on('data', data => this.onClientSocketData(data, true));
+
+          // register the new secure socket with the tcp server
+          let sockInfo = this.server.sockets.get(this.clientSocket);
+          let sessionId = sockInfo.session;
+          this.server.registerConnection(secureSocket, 'incoming-secure', sessionId);
+
+          // replace the client socket with the secure socket
+          this.clientSocket = secureSocket;
+        }
+      } else if (code === this.GSSAPI_REQUEST) {
+        logger.info('responding to gssapi request', this.getConnectionInfo());
+        this.clientSocket.write(this.GSSAPI_RESPONSE);
+      } else {
+        logger.warn('unknown startup message after handling ssl request', {
+          data : data.toString('hex'),
+          length : data.length,
+          payloadLength : data.readInt32BE(0),
+          payload : data.readInt32BE(4)
+        });
       }
 
-      // first message provides the connection properties
-      if ( !this.startupMessageHandled ) {
-        logger.info('client handling startup message', data.length, this.getConnectionInfo());
-        this.parseStartupMessage(data);
-        logger.info('startup message parsed', this.getConnectionInfo());
+      return;
+    }
 
-        try {
-          // this checks if user has access to database
-          let success = await this.checkUserAccess();
-          if (!success) {
-            logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
-            this.closeSockets();
-            return;
-          }
+    // first message provides the connection properties
+    if ( !this.startupMessageHandled ) {
+      logger.info('client handling startup message', data.length, this.getConnectionInfo());
+      this.parseStartupMessage(data);
+      logger.info('startup message parsed', this.getConnectionInfo());
 
-        } catch (e) {
-          logger.error('Error initializing server socket', this.getConnectionInfo(), e);
+      try {
+        // this checks if user has access to database
+        let success = await this.checkUserAccess();
+        if (!success) {
+          logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
           this.closeSockets();
           return;
         }
 
-        // now just proxy messsage
-        logger.info('client startup message parsed', this.getConnectionInfo());
-
-        // if public user, just create a direct connection
-        if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
-          logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
-          await this.createServerSocket(); // this sends startup message on connect
-          return;
-        // if not public user, request password, start jwt/auth intercept
-        } else {
-          this.requestPassword(this.clientSocket);
-          return;
-        }
-      }
-
-      // intercept the password message and handle it
-      if (data.length && 
-          data[0] === this.MESSAGE_CODES.PASSWORD &&
-          this.pgFarmUser?.user_type !== 'PUBLIC') {
-
-        this.handlingJwtAuth = true;
-
-        logger.info('client handling jwt auth', this.getConnectionInfo());
-        this.handleJwt(data);
+      } catch (e) {
+        logger.error('Error initializing server socket', this.getConnectionInfo(), e);
+        this.closeSockets();
         return;
       }
 
-      // check for query message, if so, emit stats
-      if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
-        this.emitStat('query', {
-          database: this.startupProperties.database,
-          databaseId : this.pgFarmUser.database_id
-        });
-      }
+      // now just proxy messsage
+      logger.info('client startup message parsed', this.getConnectionInfo());
 
-      // else, just proxy message
-      this.serverSocket.write(data);
-    });
+      // if public user, just create a direct connection
+      if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
+        logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
+        await this.createServerSocket(); // this sends startup message on connect
+        return;
+      // if not public user, request password, start jwt/auth intercept
+      } else {
+        this.requestPassword(this.clientSocket);
+        return;
+      }
+    }
+
+    // intercept the password message and handle it
+    if (data.length && 
+        data[0] === this.MESSAGE_CODES.PASSWORD &&
+        this.pgFarmUser?.user_type !== 'PUBLIC') {
+
+      this.handlingJwtAuth = true;
+
+      logger.info('client handling jwt auth', this.getConnectionInfo());
+      this.handleJwt(data);
+      return;
+    }
+
+    // check for query message, if so, emit stats
+    if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
+      this.emitStat('query', {
+        database: this.startupProperties.database,
+        databaseId : this.pgFarmUser.database_id
+      });
+    }
+
+    // else, just proxy message
+    this.serverSocket.write(data);
   }
 
   async closeSockets() {

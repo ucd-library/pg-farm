@@ -7,7 +7,7 @@ source ./devops/config.sh
 
 cd $ROOT_DIR/../admin-cli/python
 
-# python3 setup.py sdist
+python3 setup.py sdist
 
 # Setup authentication first
 # https://cloud.google.com/artifact-registry/docs/python/authentication

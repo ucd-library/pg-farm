@@ -34,7 +34,7 @@ class ProxyMonitor {
     this.name = name;
     this.opts = opts;
 
-    this.SOCKET_TYPES = ['incoming', 'outgoing'];
+    this.SOCKET_TYPES = ['incoming', 'outgoing', 'incoming-secure'];
 
     this.data = {
       socketEvents : {},

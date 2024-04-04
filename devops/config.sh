@@ -42,7 +42,7 @@ if [[ -z $REG_HOST ]]; then
     REG_HOST=localhost/local-dev
   fi
 fi
-PY_REG=https://us-docker.pkg.dev/pgfarm-419213/pip
+PY_REG=https://us-python.pkg.dev/pgfarm-419213/pip/
 
 APP_URL=${APP_URL:-https://pgfarm.library.ucdavis.edu}
 
