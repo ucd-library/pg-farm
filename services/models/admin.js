@@ -330,8 +330,30 @@ class AdminModel {
     }
   }
 
+  /**
+   * @method startInstance
+   * @description Starts an instance.  This will start the pg instance and pgRest.  This
+   * function will wait for the instance to be ready before returning.  If the instance
+   * is already starting from a prior call, this function will wait for the current request to finish.
+   * A health check is performed before starting the instance.  If the instance is already
+   * running, this function will return false unless opts.force is set to true.  Instances
+   * are 'started' by applying the k8s deployment and service yaml files, then polling the
+   * TCP port until it is ready and accepting connections.
+   * 
+   * @param {String} nameOrId Either the name or id of the instance or database.  If database, set opts.isDb=true
+   * @param {String} orgNameOrId organization name or id
+   * @param {Object} opts
+   * @param {Boolean} opts.isDb nameOrId parameter is a database name or id
+   * @param {Boolean} opts.force force start the instance even if health check passes
+   * @param {Boolean} opts.startPgRest start pgRest services as well as the pg instance
+   * @param {Boolean} opts.waitForPgRest wait for pgRest services to be ready before resolving the promise
+   *  
+   * @returns {Promise<Boolean>} true if the instance was started, false if the instance was already running
+   */
   async startInstance(nameOrId, orgNameOrId, opts={}) {
     let instance;
+    
+    // get instance by database name or instance name depending on opts
     if( opts.isDb ) {
       instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
       nameOrId = instance.name;
@@ -340,7 +362,7 @@ class AdminModel {
     }
     let iid = instance.instance_id || instance.id;
 
-
+    // check if instance is already starting
     if( this.instancesStarting[iid] ) {
       logger.info('Instance already starting', instance.hostname);
       return this.instancesStarting[iid].promise;
@@ -348,12 +370,14 @@ class AdminModel {
 
     logger.info('Checking instance health', instance.hostname);
 
+    // set instance starting promise
     this.instancesStarting[iid] = {};
     this.instancesStarting[iid].promise = new Promise((resolve, reject) => {
       this.instancesStarting[iid].resolve = resolve;
       this.instancesStarting[iid].reject = reject;
     });
 
+    // check instance health
     let health = await utils.getHealth(
       instance.name,
       instance.organization_name
@@ -366,6 +390,7 @@ class AdminModel {
       return false;
     }
 
+    // log why we are starting the instance
     if( opts.force ) {
       logger.info('Force starting instance', instance.hostname);
     } else {
@@ -377,10 +402,11 @@ class AdminModel {
     }
     
     try {
-
       let proms = [];
-
       let dbs;
+
+      // instances can have multiple databases associated with them.  Start all pgRest services
+      // as pgRest services are started per database.
       if( opts.startPgRest ) {
         dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
         proms = dbs.map(db => {
@@ -390,7 +416,10 @@ class AdminModel {
 
       proms.push(this.models.instance.start(instance.instance_id, instance.organization_id));
 
+      // wait for instance to be ready
       await utils.waitUntil(instance.hostname, instance.port);
+
+      // if there are pgRest services, wait for them to be ready if flag is set
       if( opts.startPgRest && opts.waitForPgRest && dbs.length ) {
         // wait for all instances to be deploy
         await Promise.all(proms);
