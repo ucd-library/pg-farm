@@ -13,7 +13,7 @@ const pkg = JSON.parse(
 );
 
 program
-  .name('pgfarm')
+  .name('pgfarm-admin')
   .version(pkg.version)
   .command('database', 'view/manage databases')
   .command('instance', 'view/manage postgres instances')

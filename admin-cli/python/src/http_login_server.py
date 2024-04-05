@@ -23,7 +23,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         jwt = jwt[0]
 
         # Create MD5 hash
-        md5_hash = hashlib.md5(jwt).digest()
+        md5_hash = hashlib.md5(jwt.encode()).digest()
 
         # Base64 encode the MD5 hash
         md5_hash = base64.b64encode(md5_hash).decode()

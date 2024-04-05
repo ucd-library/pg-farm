@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 
 DOT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pg-farm.json")
 
@@ -25,10 +26,21 @@ def set_config_value(key, value):
   config[key] = value
   save_config(config)
 
-def get_config_value(key):
+def get_config_value(key, default=None):
   envname = f"PGFARM_{key.upper()}"
   if envname in os.environ:
     return os.environ[envname]
+  
+  if default is None:
+    default = DEFAULTS.get(key, None)
 
   config = get_config()
-  return config.get(key, DEFAULTS.get(key, None))
+  return config.get(key, default)
+
+def get_decoded_jwt():
+  jwt = get_config_value("token")
+  if jwt:
+    return json.loads(
+      base64.b64decode(jwt.split(".")[1]+'===').decode('utf-8')
+    )
+  return None

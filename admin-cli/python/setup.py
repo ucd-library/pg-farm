@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='pgfarm',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     install_requires=[
         'typer==0.9.0',

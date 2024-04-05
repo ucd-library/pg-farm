@@ -24,3 +24,8 @@ class Auth:
     print(f"If the web browser did not open, please visit the following URL: {url}")
 
     start_http_server()
+
+  def get_token(self, jwt=False):
+    if( jwt ):
+      return get_config_value("token")
+    return get_config_value("tokenHash")
