@@ -6,6 +6,10 @@ import remoteExec from '../lib/pg-helper-remote-exec.js';
 
 class Database {
 
+  constructor() {
+    this.METADATA_FIELDS = ['title', 'description', 'shortDescription', 'url', 'tags'];
+  }
+
   /**
    * @method getConnection
    * @description Returns a postgres user connection object for a postgres instance
@@ -66,6 +70,14 @@ class Database {
     };
   }
 
+  /**
+   * @method get
+   * @description Get a database by name or ID
+   * 
+   * @param {String} nameOrId database name or ID 
+   * @param {String} orgNameOrId organization name or ID
+   * @returns 
+   */
   async get(nameOrId, orgNameOrId) {
     let organizationId = null;
     if( orgNameOrId ) {
@@ -122,6 +134,44 @@ class Database {
     await this.ensurePgDatabase(db.instance_id, db.organization_id, db.database_name);
   }
 
+  /**
+   * @method setMetadata
+   * @description Set/patch metadata for a database
+   * 
+   * @param {String} nameOrId database name or ID
+   * @param {String} orgNameOrId database organization name or ID
+   * @param {Object} metadata
+   * @param {String} metadata.title optional.  The human title of the database
+   * @param {String} metadata.description optional.  A description of the database.  Markdown is supported.
+   * @param {String} metadata.shortDescription optional.  A short description of the database
+   * @param {String} metadata.url optional.  A website for more information about the database
+   * @param {Array<String>} metadata.tags optional.  An array of search tags for the database
+   */
+  async setMetadata(nameOrId, orgNameOrId, metadata={}) {
+    if( Object.keys(metadata).length === 0 ) {
+      throw new Error('No metadata fields provided');
+    }
+
+    let db = await this.get(nameOrId, orgNameOrId);
+    let props = Object.keys(metadata);
+    for( let prop of props ) {
+      if( !this.METADATA_FIELDS.includes(prop) ) {
+        throw new Error(`Invalid metadata field ${prop}`);
+      }
+    }
+
+    await client.setDatabaseMetadata(db.database_id, metadata);
+  }
+
+  /**
+   * @method ensurePgDatabase
+   * @description Ensure a database exists on a postgres instance.  
+   * Creates the database if it does not exist.
+   * 
+   * @param {String} instNameOrId instance name or ID
+   * @param {String} orgNameOrId organization name or ID
+   * @param {String} dbName database name
+   */
   async ensurePgDatabase(instNameOrId, orgNameOrId, dbName) {
     let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
     try {

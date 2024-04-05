@@ -1,7 +1,9 @@
 const PG = require('pg');
 
-const connections = 105;
-const sleepTime = 5000;
+// const connections = 105;
+// const sleepTime = 5000;
+const connections = 1;
+const sleepTime = 30000;
 
 let clients = [];
 
@@ -18,7 +20,8 @@ async function run() {
 }
 
 async function connectAndQuery(i) {
-  let c = new PG.Client({
+  // let c = new PG.Client({
+  let c = new PG.Pool({
     host : 'pgfarm.library.ucdavis.edu',
     database : 'library/ca-base-layers',
     password : process.env.PGPASSWORD,

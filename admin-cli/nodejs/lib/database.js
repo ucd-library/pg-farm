@@ -72,6 +72,27 @@ class Database {
     }
   }
 
+  async setMetadata(name, metadata) {
+    let {organization, database} = this.parseOrg(name);
+    if( !organization ) organization = '_';
+
+    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/metadata`, {
+      method: 'PATCH',
+      headers: headers({
+        'Content-Type': 'application/json'
+      }),
+      body: JSON.stringify(metadata)
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to patch database metadata', await resp.text());
+      return;
+    }
+
+    let body = await resp.text();
+    console.log(`Patched database ${organization}/${database} metadata`);
+  }
+
   async restartApi(name) {
     let {organization, database} = this.parseOrg(name);
     if( !organization ) organization = '_';

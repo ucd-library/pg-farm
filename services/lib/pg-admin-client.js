@@ -357,25 +357,41 @@ class PgFarmAdminClient {
   }
 
   /**
-   * @method updateDatabaseProperty
-   * @description update database property
+   * @method setDatabaseMetadata
+   * @description update database metadata properties
    * 
    * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId organization name or ID
-   * @param {String} property property to update
-   * @param {String} value value to set
+   * @param {Object} metadata properties to update
+   * 
    * @returns {Promise<Object>}
    */
-  updateDatabaseProperty(nameOrId, orgNameOrId, property, value) {
-    if( this.INVALID_UPDATE_PROPS.DATABASE.includes(property) ) {
-      throw new Error('Cannot update '+property);
+  setDatabaseMetadata(dbId, metadata) {
+    let keys = [];
+    let values = [];
+    let templateParams = [];
+    for( let key in metadata ) {
+      if( key === 'shortDescription' ) {
+        key = 'short_description';
+      }
+      keys.push(key);
+      values.push(metadata[key]);
+      templateParams.push('$'+values.length);
+    }
+    values.push(dbId);
+    
+    let setClause;
+    if ( keys.length === 1 ) {
+      setClause = `${keys[0]} = $1`;
+    } else {
+      setClause = `(${keys.join(', ')}) = (${templateParams.join(', ')})`;
     }
 
     return client.query(`
       UPDATE ${config.adminDb.tables.DATABASE}
-      SET ${pgFormat('%s', property)} = $1
-      WHERE database_id = ${this.schema}.get_database_id($2, $3)
-    `, [value, nameOrId, orgNameOrId]);
+      SET ${setClause}
+      WHERE database_id = $${templateParams.length+1}
+    `, values);
   }
 
   /**

@@ -14,6 +14,28 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.patch(
+  '/:organization/:database/metadata', 
+  keycloak.protect('{instance}-admin'), 
+  async (req, res) => {
+  
+    try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let resp = await database.setMetadata(
+      req.params.database, 
+      organization,
+      req.body
+    );
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     let opts = {};

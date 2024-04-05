@@ -12,6 +12,20 @@ program.command('create')
     database.create(options);
   });
 
+program.command('set-metadata <org/database>')
+  .description('Set metadata for a database')
+  .option('-t, --title <title>', 'Title')
+  .option('-d, --description <description>', 'Description')
+  .option('-s, --short-description <shortDescription>', 'Short description')
+  .option('-u, --url <url>', 'URL')
+  .option('-l, --tags <tags>', 'Tags (comma separated)')
+  .action((dbName, opts) => {
+    if( opts.tags ) {
+      opts.tags = opts.tags.split(',').map(t => t.trim());
+    }
+    database.setMetadata(dbName, opts);
+  });
+
 program.command('list')
   .description('List databases')
   .option('-m, --mine', 'List only databases I have an account on')
