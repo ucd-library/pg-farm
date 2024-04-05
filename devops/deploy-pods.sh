@@ -23,3 +23,7 @@ kubectl apply -f $YAML_DIR/gateway-service.yaml
 kubectl rollout restart deployment admin
 kubectl rollout restart deployment health-probe
 kubectl rollout restart deployment gateway
+
+kubectl autoscale deployment gateway \
+  --max 10 --min 2 \
+  --cpu-percent 30 || true

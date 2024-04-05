@@ -222,7 +222,7 @@ class ProxyConnection extends EventEmitter {
     }
 
     // first message provides the connection properties
-    if ( !this.startupMessageHandled ) {
+    if ( !this.startupMessageHandled && data.length ) {
       logger.info('client handling startup message', data.length, this.getConnectionInfo());
       this.parseStartupMessage(data);
       logger.info('startup message parsed', this.getConnectionInfo());
