@@ -5,6 +5,8 @@ from .config import set_config_value, get_config
 from .auth import Auth
 from .connect import Connect
 
+import pkg_resources  # part of setuptools
+
 app = typer.Typer()
 
 config_cmds = typer.Typer()
@@ -68,3 +70,20 @@ def yaml(dbname: Annotated[Optional[str], typer.Argument()] = None):
   """Show connection data as YAML object"""
   con = Connect()
   con.yaml(dbname)
+
+
+def version_callback(value: bool):
+    if value:
+        version = pkg_resources.require("pgfarm")[0].version
+        print(f"v{version}")
+        raise typer.Exit()
+
+@app.callback()
+def common(
+    ctx: typer.Context,
+    version: bool = typer.Option(None, "--version", callback=version_callback),
+):
+    pass
+
+if __name__ == "__main__":
+    app()

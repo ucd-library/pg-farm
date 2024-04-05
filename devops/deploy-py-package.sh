@@ -7,6 +7,7 @@ source ./devops/config.sh
 
 cd $ROOT_DIR/../admin-cli/python
 
+rm -rf dist
 python3 setup.py sdist
 
 # Setup authentication first
