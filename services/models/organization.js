@@ -3,6 +3,10 @@ import client from '../lib/pg-admin-client.js';
 
 class OrganizationModel {
 
+  constructor() {
+    this.METADATA_FIELDS = ['title', 'url', 'description'];
+  }
+
   get(nameOrId) {
     return client.getOrganization(nameOrId);
   }
@@ -41,6 +45,29 @@ class OrganizationModel {
     await client.createOrganization(title, opts);
 
     return this.get(opts.name);
+  }
+
+  async setMetadata(nameOrId, metadata={}) {
+    if( Object.keys(metadata).length === 0 ) {
+      throw new Error('No metadata fields provided');
+    }
+
+    let org = await this.get(nameOrId);
+    let props = Object.keys(metadata);
+    for( let prop of props ) {
+      if( !this.METADATA_FIELDS.includes(prop) ) {
+        throw new Error(`Invalid metadata field ${prop}`);
+      }
+    }
+
+    logger.info('Updating organization metadata', org.name, metadata);
+
+    await client.setOrganizationMetadata(org.organization_id, metadata);
+  }
+
+  setUserRole(nameOrId, username, role='') {
+    role = role.toUpperCase();
+    return client.setOrganizationRole(nameOrId, username, role);
   }
 
 }

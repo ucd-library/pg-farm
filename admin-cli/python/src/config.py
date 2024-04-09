@@ -1,8 +1,11 @@
 import os
 import json
 import base64
+import configparser
+from urllib.parse import urlparse
 
 DOT_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pg-farm.json")
+PGSERVICE_FILE_PATH = os.path.join(os.path.expanduser("~"), ".pg_service.conf")
 
 DEFAULTS = {
   "host": "https://pgfarm.library.ucdavis.edu",
@@ -44,3 +47,31 @@ def get_decoded_jwt():
       base64.b64decode(jwt.split(".")[1]+'===').decode('utf-8')
     )
   return None
+
+def update_pgservice():
+  token = get_config_value("tokenHash")
+  user = get_decoded_jwt()
+  host = get_config_value("host")
+
+  if token is None or user is None or host is None:
+    return
+  
+  host = urlparse(host).hostname
+
+  config = configparser.ConfigParser()
+
+  if os.path.exists(PGSERVICE_FILE_PATH):
+    config.read(PGSERVICE_FILE_PATH)
+
+    if 'pgfarm' in config:
+      config.remove_section('pgfarm')
+
+  config['pgfarm'] = {
+    'host': host,
+    'port': 5432,
+    'user': user.get('preferred_username', user.get('username')),
+    'password': token
+  }
+
+  with open(PGSERVICE_FILE_PATH, 'w') as configfile:
+    config.write(configfile, space_around_delimiters=False)

@@ -31,6 +31,7 @@ if( healthProbePort.match(/^tcp:/) ) {
   healthProbePort = healthProbePort.split(':').pop();
 }
 
+let clientEnv = env.CLIENT_ENV || 'dev';
 
 const config = {
 
@@ -53,6 +54,13 @@ const config = {
     secret : env.JWT_SECRET || 'secretsecret',
     cookieName : env.JWT_COOKIE_NAME || 'pgfarm-token',
     header : env.JWT_HEADER || 'x-pgfarm-token'
+  },
+
+  client : {
+    env : clientEnv,
+    assets : (clientEnv === 'prod') ? 'dist' : 'public',
+    title : 'PG Farm',
+    appRoutes : ['search', 'db']
   },
 
   gateway : {

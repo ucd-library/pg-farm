@@ -4,7 +4,7 @@ import sys
 import hashlib
 import base64
 from urllib.parse import urlparse, parse_qs
-from .config import get_config, save_config
+from .config import get_config, save_config, update_pgservice
 
 PORT = 3210
 
@@ -36,9 +36,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # Write JWT token as a dot file in the user's home directory
         config = get_config()
-        config["jwt"] = jwt
-        config["tokenHash"] = md5_hash
+        config["token"] = jwt
+        config["tokenHash"] = f"urn:md5:{md5_hash}"
         save_config(config)
+
+        # Update the PGSERVICE file
+        update_pgservice()
         
         sys.exit(0)
 

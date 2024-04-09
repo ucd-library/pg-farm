@@ -17,6 +17,7 @@ program
   .version(pkg.version)
   .command('database', 'view/manage databases')
   .command('instance', 'view/manage postgres instances')
+  .command('organization', 'manage organizations')
   .command('auth', 'log in/out of PG Farm')
   .command('config', 'setup cli');
   

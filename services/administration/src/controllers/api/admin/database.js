@@ -19,7 +19,7 @@ router.patch(
   keycloak.protect('{instance}-admin'), 
   async (req, res) => {
   
-    try {
+  try {
     let organization = req.params.organization;
     if( organization === '_' ) {
       organization = null;

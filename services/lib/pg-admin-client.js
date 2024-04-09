@@ -111,28 +111,6 @@ class PgFarmAdminClient {
   }
 
   /**
-   * @method updateOrganization
-   * @description update organization property
-   * 
-   * @param {String} nameOrId organization name or ID
-   * @param {String} property property to update
-   * @param {String} value value to set
-   */
-  async updateOrganization(nameOrId, property, value) {
-    let org = await this.getOrganization(nameOrId);
-
-    if( this.INVALID_UPDATE_PROPS.ORGANIZATION.includes(property) ) {
-      throw new Error('Cannot update '+property);
-    }
-
-    return client.query(`
-      UPDATE ${config.adminDb.tables.ORGANIZATION}
-      SET ${pgFormat('%s', property)} = $1
-      WHERE organization_id = $2
-    `, [value, org.organization_id]);
-  }
-
-  /**
    * @method getInstance
    * @description get instance by name or ID
    * 
@@ -392,6 +370,49 @@ class PgFarmAdminClient {
       SET ${setClause}
       WHERE database_id = $${templateParams.length+1}
     `, values);
+  }
+
+  /**
+   * @method setOrganizationMetadata
+   * @description update organization metadata properties
+   * 
+   * @param {String} orgId organization ID
+   * @param {Object} metadata properties to update
+   * @param {String} metadata.title optional.  The human title of the organization
+   * @param {String} metadata.description optional.  A description of the organization.  Markdown is supported.
+   * @param {String} metadata.url optional.  A website for more information about the organization
+   * 
+   * @returns {Promise<Object>}
+   */
+  setOrganizationMetadata(orgId, metadata) {
+    let keys = [];
+    let values = [];
+    let templateParams = [];
+    for( let key in metadata ) {
+      keys.push(key);
+      values.push(metadata[key]);
+      templateParams.push('$'+values.length);
+    }
+    values.push(orgId);
+    
+    let setClause;
+    if ( keys.length === 1 ) {
+      setClause = `${keys[0]} = $1`;
+    } else {
+      setClause = `(${keys.join(', ')}) = (${templateParams.join(', ')})`;
+    }
+
+    return client.query(`
+      UPDATE ${config.adminDb.tables.ORGANIZATION}
+      SET ${setClause}
+      WHERE organization_id = $${templateParams.length+1}
+    `, values);
+  }
+  
+  setOrganizationRole(orgNameOrId, username, role) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.add_organization_role($1, $2, $3)
+    `, [orgNameOrId, username, role]);
   }
 
   /**
