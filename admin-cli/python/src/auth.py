@@ -29,3 +29,7 @@ class Auth:
     if( jwt ):
       return get_config_value("token")
     return get_config_value("tokenHash")
+  
+def set_auth_header(headers={}):
+  headers["Authorization"] = f"Bearer {get_config_value('tokenHash')}"
+  return headers

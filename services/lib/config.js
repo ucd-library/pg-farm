@@ -60,7 +60,8 @@ const config = {
     env : clientEnv,
     assets : (clientEnv === 'prod') ? 'dist' : 'public',
     title : 'PG Farm',
-    appRoutes : ['search', 'db']
+    appRoutes : ['search', 'db'],
+    staticAssetsBaseUrl : env.CLIENT_STATIC_ASSETS_BASE_URL || 'https://storage.googleapis.com/application-static-assets',
   },
 
   gateway : {
