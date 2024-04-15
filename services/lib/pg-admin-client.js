@@ -424,11 +424,12 @@ class PgFarmAdminClient {
    * @param {String} username username of the user.  will be added to the pgfarm.users table if not exists
    * @param {String} password password for this user on this instance
    * @param {String} type pgfarm user type (instance_user_type enum)
+   * @param {String} parent optional.  parent user to create this user under
    * @returns {Promise<Object>}
    */
-  async createInstanceUser(instNameOrId, orgNameOrId, username, password, type) {
-    return client.query(`SELECT * FROM ${this.schema}.add_instance_user($1, $2, $3, $4, $5)`, 
-    [instNameOrId, orgNameOrId, username, password, type]);
+  async createInstanceUser(instNameOrId, orgNameOrId, username, password, type, parent) {
+    return client.query(`SELECT * FROM ${this.schema}.add_instance_user($1, $2, $3, $4, $5, $6)`, 
+    [instNameOrId, orgNameOrId, username, password, type, parent]);
   }
 
   /**

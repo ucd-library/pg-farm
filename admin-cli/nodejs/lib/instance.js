@@ -30,6 +30,11 @@ class Instances {
     let flags = [];
     if( opts.admin ) {
       flags.push('type=ADMIN');
+    } else if( opts.serviceAccount ) {
+      flags.push('type=SERVICE_ACCOUNT');
+    }
+    if( opts.parent ) {
+      flags.push(`parent=${opts.parent}`);
     }
     flags = flags.length > 0 ? '?'+flags.join('&') : '';
 

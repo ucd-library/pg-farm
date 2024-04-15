@@ -21,16 +21,18 @@ class User {
    * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER. 
    * @param {String} password optional.  defined password.  If not 
    * provided, a random password will be generated.
+   * @param {Boolean} noinherit optional.  Defaults to false.
+   * @param {String} parent optional.  Parent user.  Only used for 'SERVICE_ACCOUNT' type
    * 
    * @returns {Promise}
    */
-  async create(nameOrId, orgNameOrId=null, username, type='USER', password, noinherit=false) {
+  async create(nameOrId, orgNameOrId=null, username, type='USER', password, noinherit=false, parent=null) {
     let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
     if( !instance ) {
       let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
       if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
       instance = await this.models.instance.get(db.instance_id);
-    }
+    } 
 
     // check for reserved users
     if( username === config.pgInstance.publicRole.username ) {
@@ -52,19 +54,23 @@ class User {
     // add user to database
     let user = await this.exists(instance.instance_id, orgNameOrId, username);
     if( !user ) {
-      logger.info('Creating instance user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
-      await client.createInstanceUser(instance.instance_id, orgNameOrId, username, password, type);
+      logger.info('Creating instance user: ', {
+        username, type, parent,
+        instance: instance.name,
+        organization: orgNameOrId
+      });
+      await client.createInstanceUser(instance.instance_id, orgNameOrId, username, password, type, parent);
     } else { // get current password.  make sure its set on the instance db
       logger.info('Instance user already exists: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
       password = user.password;
 
       if( type !== user.type ) {
-        logger.info('Updating user type: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId, typew);
+        logger.info('Updating user type: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId, type);
         await client.query(
           `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
           SET type = $4 
           WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
-          [username, instNameOrId, orgNameOrId, type]
+          [username, nameOrId, orgNameOrId, type]
         );
       }
     }

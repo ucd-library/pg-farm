@@ -26,6 +26,8 @@ function register(app) {
       delete loginResp.body.id_token;
     }
 
+    await pgAdminClient.setUserToken(loginResp.body.access_token);
+
     res
       .status(loginResp.status)
       .json(loginResp.body);

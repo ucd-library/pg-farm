@@ -49,6 +49,19 @@ def login():
   auth = Auth()
   auth.login()
 
+@auth_cmds.command('service-account-login')
+def service_account_login(
+  username: Annotated[str, typer.Argument(help="Service account username")],
+  file: Annotated[str, typer.Option('--file', '-f', help="Path to file storing service account secret")] = None,
+  env: Annotated[str, typer.Option('--env', '-e', help="Environment variable storing service account secret")] = None
+):
+  """Login to PG Farm"""
+  auth = Auth()
+  auth.service_account_login(username, {
+    'file': file,
+    'env': env
+  })
+
 @auth_cmds.command()
 def token(jwt: Annotated[bool, typer.Option("--jwt", "-j", help="Print JWT")] = False):
   """Print the access token or JWT token.  This token should be used as your password"""

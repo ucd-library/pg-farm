@@ -18,7 +18,8 @@ DO $$ BEGIN
     'PUBLIC',
     'USER',
     'ADMIN',
-    'PGREST'
+    'PGREST',
+    'SERVICE_ACCOUNT'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;

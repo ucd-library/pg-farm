@@ -41,13 +41,15 @@ class AdminModel {
    * @description Creates a new user in the database.  This will also grant
    * the role to the pgrest authenticator user.
    * 
-   * @param {*} instNameOrId 
-   * @param {*} orgNameOrId 
-   * @param {*} user 
-   * @param {*} type 
+   * @param {String} instNameOrId instance name or id
+   * @param {String} orgNameOrId organization name or id
+   * @param {String} user username
+   * @param {String} type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
+   * @param {Object} opts
+   * @param {String} opts.parent parent username.  Required for SERVICE_ACCOUNT
    */
-  async createUser(instNameOrId, orgNameOrId, user, type='USER') {
-    await this.models.user.create(instNameOrId, orgNameOrId, user, type);
+  async createUser(instNameOrId, orgNameOrId, user, type='USER', opts={}) {
+    await this.models.user.create(instNameOrId, orgNameOrId, user, type, null, null, opts.parent);
     if( ['USER', 'ADMIN'].includes(type) ) {
       await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user);
     }

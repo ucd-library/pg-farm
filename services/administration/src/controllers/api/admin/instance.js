@@ -22,15 +22,17 @@ router.put('/:organization/:instance/:user',
   
     try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
-    let user = req.params.user.replace(/@.*$/, '');
+    // let user = req.params.user.replace(/@.*$/, '');
+    let user = req.params.user;
+    let parent = req.query.parent;
 
     // do not let api create special users, for now
     let type = req.query.type || 'USER';
-    if( type !== 'USER' && type !== 'ADMIN' ) {
+    if( type !== 'USER' && type !== 'ADMIN' && type !== 'SERVICE_ACCOUNT') {
       throw new Error('Invalid type: '+type);
     }
 
-    let id = await model.createUser(instance, organization, user, type);
+    let id = await model.createUser(instance, organization, user, type, {parent});
     res.status(204).json({id});
   } catch(e) {
     handleError(res, e);

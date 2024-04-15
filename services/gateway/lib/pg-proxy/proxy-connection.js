@@ -7,17 +7,6 @@ import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
 import {admin, user as userModel, instance} from '../../../models/index.js';
 
-// let pgPassConnection = null;
-// if( config.proxy.password.type === 'pg' ) {
-//   pgPassConnection = new PG.Pool({
-//     user : config.proxy.password.user,
-//     host : config.proxy.password.host,
-//     database : config.proxy.password.database,
-//     password : config.proxy.password.password,
-//     port : config.proxy.password.port
-//   });
-// }
-
 let tlsOptions = {};
 if( config.proxy.tls.key && 
     config.proxy.tls.cert && 
@@ -76,7 +65,7 @@ class ProxyConnection extends EventEmitter {
     this.GSSAPI_REQUEST = 0x04D21630;
     this.GSSAPI_RESPONSE = Buffer.from('G', 'utf8'); // from server debug
 
-    this.ALLOWED_USER_TYPES = ['ADMIN', 'USER', 'PUBLIC'];
+    this.ALLOWED_USER_TYPES = ['ADMIN', 'USER', 'PUBLIC', 'SERVICE_ACCOUNT'];
     this.ALLOWED_INSTANCE_STATES = ['RUN', 'SLEEP'];
 
     this.MESSAGE_CODES = {
@@ -167,118 +156,123 @@ class ProxyConnection extends EventEmitter {
   }
 
   async onClientSocketData(data, fromSecureSocket = false) {
-    this.debug('client'+(fromSecureSocket ? '-secure' : ''), data);
+    try {
+      this.debug('client'+(fromSecureSocket ? '-secure' : ''), data);
 
-    // if we are attempting reconnect, just buffer the message
-    if (this.awaitingReconnect || this.handlingJwtAuth) {
-      this.pendingMessages.push(data);
-      return;
-    }
-
-    // check for SSL and special auth messages
-    if (!this.startupMessageHandled &&
-      data.length == 8 ) {
-      
-      let code = data.readInt32BE(4);
-
-      if( !this.sslHandled && code === this.SSL_REQUEST ) {
-        logger.info('client handling ssl request', this.getConnectionInfo());
-        this.sslHandled = true;
-
-        if (!config.proxy.tls.enabled) {
-          this.clientSocket.write(Buffer.from('N', 'utf8'));
-        } else {
-          this.clientSocket.write(Buffer.from('S', 'utf8'));
-
-          const secureContext = tls.createSecureContext(tlsOptions);
-          const secureSocket = new tls.TLSSocket(this.clientSocket, { 
-            isServer: true, 
-            secureContext,
-            server: this.server.server
-          });
-          secureSocket.on('data', data => this.onClientSocketData(data, true));
-
-          // register the new secure socket with the tcp server
-          let sockInfo = this.server.sockets.get(this.clientSocket);
-          let sessionId = sockInfo.session;
-          this.server.registerConnection(secureSocket, 'incoming-secure', sessionId);
-
-          // replace the client socket with the secure socket
-          this.clientSocket = secureSocket;
-        }
-      } else if (code === this.GSSAPI_REQUEST) {
-        logger.info('responding to gssapi request', this.getConnectionInfo());
-        this.clientSocket.write(this.GSSAPI_RESPONSE);
-      } else {
-        logger.warn('unknown startup message after handling ssl request', {
-          data : data.toString('hex'),
-          length : data.length,
-          payloadLength : data.readInt32BE(0),
-          payload : data.readInt32BE(4)
-        });
+      // if we are attempting reconnect, just buffer the message
+      if (this.awaitingReconnect || this.handlingJwtAuth) {
+        this.pendingMessages.push(data);
+        return;
       }
 
-      return;
-    }
+      // check for SSL and special auth messages
+      if (!this.startupMessageHandled &&
+        data.length == 8 ) {
+        
+        let code = data.readInt32BE(4);
 
-    // first message provides the connection properties
-    if ( !this.startupMessageHandled && data.length ) {
-      logger.info('client handling startup message', data.length, this.getConnectionInfo());
-      this.parseStartupMessage(data);
-      logger.info('startup message parsed', this.getConnectionInfo());
+        if( !this.sslHandled && code === this.SSL_REQUEST ) {
+          logger.info('client handling ssl request', this.getConnectionInfo());
+          this.sslHandled = true;
 
-      try {
-        // this checks if user has access to database
-        let success = await this.checkUserAccess();
-        if (!success) {
-          logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
+          if (!config.proxy.tls.enabled) {
+            this.clientSocket.write(Buffer.from('N', 'utf8'));
+          } else {
+            this.clientSocket.write(Buffer.from('S', 'utf8'));
+
+            const secureContext = tls.createSecureContext(tlsOptions);
+            const secureSocket = new tls.TLSSocket(this.clientSocket, { 
+              isServer: true, 
+              secureContext,
+              server: this.server.server
+            });
+            secureSocket.on('data', data => this.onClientSocketData(data, true));
+
+            // register the new secure socket with the tcp server
+            let sockInfo = this.server.sockets.get(this.clientSocket);
+            let sessionId = sockInfo.session;
+            this.server.registerConnection(secureSocket, 'incoming-secure', sessionId);
+
+            // replace the client socket with the secure socket
+            this.clientSocket = secureSocket;
+          }
+        } else if (code === this.GSSAPI_REQUEST) {
+          logger.info('responding to gssapi request', this.getConnectionInfo());
+          this.clientSocket.write(this.GSSAPI_RESPONSE);
+        } else {
+          logger.warn('unknown startup message after handling ssl request', {
+            data : data.toString('hex'),
+            length : data.length,
+            payloadLength : data.readInt32BE(0),
+            payload : data.readInt32BE(4)
+          });
+        }
+
+        return;
+      }
+
+      // first message provides the connection properties
+      if ( !this.startupMessageHandled && data.length ) {
+        logger.info('client handling startup message', data.length, this.getConnectionInfo());
+        this.parseStartupMessage(data);
+        logger.info('startup message parsed', this.getConnectionInfo());
+
+        try {
+          // this checks if user has access to database
+          let success = await this.checkUserAccess();
+          if (!success) {
+            logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
+            this.closeSockets();
+            return;
+          }
+
+        } catch (e) {
+          logger.error('Error initializing server socket', this.getConnectionInfo(), e);
           this.closeSockets();
           return;
         }
 
-      } catch (e) {
-        logger.error('Error initializing server socket', this.getConnectionInfo(), e);
-        this.closeSockets();
+        // now just proxy messsage
+        logger.info('client startup message parsed', this.getConnectionInfo());
+
+        // if public user, just create a direct connection
+        if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
+          logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
+          await this.createServerSocket(); // this sends startup message on connect
+          return;
+        // if not public user, request password, start jwt/auth intercept
+        } else {
+          this.requestPassword(this.clientSocket);
+          return;
+        }
+      }
+
+      // intercept the password message and handle it
+      if (data.length && 
+          data[0] === this.MESSAGE_CODES.PASSWORD &&
+          this.pgFarmUser?.user_type !== 'PUBLIC') {
+
+        this.handlingJwtAuth = true;
+
+        logger.info('client handling jwt auth', this.getConnectionInfo());
+        this.handleJwt(data);
         return;
       }
 
-      // now just proxy messsage
-      logger.info('client startup message parsed', this.getConnectionInfo());
-
-      // if public user, just create a direct connection
-      if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
-        logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
-        await this.createServerSocket(); // this sends startup message on connect
-        return;
-      // if not public user, request password, start jwt/auth intercept
-      } else {
-        this.requestPassword(this.clientSocket);
-        return;
+      // check for query message, if so, emit stats
+      if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
+        this.emitStat('query', {
+          database: this.startupProperties.database,
+          databaseId : this.pgFarmUser.database_id
+        });
       }
+
+      // else, just proxy message
+      this.serverSocket.write(data);
+    } catch(e) {
+      logger.error('Error handling client data', this.getConnectionInfo(), e);
+      this.closeSockets();
     }
-
-    // intercept the password message and handle it
-    if (data.length && 
-        data[0] === this.MESSAGE_CODES.PASSWORD &&
-        this.pgFarmUser?.user_type !== 'PUBLIC') {
-
-      this.handlingJwtAuth = true;
-
-      logger.info('client handling jwt auth', this.getConnectionInfo());
-      this.handleJwt(data);
-      return;
-    }
-
-    // check for query message, if so, emit stats
-    if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
-      this.emitStat('query', {
-        database: this.startupProperties.database,
-        databaseId : this.pgFarmUser.database_id
-      });
-    }
-
-    // else, just proxy message
-    this.serverSocket.write(data);
   }
 
   async closeSockets() {
@@ -585,9 +579,19 @@ class ProxyConnection extends EventEmitter {
    * @param {Buffer} data message from client 
    */
   parseStartupMessage(data) {
+    if( data.length < 8 ) {
+      throw new Error(`Invalid startup message, too short (${data.length}) must be at least 8 bytes.  Closing connection.`);
+    }
+
     let offset = 0;
     let len = data.readInt32BE(offset);
     offset += 4;
+
+    if( len !== data.length ) {
+      logger.warn('Invalid startup message, length does not match message length.');
+      // TODO
+      // throw new Error(`Invalid startup message, length does not match message length.  Closing connection.`);
+    }
 
     this.version = data.readInt32BE(offset);
     offset += 4;

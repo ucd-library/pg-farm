@@ -15,6 +15,8 @@ program.command('create')
 program.command('add-user <org/instance> <user>')
   .description('Add a user to an database (instance admin only)')
   .option('-a, --admin', 'Grant admin privileges to the user')
+  .option('-s, --service-account', 'User is a service account')
+  .option('-p, --parent <parent>', 'Parent user for service account')
   .action((instanceName, user, opts) => {
     instance.addUser(instanceName, user, opts);
   });

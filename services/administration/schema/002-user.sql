@@ -54,6 +54,20 @@ CREATE OR REPLACE FUNCTION pgfarm.ensure_user(username_in text)
   END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION pgfarm.purge_user(username_in text) 
+  RETURNS void AS $$
+  DECLARE
+    uid UUID;
+  BEGIN
+    SELECT pgfarm.get_user_id(username_in) INTO uid;
+    DELETE FROM pgfarm.instance_user WHERE user_id = uid;
+    DELETE FROM pgfarm.user_token WHERE user_id = uid;
+    DELETE FROM pgfarm.organization_role WHERE user_id = uid;
+    DELETE FROM pgfarm.user_email WHERE user_id = uid;
+    DELETE FROM pgfarm.user WHERE user_id = uid;
+  END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION pgfarm.add_organization_role(org_in text, username_in text, role_in pgfarm.organization_role_type) 
   RETURNS void AS $$
   DECLARE

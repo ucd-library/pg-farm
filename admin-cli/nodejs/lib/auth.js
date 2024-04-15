@@ -1,9 +1,11 @@
 import LocalLoginServer from './local-server.js';
 import init from 'multi-ini';
-import {config} from './config.js';
+import {config, save as saveConfig} from './config.js';
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import fetch from 'node-fetch';
+import crypto from 'crypto';
 
 class Auth {
 
@@ -24,6 +26,48 @@ class Auth {
 
     let localServer = new LocalLoginServer();
     return localServer.create(opts);
+  }
+
+  async loginServiceAccount(name, opts={}) {
+    if( opts.file ) {
+      if( !path.isAbsolute(opts.file) ) {
+        opts.file = path.join(process.cwd(), opts.file);
+      }
+      opts.secret = fs.readFileSync(opts.file, 'utf-8').trim();
+    } else if( opts.env ) {
+      opts.secret = process.env[opts.env];
+    }
+
+    if( !opts.secret ) {
+      console.error('No secret provided');
+      process.exit(1);
+    }
+
+    let resp = await fetch(`${config.host}/auth/service-account/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: name,
+        secret: opts.secret
+      })
+    });
+
+    if( resp.status !== 200 ) {
+      console.error('Login failed', await resp.text());
+      process.exit(1);
+    }
+
+    let body = await resp.json();
+
+    config.token = body.access_token;
+    const hash = 'urn:md5:'+crypto.createHash('md5').update(body.access_token).digest('base64');
+    config.tokenHash = hash;
+
+    saveConfig();
+
+    this.updateService();
   }
 
   updateService() {

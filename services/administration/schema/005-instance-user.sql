@@ -6,11 +6,26 @@ CREATE TABLE IF NOT EXISTS pgfarm.instance_user (
     user_id UUID NOT NULL REFERENCES pgfarm.user(user_id),
     password text NOT NULL,
     type instance_user_type NOT NULL,
+    parent_user_id UUID REFERENCES pgfarm.user(user_id),
     created_at timestamp NOT NULL DEFAULT now(),
     updated_at timestamp NOT NULL DEFAULT now(),
     UNIQUE (instance_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS instance_user_username_idx ON pgfarm.instance_user(user_id);
+
+CREATE OR REPLACE FUNCTION check_parent_user_id() RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.type = 'SERVICE_ACCOUNT' AND NEW.parent_user_id IS NULL THEN
+    RAISE EXCEPTION 'Parent user ID cannot be null for service accounts';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER check_parent_user_id_trigger
+BEFORE INSERT OR UPDATE ON pgfarm.instance_user
+FOR EACH ROW
+EXECUTE FUNCTION check_parent_user_id();
 
 CREATE OR REPLACE FUNCTION get_instance_user_id(username_or_id text, inst_name_or_id text, org_name_or_id text)
   RETURNS UUID AS $$
@@ -48,21 +63,23 @@ CREATE OR REPLACE FUNCTION get_instance_user_id_for_db(username_or_id text, db_n
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION add_instance_user(inst_name_or_id text, org_name_or_id text, username_in text, password_in text, type_in instance_user_type)
+CREATE OR REPLACE FUNCTION add_instance_user(inst_name_or_id text, org_name_or_id text, username_in text, password_in text, type_in instance_user_type, parent_in text)
   RETURNS UUID AS $$
   DECLARE
     uid UUID;
     iid UUID;
     iuid UUID;
+    puid UUID;
   BEGIN
 
     SELECT pgfarm.get_instance_id(inst_name_or_id, org_name_or_id) INTO iid;
     SELECT pgfarm.ensure_user(username_in) INTO uid;
+    SELECT pgfarm.get_user_id(parent_in) INTO puid;
 
     INSERT INTO pgfarm.instance_user 
-      (instance_id, user_id, password, type) 
+      (instance_id, user_id, password, type, parent_user_id) 
     VALUES 
-      (iid, uid, password_in, type_in)
+      (iid, uid, password_in, type_in, puid)
     RETURNING instance_user_id INTO iuid;
 
     RETURN iuid;
