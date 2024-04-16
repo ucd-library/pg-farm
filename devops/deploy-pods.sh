@@ -17,9 +17,16 @@ kubectl apply -f $YAML_DIR/health-probe-service.yaml
 kubectl apply -f $YAML_DIR/admin-deployment.yaml
 kubectl apply -f $YAML_DIR/admin-service.yaml
 
-kubectl apply -f $YAML_DIR/gateway-deployment.yaml
-kubectl apply -f $YAML_DIR/gateway-service.yaml
+# you must manually do this
+# kubectl apply -f $YAML_DIR/gateway-deployment.yaml
+# kubectl apply -f $YAML_DIR/gateway-service.yaml
+
+kubectl apply -f $YAML_DIR/gateway-dev-deployment.yaml
+kubectl apply -f $YAML_DIR/gateway-dev-service.yaml
 
 kubectl rollout restart deployment admin
 kubectl rollout restart deployment health-probe
-kubectl rollout restart deployment gateway
+kubectl rollout restart deployment dev-gateway
+
+# you must manually do this
+# kubectl rollout restart deployment gateway

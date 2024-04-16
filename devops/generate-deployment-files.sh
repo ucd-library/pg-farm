@@ -63,3 +63,13 @@ cork-template \
   -c ./config.sh \
   -t $TEMPLATE_ROOT/gateway-deployment.yaml \
   -o $DEPLOYMENT_DIR/gateway-deployment.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/gateway-dev-service.yaml \
+  -o $DEPLOYMENT_DIR/gateway-dev-service.yaml
+
+cork-template \
+  -c ./config.sh \
+  -t $TEMPLATE_ROOT/gateway-dev-deployment.yaml \
+  -o $DEPLOYMENT_DIR/gateway-dev-deployment.yaml
