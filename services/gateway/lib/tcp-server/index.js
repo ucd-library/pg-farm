@@ -16,6 +16,11 @@ class PgFarmTcpServer {
       this.onConnection = onConnection.bind(this);
     }
 
+    // if true, close all sockets whenever a connection is closed
+    // set to false if you want to keep the other sockets open after
+    // a disconnect.  Used to support server moves
+    this.autoCloseSockets = true;
+
     this.server = null;
     this.sockets = new Map();
     this.sessions = new Map();
@@ -56,7 +61,7 @@ class PgFarmTcpServer {
     this.metrics.setSocketProperties(socket, props);
   }
 
-  registerConnection(socket, type, session) {
+  registerConnection(socket, type, session, pgConnection=null) {
     if( this.sockets.has(socket) ) {
       logger.error('Socket already registered',  type, session);
       return;
@@ -66,9 +71,9 @@ class PgFarmTcpServer {
     this.sockets.set(socket, {type, session});
 
     // register lookup for sockets by session id
-    let sockets = this.sessions.get(session) || [];
-    sockets.push(socket);
-    this.sessions.set(session, sockets);
+    let sessionInfo = this.sessions.get(session) || {sockets: [], pgConnection};
+    sessionInfo.sockets.push(socket);
+    this.sessions.set(session, sessionInfo);
 
     this.metrics.registerSocket(socket, type, session);
 
@@ -77,27 +82,29 @@ class PgFarmTcpServer {
       setTimeout(() => {
         this.sockets.delete(socket);
 
-        let sockets = this.sessions.get(session);
+        let {sockets, pgConnection} = this.sessions.get(session);
         let index = sockets.indexOf(socket);
         if( index > -1 ) sockets.splice(index, 1);
 
         if( sockets.length === 0 ) {
           this.sessions.delete(session);
         } else {
-          this.sessions.set(session, sockets);
+          this.sessions.set(session, {sockets, pgConnection});
         }
 
         socket.removeAllListeners();
         socket.destroySoon();
 
-        // TODO: fix so we can support server moves
+        if( !pgConnection.autoCloseSockets ) {
+          logger.info('autoCloseSockets set to false, not closing other sockets for session', session);
+          return;
+        }
+
+        logger.info('Closing all sockets for session', session);
         for( let s of sockets ) {
-          // if( s === socket ) continue;
           s.destroySoon();
         }
       }, 100);
-
-      // let sockets = this.sessions.get(session);
       
     });
 
@@ -110,10 +117,12 @@ class PgFarmTcpServer {
 
   _onIncomingConnection(socket) {
     let pgFarmSession = this.getSessionId();
-    this.registerConnection(socket, 'incoming', pgFarmSession);
+    
+    let pgConnection;
     if( this.onConnection ) {
-      this.onConnection(socket);
+      pgConnection = this.onConnection(socket, pgFarmSession);
     }
+    this.registerConnection(socket, 'incoming', pgFarmSession, pgConnection);
   }
 }
 

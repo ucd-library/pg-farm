@@ -26,9 +26,10 @@ class ProxyConnection extends EventEmitter {
    * @param {Socket} clientSocket incoming client socket
    * @param {PgFarmTcpServer} server tcp server
    */
-  constructor(clientSocket, server) {
+  constructor(clientSocket, server, sessionId) {
     super();
 
+    this.sessionId = sessionId;
     this.clientSocket = clientSocket;
     this.serverSocket = null;
     this.server = server;
@@ -58,6 +59,11 @@ class ProxyConnection extends EventEmitter {
 
     // if we are waiting for a reconnect.  This is the time of the reconnect
     this.awaitingReconnect = null;
+    // if we are checking the pg instance status.  this is set before awaiting reconnect
+    this.checkingPgInstStatus = false;
+    // should all connection sockets be closed when any connection is closed
+    // set to false to keep client socket alive on server disconnect during reconnect
+    this.autoCloseSockets = true;
 
     // this.targetPort = config.proxy.targetPort;
 
@@ -128,16 +134,21 @@ class ProxyConnection extends EventEmitter {
   }
 
   getConnectionInfo() {
-    let info = {};
+    let info = {
+      session: this.sessionId
+    };
     if( this.clientSocket ) {
-      info.client = this.clientSocket.remoteAddress;
+      info.clientSocket = this.clientSocket.readyState;
     }
     if( this.serverSocket ) {
-      info.server = this.serverSocket.remoteAddress;
+      info.serverSocket = this.serverSocket.readyState;
     }
     if( this.startupProperties ) {
       info.database = this.startupProperties.database;
       info.user = this.startupProperties.user;
+    }
+    if( this.instance ) {
+      info.instance = this.instance.name;
     }
     return info;
   }
@@ -160,7 +171,7 @@ class ProxyConnection extends EventEmitter {
       this.debug('client'+(fromSecureSocket ? '-secure' : ''), data);
 
       // if we are attempting reconnect, just buffer the message
-      if (this.awaitingReconnect || this.handlingJwtAuth) {
+      if (this.awaitingReconnect || this.handlingJwtAuth || this.checkingPgInstStatus ) {
         this.pendingMessages.push(data);
         return;
       }
@@ -191,7 +202,7 @@ class ProxyConnection extends EventEmitter {
             // register the new secure socket with the tcp server
             let sockInfo = this.server.sockets.get(this.clientSocket);
             let sessionId = sockInfo.session;
-            this.server.registerConnection(secureSocket, 'incoming-secure', sessionId);
+            this.server.registerConnection(secureSocket, 'incoming-secure', sessionId, this);
 
             // replace the client socket with the secure socket
             this.clientSocket = secureSocket;
@@ -281,7 +292,6 @@ class ProxyConnection extends EventEmitter {
       try {
         await utils.closeSocket(this.clientSocket);
         logger.info('Client socket closed', this.getConnectionInfo());
-        // this.emitStat('socket-closed', {socket: 'client'});
       } catch(e) {
         logger.error('Error closing client socket', this.getConnectionInfo(), e);
       }
@@ -294,7 +304,6 @@ class ProxyConnection extends EventEmitter {
       try {
         await utils.closeSocket(this.serverSocket);
         logger.info('Server socket closed', this.getConnectionInfo());
-        // this.emitStat('socket-closed', {socket: 'server'});
       } catch(e) {
         logger.error('Error closing server socket', this.getConnectionInfo(), e);
       }
@@ -424,6 +433,7 @@ class ProxyConnection extends EventEmitter {
           }
         }
 
+        // default login flow
         if( this.handlingJwtAuth ) {
           let completed = this.interceptServerAuth(data);
           if( completed ) {
@@ -439,10 +449,10 @@ class ProxyConnection extends EventEmitter {
           let completed = this.interceptServerAuth(data);
           if( completed ) {
             this.awaitingReconnect = null;
-          } else {
-            return;
-          }
-          // if not a password message, just ignore during reconnect
+            this.autoCloseSockets = true;
+          } 
+          // always return, we don't want to send password ok message during reconnect
+          return;
         }
   
         // if not reconnect, just proxy server message to client
@@ -459,7 +469,7 @@ class ProxyConnection extends EventEmitter {
         }
 
         if (this.awaitingReconnect && this.startUpMsg) {
-          logger.info('Resending startup message', this.instance.name, this.instance.port, this.startupProperties.user);
+          logger.info('Resending startup message', this.getConnectionInfo());
           this.serverSocket.write(this.startUpMsg);
         }
 
@@ -474,39 +484,53 @@ class ProxyConnection extends EventEmitter {
         // if we still have a client socket, and the server is unavailable, attempt reconnect
         // which will start the instance
         if ( this.clientSocket?.readyState === 'open' ) {
-          let isAlive = await utils.isAlive(this.instance.hostname, this.instance.port);
-          if( !isAlive ) {
-            this.emitStat('socket-closed', {socket: 'server'});
-            this.serverSocket.destroySoon();
-            this.reconnect();
-            return;
-          }
+          logger.info('Server socket closed with open client, attempting reconnect', this.getConnectionInfo());
+          this.autoCloseSockets = false;
+          this.serverSocket.destroySoon();
+          this.reconnect();
         }
       });
     });
   }
 
-  async reconnect() {
-    if (this.awaitingReconnect) {
+  async reconnect(attemptStart=false) {
+    if (this.awaitingReconnect || this.checkingPgInstStatus ) {
+      return;
+    }
+    this.checkingPgInstStatus = true;
+
+    let instCheck = await instance.getByDatabase(
+      this.startupProperties.database,
+      this.dbOrganization
+    );
+
+    this.checkingPgInstStatus = false;
+
+    if( !this.ALLOWED_INSTANCE_STATES.includes(instCheck.state) ) {
+      logger.warn(`Instance is not in a an allowed state ${instCheck.state}, server connection lost.  Dropping connection`, this.getConnectionInfo());
+      this.autoCloseSockets = true;
+      this.closeSockets();
       return;
     }
 
     this.emitStat('socket-reconnect', 1);
     this.awaitingReconnect = Date.now();
 
-    logger.info('Attempting reconnect', this.instance.name, this.instance.port);
+    logger.info('Attempting reconnect', this.getConnectionInfo());
 
     try {
-      logger.info('Starting instance', this.instance.name);
-      await admin.startInstance(
-        this.startupProperties.database, 
-        this.dbOrganization
-      );
+      if( attemptStart === true ) {
+        logger.info('Starting instance', this.getConnectionInfo());
+        await admin.startInstance(
+          this.startupProperties.database, 
+          this.dbOrganization
+        );
+      }
 
-      logger.info('Waiting for instance tcp port', this.instance.name);
+      logger.info('Waiting for instance tcp port', this.getConnectionInfo());
       await utils.waitUntil(this.instance.hostname, this.instance.port, 20);
     } catch (e) {
-      logger.fatal('Reconnect failed.  Killing client connection', this.instance.name, this.instance.port);
+      logger.fatal('Reconnect failed.  Killing client connection', this.getConnectionInfo());
       if (this.shutdownMsg && this.clientSocket) {
         this.clientSocket.write(this.shutdownMsg);
       }
@@ -516,7 +540,7 @@ class ProxyConnection extends EventEmitter {
       return;
     }
 
-    logger.info('Reconnect server detected, establishing connection', this.instance.name, this.instance.port);
+    logger.info('Reconnect server detected, establishing connection', this.getConnectionInfo());
 
     await this.createServerSocket();
   }
@@ -549,7 +573,7 @@ class ProxyConnection extends EventEmitter {
         logger.info('Pg instance connect authentication ok message received.');
 
         if (this.pendingMessages.length) {
-          logger.info('Sending pending client messages: ', this.pendingMessages.length);
+          logger.info('Sending pending client messages: ', this.pendingMessages.length, this.getConnectionInfo());
           for (let msg of this.pendingMessages) {
             this.serverSocket.write(msg);
           }
@@ -557,14 +581,13 @@ class ProxyConnection extends EventEmitter {
         }
 
         // if we have received any messages from the client while disconnected, send them now
-
-        logger.info('Connected', this.instance.name, this.instance.port);
+        logger.info('Reconnected', this.getConnectionInfo());
         return true;
       }
     }
 
     // possibly a bad login.  But this state needs research
-    logger.info('Proxying server message during connect dance', data[0]);
+    logger.info('Proxying server message during connect dance', data[0], this.getConnectionInfo());
     this.serverSocket.write(data);
 
     return false;
@@ -588,7 +611,7 @@ class ProxyConnection extends EventEmitter {
     offset += 4;
 
     if( len !== data.length ) {
-      logger.warn('Invalid startup message, length does not match message length.');
+      logger.warn(`Invalid startup message, supplied length does not match message length (${len} != ${data.length}).`);
       // TODO
       // throw new Error(`Invalid startup message, length does not match message length.  Closing connection.`);
     }

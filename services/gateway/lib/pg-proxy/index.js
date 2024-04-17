@@ -12,10 +12,10 @@ let server = new PgFarmTcpServer({
     logging: true,
     port: definition.port
   }, 
-  (clientSocket) => {
-    proxyStatus.registerConnection(
-      new ProxyConnection(clientSocket, server)
-    );
+  (clientSocket, sessionId) => {
+    let con = new ProxyConnection(clientSocket, server, sessionId)
+    proxyStatus.registerConnection(con);
+    return con;
   }
 );
 
