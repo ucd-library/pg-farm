@@ -177,95 +177,21 @@ class ProxyConnection extends EventEmitter {
       }
 
       // check for SSL and special auth messages
-      if (!this.startupMessageHandled &&
-        data.length == 8 ) {
-        
-        let code = data.readInt32BE(4);
-
-        if( !this.sslHandled && code === this.SSL_REQUEST ) {
-          logger.info('client handling ssl request', this.getConnectionInfo());
-          this.sslHandled = true;
-
-          if (!config.proxy.tls.enabled) {
-            this.clientSocket.write(Buffer.from('N', 'utf8'));
-          } else {
-            this.clientSocket.write(Buffer.from('S', 'utf8'));
-
-            const secureContext = tls.createSecureContext(tlsOptions);
-            const secureSocket = new tls.TLSSocket(this.clientSocket, { 
-              isServer: true, 
-              secureContext,
-              server: this.server.server
-            });
-            secureSocket.on('data', data => this.onClientSocketData(data, true));
-
-            // register the new secure socket with the tcp server
-            let sockInfo = this.server.sockets.get(this.clientSocket);
-            let sessionId = sockInfo.session;
-            this.server.registerConnection(secureSocket, 'incoming-secure', sessionId, this);
-
-            // replace the client socket with the secure socket
-            this.clientSocket = secureSocket;
-          }
-        } else if (code === this.GSSAPI_REQUEST) {
-          logger.info('responding to gssapi request', this.getConnectionInfo());
-          this.clientSocket.write(this.GSSAPI_RESPONSE);
-        } else {
-          logger.warn('unknown startup message after handling ssl request', {
-            data : data.toString('hex'),
-            length : data.length,
-            payloadLength : data.readInt32BE(0),
-            payload : data.readInt32BE(4)
-          });
-        }
-
+      if (!this.startupMessageHandled && data.length == 8 ) { 
+        this.handlePreStartupMessage(data);
         return;
       }
 
       // first message provides the connection properties
       if ( !this.startupMessageHandled && data.length ) {
-        logger.info('client handling startup message', data.length, this.getConnectionInfo());
-        this.parseStartupMessage(data);
-        logger.info('startup message parsed', this.getConnectionInfo());
-
-        try {
-          // this checks if user has access to database
-          let success = await this.checkUserAccess();
-          if (!success) {
-            logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
-            this.closeSockets();
-            return;
-          }
-
-        } catch (e) {
-          logger.error('Error initializing server socket', this.getConnectionInfo(), e);
-          this.closeSockets();
-          return;
-        }
-
-        // now just proxy messsage
-        logger.info('client startup message parsed', this.getConnectionInfo());
-
-        // if public user, just create a direct connection
-        if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
-          logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
-          await this.createServerSocket(); // this sends startup message on connect
-          return;
-        // if not public user, request password, start jwt/auth intercept
-        } else {
-          this.requestPassword(this.clientSocket);
-          return;
-        }
+        this.handleStartupMessage();
+        return;
       }
 
       // intercept the password message and handle it
       if (data.length && 
           data[0] === this.MESSAGE_CODES.PASSWORD &&
           this.pgFarmUser?.user_type !== 'PUBLIC') {
-
-        this.handlingJwtAuth = true;
-
-        logger.info('client handling jwt auth', this.getConnectionInfo());
         this.handleJwt(data);
         return;
       }
@@ -283,6 +209,89 @@ class ProxyConnection extends EventEmitter {
     } catch(e) {
       logger.error('Error handling client data', this.getConnectionInfo(), e);
       this.closeSockets();
+    }
+  }
+
+  async handleStartupMessage() {
+    logger.info('client handling startup message', data.length, this.getConnectionInfo());
+    this.parseStartupMessage(data);
+    logger.info('startup message parsed', this.getConnectionInfo());
+
+    try {
+      // this checks if user has access to database
+      let success = await this.checkUserAccess();
+      if (!success) {
+        logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
+        this.closeSockets();
+        return;
+      }
+
+    } catch (e) {
+      logger.error('Error initializing server socket', this.getConnectionInfo(), e);
+      this.closeSockets();
+      return;
+    }
+
+    // now just proxy messsage
+    logger.info('client startup message parsed', this.getConnectionInfo());
+
+    // if public user, just create a direct connection
+    if( this.pgFarmUser?.user_type === 'PUBLIC' ) {
+      logger.info(`Public user ${this.startupProperties.user} logging in with a direct proxy of password`, this.getConnectionInfo());
+      await this.createServerSocket(); // this sends startup message on connect
+      return;
+    } 
+
+    // if not public user, request password, start jwt/auth intercept
+    this.requestPassword(this.clientSocket);
+  }
+
+  handlePreStartupMessage(data) {
+    let code = data.readInt32BE(4);
+
+    if( !this.sslHandled && code === this.SSL_REQUEST ) {
+      this.handleSSLRequest();
+      return;
+    }
+    
+    if (code === this.GSSAPI_REQUEST) {
+      logger.info('responding to gssapi request', this.getConnectionInfo());
+      this.clientSocket.write(this.GSSAPI_RESPONSE);
+      return;
+    }
+
+    logger.warn('unknown startup message after handling ssl request', {
+      data : data.toString('hex'),
+      length : data.length,
+      payloadLength : data.readInt32BE(0),
+      payload : data.readInt32BE(4)
+    })
+  }
+
+  handleSSLRequest() {
+    logger.info('client handling ssl request', this.getConnectionInfo());
+    this.sslHandled = true;
+
+    if (!config.proxy.tls.enabled) {
+      this.clientSocket.write(Buffer.from('N', 'utf8'));
+    } else {
+      this.clientSocket.write(Buffer.from('S', 'utf8'));
+
+      const secureContext = tls.createSecureContext(tlsOptions);
+      const secureSocket = new tls.TLSSocket(this.clientSocket, { 
+        isServer: true, 
+        secureContext,
+        server: this.server.server
+      });
+      secureSocket.on('data', data => this.onClientSocketData(data, true));
+
+      // register the new secure socket with the tcp server
+      let sockInfo = this.server.sockets.get(this.clientSocket);
+      let sessionId = sockInfo.session;
+      this.server.registerConnection(secureSocket, 'incoming-secure', sessionId, this);
+
+      // replace the client socket with the secure socket
+      this.clientSocket = secureSocket;
     }
   }
 
@@ -326,7 +335,6 @@ class ProxyConnection extends EventEmitter {
         this.startupProperties.user
       );
     } catch (e) {}
-
 
     let userError = false;
     if( !this.pgFarmUser ) {
@@ -418,79 +426,82 @@ class ProxyConnection extends EventEmitter {
       }
   
       // When the target server sends data, forward it to the client
-      this.serverSocket.on('data', async data => {
-        this.debug('server', data);
+      this.serverSocket.on('data',  data => this._onServerSocketData(data));
   
-        // check for shutdown message can capture
-        // TODO: should we send this if reconnect fails??
-        if (data.length && data[0] === this.MESSAGE_CODES.ERROR) {
-          let error = this.parseError(data);
-          if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
-            this.shutdownMsg = data;
-            logger.info('Ignoring admin shutdown message, reconnect in progress', (this.awaitingReconnect ? true : false));
-            // we will handle later
-            return;
-          }
-        }
-
-        // default login flow
-        if( this.handlingJwtAuth ) {
-          let completed = this.interceptServerAuth(data);
-          if( completed ) {
-            this.handlingJwtAuth = false;
-          } else {
-            return;
-          }
-        }
-  
-        // hijack the authentication ok message and send password to quietly 
-        // reestablish connection
-        if (this.awaitingReconnect) {
-          let completed = this.interceptServerAuth(data);
-          if( completed ) {
-            this.awaitingReconnect = null;
-            this.autoCloseSockets = true;
-          } 
-          // always return, we don't want to send password ok message during reconnect
-          return;
-        }
-  
-        // if not reconnect, just proxy server message to client
-        this.clientSocket.write(data);
-      });
-  
-      this.serverSocket.on('connect', () => {
-        logger.info('Server socket connected', this.getConnectionInfo());
-
-        if( !this.startUpMsgSent && this.startUpMsg  ) {
-          logger.info('Sending startup message', this.getConnectionInfo());
-          this.serverSocket.write(this.startUpMsg);
-          this.startUpMsgSent = true;
-        }
-
-        if (this.awaitingReconnect && this.startUpMsg) {
-          logger.info('Resending startup message', this.getConnectionInfo());
-          this.serverSocket.write(this.startUpMsg);
-        }
-
-        resolve();
-      });
-  
+      this.serverSocket.on('connect', () => this._onServerSocketConnect(resolve));
   
       // Handle target socket closure
-      this.serverSocket.on('close', async () => {
-        // logger.info('Server socket end event', this.getConnectionInfo());
-  
-        // if we still have a client socket, and the server is unavailable, attempt reconnect
-        // which will start the instance
-        if ( this.clientSocket?.readyState === 'open' ) {
-          logger.info('Server socket closed with open client, attempting reconnect', this.getConnectionInfo());
-          this.autoCloseSockets = false;
-          this.serverSocket.destroySoon();
-          this.reconnect();
-        }
-      });
+      this.serverSocket.on('close', () => this._onServerSocketClose());
     });
+  }
+
+  _onServerSocketData(data) {
+    this.debug('server', data);
+
+    // check for shutdown message can capture
+    // TODO: should we send this if reconnect fails??
+    if (data.length && data[0] === this.MESSAGE_CODES.ERROR) {
+      let error = this.parseError(data);
+      if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
+        this.shutdownMsg = data;
+        logger.info('Shutdown message received ignoring for now', this.getConnectionInfo());
+        // we will handle later
+        return;
+      }
+    }
+
+    // default login flow
+    if( this.handlingJwtAuth ) {
+      let completed = this.interceptServerAuth(data);
+      if( completed ) {
+        this.handlingJwtAuth = false;
+      } else {
+        return;
+      }
+    }
+
+    // hijack the authentication ok message and send password to quietly 
+    // reestablish connection
+    if (this.awaitingReconnect) {
+      let completed = this.interceptServerAuth(data);
+      if( completed ) {
+        this.awaitingReconnect = null;
+        this.autoCloseSockets = true;
+      } 
+      // always return, we don't want to send password ok message during reconnect
+      return;
+    }
+
+    // if not reconnect, just proxy server message to client
+    this.clientSocket.write(data);
+  }
+
+  _onServerSocketConnect(resolve) {
+    logger.info('Server socket connected', this.getConnectionInfo());
+
+    if( !this.startUpMsgSent && this.startUpMsg  ) {
+      logger.info('Sending startup message', this.getConnectionInfo());
+      this.serverSocket.write(this.startUpMsg);
+      this.startUpMsgSent = true;
+    }
+
+    if (this.awaitingReconnect && this.startUpMsg) {
+      logger.info('Resending startup message', this.getConnectionInfo());
+      this.serverSocket.write(this.startUpMsg);
+    }
+
+    resolve();
+  }
+
+  _onServerSocketClose() {
+    // if we still have a client socket, and the server is unavailable, attempt reconnect
+    // which will start the instance
+    if ( this.clientSocket?.readyState === 'open' ) {
+      logger.info('Server socket closed with open client, attempting reconnect', this.getConnectionInfo());
+      this.autoCloseSockets = false;
+      this.serverSocket.destroySoon();
+      this.reconnect();
+    }
   }
 
   async reconnect(attemptStart=false) {
@@ -509,6 +520,13 @@ class ProxyConnection extends EventEmitter {
     if( !this.ALLOWED_INSTANCE_STATES.includes(instCheck.state) ) {
       logger.warn(`Instance is not in a an allowed state ${instCheck.state}, server connection lost.  Dropping connection`, this.getConnectionInfo());
       this.autoCloseSockets = true;
+
+      // if we have a shutdown message, send it
+      if (this.shutdownMsg && this.clientSocket) {
+        this.clientSocket.write(this.shutdownMsg);
+      }
+      await utils.sleep(100);
+
       this.closeSockets();
       return;
     }
@@ -564,13 +582,13 @@ class ProxyConnection extends EventEmitter {
 
       // pg is asking for a password during reconnect
       if (type === this.AUTHENTICATION_CODE.CLEARTEXT_PASSWORD) {
-        logger.info('Sending pg instance connect user password');
+        logger.info('Sending pg instance connect user password', this.getConnectionInfo());
         this.sendUserPassword();
         return false;
 
         // pg is acknowledging the password on reconnects
       } else if (type === this.AUTHENTICATION_CODE.OK) {
-        logger.info('Pg instance connect authentication ok message received.');
+        logger.info('Pg instance connect authentication ok message received.', this.getConnectionInfo());
 
         if (this.pendingMessages.length) {
           logger.info('Sending pending client messages: ', this.pendingMessages.length, this.getConnectionInfo());
@@ -709,6 +727,9 @@ class ProxyConnection extends EventEmitter {
    * @returns {Promise} 
    */
   async handleJwt(data) {
+    logger.info('client handling jwt auth', this.getConnectionInfo());
+
+    this.handlingJwtAuth = true;
 
     let offset = 1;
     // TODO; make sure the buffer is the same length as the message
