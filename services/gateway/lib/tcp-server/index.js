@@ -4,6 +4,11 @@ import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
 import {v4 as uui4} from 'uuid';
 
+/**
+ * @class PgFarmTcpServer
+ * @description TCP server that listens for incoming connections and starts a new
+ * proxy connection.  Monitors the connections and handles disconnects.
+ **/
 class PgFarmTcpServer {
   constructor(opts, onConnection) {
     this.opts = opts;
@@ -12,6 +17,7 @@ class PgFarmTcpServer {
       logging: opts.logging
     });
 
+    // register a callback to be called when a new connection is made
     if( onConnection ) {
       this.onConnection = onConnection.bind(this);
     }
@@ -26,10 +32,20 @@ class PgFarmTcpServer {
     this.sessions = new Map();
   }
 
+  /**
+   * @method getSessionId
+   * @description Generate a unique session id
+   * 
+   * @returns {string}
+   **/
   getSessionId() {
     return uui4().split('-').pop();
   }
 
+  /**
+   * @method start
+   * @description Start the tcp server and listen for incoming connections
+   */
   start() {
     this.server = net.createServer(socket => this._onIncomingConnection(socket));
     
@@ -41,6 +57,17 @@ class PgFarmTcpServer {
     });
   }
 
+  /**
+   * @method createProxyConnection
+   * @description Create a tcp connection to the specified host and port.  register the connection
+   * and return the socket
+   * 
+   * @param {String} host hostname to connect to
+   * @param {Number} port port to connect to
+   * @param {net.Socket} incomingSocket incoming socket that is being proxied
+   * 
+   * @returns {net.Socket}
+   **/
   createProxyConnection(host, port, incomingSocket) {
     let socketInfo = this.sockets.get(incomingSocket);
     if( !socketInfo ) {
@@ -50,10 +77,14 @@ class PgFarmTcpServer {
 
     let sessionId = socketInfo.session;
 
+    // create the new outgoing tcp socket
     const socket = net.createConnection({ 
       host, port
     });
+
+    // register the socket with the current proxy session
     this.registerConnection(socket, 'outgoing', sessionId);
+
     return socket;
   }
 
@@ -61,6 +92,19 @@ class PgFarmTcpServer {
     this.metrics.setSocketProperties(socket, props);
   }
 
+  /**
+   * @method registerConnection
+   * @description Register a connection with the server.  Creates a lookup for the socket
+   * based on the session id.  Listens for close events on the socket and disconnects all
+   * other sockets associated with the session id on close.  Additionally handles
+   * timeout events on the socket which should cause a disconnect of all sockets (dont want 
+   * these to hang)
+   * 
+   * @param {net.Socket} socket socket to register
+   * @param {String} type incoming or outgoing
+   * @param {String} session session id
+   * @param {Object} pgConnection ProxyConnection instance
+   **/
   registerConnection(socket, type, session, pgConnection=null) {
     if( this.sockets.has(socket) ) {
       logger.error('Socket already registered',  type, session);
@@ -82,24 +126,29 @@ class PgFarmTcpServer {
       setTimeout(() => {
         this.sockets.delete(socket);
 
+        // find the socket by session and remove it
         let {sockets, pgConnection} = this.sessions.get(session);
         let index = sockets.indexOf(socket);
         if( index > -1 ) sockets.splice(index, 1);
 
+        // if there are no more sockets for the session, remove the session
         if( sockets.length === 0 ) {
           this.sessions.delete(session);
         } else {
           this.sessions.set(session, {sockets, pgConnection});
         }
 
+        // remove all event listeners and destroy the socket
         socket.removeAllListeners();
         socket.destroySoon();
 
+        // if autoCloseSockets is false, do not close other sockets
         if( !pgConnection.autoCloseSockets ) {
           logger.info('autoCloseSockets set to false, not closing other sockets for session', session);
           return;
         }
 
+        // close all other sockets for the session
         logger.info('Closing all sockets for session', session);
         for( let s of sockets ) {
           s.destroySoon();
@@ -108,6 +157,7 @@ class PgFarmTcpServer {
       
     });
 
+    // listen for timeout events and handle
     socket.on('timeout', () => {
       utils.closeSocket(socket)
         .then(() => logger.info('Closed socket successfully'))
@@ -115,6 +165,14 @@ class PgFarmTcpServer {
     });
   }
 
+  /**
+   * @method _onIncomingConnection
+   * @description Handle incoming connections to tcp server.  Register the 
+   * connection and call the onConnection which should return a ProxyConnection
+   * instance.  
+   * 
+   * @param {net.Socket} socket incoming tcp socket
+   **/
   _onIncomingConnection(socket) {
     let pgFarmSession = this.getSessionId();
     

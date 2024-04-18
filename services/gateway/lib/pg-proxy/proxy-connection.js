@@ -17,6 +17,13 @@ if( config.proxy.tls.key &&
   tlsOptions.cert = fs.readFileSync(config.proxy.tls.cert);
 }
 
+/**
+ * @class ProxyConnection
+ * @description handles the tcp socket connections between the client and the proxy as 
+ * well as the proxy and the postgres server.  This class handles the pg wire protocol 
+ * messages and the authentication flow between the client and the server for jwt authentication as
+ * well as silent reconnects of a server pod is rebalanced or restarted in Kubernetes.
+ */
 class ProxyConnection extends EventEmitter {
 
   /**
@@ -25,13 +32,15 @@ class ProxyConnection extends EventEmitter {
    * 
    * @param {Socket} clientSocket incoming client socket
    * @param {PgFarmTcpServer} server tcp server
+   * @param {String} sessionId unique session id created by the server
    */
   constructor(clientSocket, server, sessionId) {
     super();
 
     this.sessionId = sessionId;
     this.clientSocket = clientSocket;
-    this.serverSocket = null;
+    // created after startup message and successful user auth
+    this.serverSocket = null; 
     this.server = server;
 
     // have we sent the clients startup message
@@ -44,14 +53,14 @@ class ProxyConnection extends EventEmitter {
     // via the password stored in the pg farm database
     this.handlingJwtAuth = false;
 
-    // for replaying startup message on reconnect
+    // user information from pg farm database
     this.pgFarmUser = null;
 
-    // original startup message
+    // original startup message for replaying startup message on reconnect
     this.startUpMsg = null;
     this.startUpMsgSent = false;
 
-    // captured shutdown message.  Used for silently reconnecting
+    // captured shutdown message.  Used if reconnect fails or server is put to sleep or archived
     this.shutdownMsg = null;
 
     // pending messages while reconnecting
@@ -65,7 +74,6 @@ class ProxyConnection extends EventEmitter {
     // set to false to keep client socket alive on server disconnect during reconnect
     this.autoCloseSockets = true;
 
-    // this.targetPort = config.proxy.targetPort;
 
     this.SSL_REQUEST = 0x04D2162F;
     this.GSSAPI_REQUEST = 0x04D21630;
@@ -133,6 +141,12 @@ class ProxyConnection extends EventEmitter {
     this.init();
   }
 
+  /**
+   * @method getConnectionInfo
+   * @description get connection information for logging
+   * 
+   * @returns {Object}
+   **/
   getConnectionInfo() {
     let info = {
       session: this.sessionId
@@ -166,6 +180,13 @@ class ProxyConnection extends EventEmitter {
     this.clientSocket.on('data', data => this.onClientSocketData(data));
   }
 
+  /**
+   * @method onClientSocketData
+   * @description handle the data from the client socket.
+   * 
+   * @param {Buffer} data binary data from the tcp client socket
+   * @param {Boolean} fromSecureSocket if the data is from a secure TLS socket
+   **/
   async onClientSocketData(data, fromSecureSocket = false) {
     try {
       this.debug('client'+(fromSecureSocket ? '-secure' : ''), data);
@@ -182,7 +203,7 @@ class ProxyConnection extends EventEmitter {
         return;
       }
 
-      // first message provides the connection properties
+      // check first message, provides the connection properties
       if ( !this.startupMessageHandled && data.length ) {
         this.handleStartupMessage();
         return;
@@ -212,27 +233,36 @@ class ProxyConnection extends EventEmitter {
     }
   }
 
+  /**
+   * @method handleStartupMessage
+   * @description handle the startup message from the pg client.
+   * This message provides the connection properties such as user and database.
+   **/
   async handleStartupMessage() {
-    logger.info('client handling startup message', data.length, this.getConnectionInfo());
+    logger.info('client handling startup message', data.length, this.getConnectionInfo())
+  
+
     this.parseStartupMessage(data);
     logger.info('startup message parsed', this.getConnectionInfo());
 
     try {
       // this checks if user has access to database
       let success = await this.checkUserAccess();
+
+      // if user has no access, close connection
       if (!success) {
         logger.info('invalid user access or database is in archived state, closing connection', this.getConnectionInfo());
         this.closeSockets();
         return;
       }
 
+    // general error handling for user auth
     } catch (e) {
-      logger.error('Error initializing server socket', this.getConnectionInfo(), e);
+      logger.error('Error checking user access to database', this.getConnectionInfo(), e);
       this.closeSockets();
       return;
     }
 
-    // now just proxy messsage
     logger.info('client startup message parsed', this.getConnectionInfo());
 
     // if public user, just create a direct connection
@@ -242,24 +272,41 @@ class ProxyConnection extends EventEmitter {
       return;
     } 
 
-    // if not public user, request password, start jwt/auth intercept
+    // if not public user, request 'password' ie jwt token
+    // start jwt/auth intercept routine
     this.requestPassword(this.clientSocket);
   }
 
+  /**
+   * @method handlePreStartupMessage
+   * @description handle the pre startup message.  Some pg wire protocol
+   * messages are sent before the startup message without a message type.
+   * This method handles those messages.
+   * 
+   * if part of the pg client connection is breaking, this is a good place
+   * to check if there is part of the protocol that has been missed.
+   * 
+   * @param {Buffer} data binary data from the tcp client socket
+   **/
   handlePreStartupMessage(data) {
     let code = data.readInt32BE(4);
 
+    // check for ssl request code
     if( !this.sslHandled && code === this.SSL_REQUEST ) {
       this.handleSSLRequest();
       return;
     }
     
+    // check for gssapi request code
+    // this is not well documented in the docs.  This response message
+    // was reverse engineered by inspecting the pg wire protocol between an active server
     if (code === this.GSSAPI_REQUEST) {
       logger.info('responding to gssapi request', this.getConnectionInfo());
       this.clientSocket.write(this.GSSAPI_RESPONSE);
       return;
     }
 
+    // if we don't know the message, log it for debuggin
     logger.warn('unknown startup message after handling ssl request', {
       data : data.toString('hex'),
       length : data.length,
@@ -268,21 +315,33 @@ class ProxyConnection extends EventEmitter {
     })
   }
 
+  /**
+   * @method handleSSLRequest
+   * @description handle the ssl request from the client.  This method checks that TLS
+   * has been enabled in the config and responds to the client with the appropriate
+   * message. If TLS is enabled, the client socket is upgraded to a secure socket,
+   * the secure socket is registered, the clientSocket is replaced with the secure socket.
+   **/
   handleSSLRequest() {
     logger.info('client handling ssl request', this.getConnectionInfo());
     this.sslHandled = true;
 
     if (!config.proxy.tls.enabled) {
+      // if tls is not enabled, respond with 'N' to indicate no ssl available
       this.clientSocket.write(Buffer.from('N', 'utf8'));
     } else {
+      // if tls is enabled, respond with 'S' to indicate ssl is available
       this.clientSocket.write(Buffer.from('S', 'utf8'));
 
+      // upgrade the client socket to a secure socket
       const secureContext = tls.createSecureContext(tlsOptions);
       const secureSocket = new tls.TLSSocket(this.clientSocket, { 
         isServer: true, 
         secureContext,
         server: this.server.server
       });
+
+      // handle secure socket data
       secureSocket.on('data', data => this.onClientSocketData(data, true));
 
       // register the new secure socket with the tcp server
@@ -295,6 +354,13 @@ class ProxyConnection extends EventEmitter {
     }
   }
 
+  /**
+   * @method closeSockets
+   * @description close the client and server sockets.  Most of the time this is handled
+   * by the underlying tcp server, but this method is available to close the sockets manually
+   * if needed.
+   * 
+   **/
   async closeSockets() {
     if( this.clientSocket && !this.closingClientSocket ) {
       this.closingClientSocket = true;
@@ -321,6 +387,15 @@ class ProxyConnection extends EventEmitter {
     }
   }
 
+  /**
+   * @method checkUserAccess
+   * @description check if the user has access to the database.  This method
+   * checks if the user is registered with the pg farm database and that the
+   * database is in a running state.  Standard pg wire protocol error messages
+   * are sent to the client if the user does not have access.
+   * 
+   * @returns {Boolean} true if the user has access to the database
+   **/
   async checkUserAccess() {
     if (!this.startupProperties) return false;
     if (!this.startupProperties.database) return false;
@@ -380,11 +455,14 @@ class ProxyConnection extends EventEmitter {
 
       logger.info('Creating server socket', this.getConnectionInfo());
 
+      // get the instance information from the database/organization
       this.instance = await instance.getByDatabase(
         this.startupProperties.database,
         this.dbOrganization
       );
   
+      // this clients seem to be upset if you send a notice message when they don't expect it :(
+      // Leaving as a TODO.  but this might not be possible.
       // if( this.instance.state !== 'RUNNING' || true ) {
       //   let orgText = this.dbOrganization ? this.dbOrganization + '/' : '';
       //   this.sendNotice(
@@ -397,12 +475,14 @@ class ProxyConnection extends EventEmitter {
       //   );
       // }
   
+      // ensure the instance is running
       let startTime = Date.now();
       let started = await admin.startInstance(
         this.startupProperties.database, 
         this.dbOrganization
       );
   
+      // log stats if we started the instance
       if( started === true ) {
         this.emitStat('instance-start', {
           database: this.instance.name,
@@ -419,6 +499,7 @@ class ProxyConnection extends EventEmitter {
         this.clientSocket
       );
 
+      // badness
       if( !this.serverSocket ) {
         logger.error('Error creating server socket', this.getConnectionInfo());
         this.closeSockets();
@@ -428,6 +509,7 @@ class ProxyConnection extends EventEmitter {
       // When the target server sends data, forward it to the client
       this.serverSocket.on('data',  data => this._onServerSocketData(data));
   
+      // Handle target socket connection, this resolves the wrapper promise once completed
       this.serverSocket.on('connect', () => this._onServerSocketConnect(resolve));
   
       // Handle target socket closure
@@ -435,6 +517,12 @@ class ProxyConnection extends EventEmitter {
     });
   }
 
+  /**
+   * @method _onServerSocketData
+   * @description handle the data from the server (pg) socket
+   * 
+   * @param {Buffer} data binary data from the tcp server socket
+   **/
   _onServerSocketData(data) {
     this.debug('server', data);
 
@@ -442,10 +530,11 @@ class ProxyConnection extends EventEmitter {
     // TODO: should we send this if reconnect fails??
     if (data.length && data[0] === this.MESSAGE_CODES.ERROR) {
       let error = this.parseError(data);
+
+      // if we have a shutdown message, capture it possible use later
       if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
         this.shutdownMsg = data;
         logger.info('Shutdown message received ignoring for now', this.getConnectionInfo());
-        // we will handle later
         return;
       }
     }
@@ -476,6 +565,13 @@ class ProxyConnection extends EventEmitter {
     this.clientSocket.write(data);
   }
 
+  /**
+   * @method _onServerSocketConnect
+   * @description handle the server socket connection event.  This method
+   * sends the startup message to the server once the connection is established.
+   * 
+   * @param {Function} resolve resolve function for the promise passed from createServerSocket
+   */
   _onServerSocketConnect(resolve) {
     logger.info('Server socket connected', this.getConnectionInfo());
 
@@ -493,6 +589,11 @@ class ProxyConnection extends EventEmitter {
     resolve();
   }
 
+  /**
+   * @method _onServerSocketClose
+   * @description handle the server socket close event.  This checks if the client 
+   * socket is still open and if so, attempts a reconnect to the server.
+   **/
   _onServerSocketClose() {
     // if we still have a client socket, and the server is unavailable, attempt reconnect
     // which will start the instance
@@ -504,12 +605,25 @@ class ProxyConnection extends EventEmitter {
     }
   }
 
+  /**
+   * @method reconnect
+   * @description attempt to reconnect to the server.  Checks the status of the instance
+   * is still in a RUN state.  This means the instance, while down, is probably just
+   * being rebalanced to a new node or restarted.  Wait for the instance to come back
+   * online and then attempt a silent reconnect.
+   * 
+   * @param {Boolean} attemptStart if true, attempt to start the instance
+   **/
   async reconnect(attemptStart=false) {
     if (this.awaitingReconnect || this.checkingPgInstStatus ) {
       return;
     }
+
+    // if we are already checking the instance status, don't start another check
+    // this flag will start the caching of any client messages while we wait
     this.checkingPgInstStatus = true;
 
+    // grab the current instance status from the pg farm admin database
     let instCheck = await instance.getByDatabase(
       this.startupProperties.database,
       this.dbOrganization
@@ -517,7 +631,9 @@ class ProxyConnection extends EventEmitter {
 
     this.checkingPgInstStatus = false;
 
-    if( !this.ALLOWED_INSTANCE_STATES.includes(instCheck.state) ) {
+    // if the instance is not in a run state, close the connection sending
+    // a shutdown message if available
+    if( instCheck.state != 'RUN' ) {
       logger.warn(`Instance is not in a an allowed state ${instCheck.state}, server connection lost.  Dropping connection`, this.getConnectionInfo());
       this.autoCloseSockets = true;
 
@@ -537,6 +653,7 @@ class ProxyConnection extends EventEmitter {
     logger.info('Attempting reconnect', this.getConnectionInfo());
 
     try {
+      // if we are attempting to start the instance, do so now
       if( attemptStart === true ) {
         logger.info('Starting instance', this.getConnectionInfo());
         await admin.startInstance(
@@ -545,9 +662,12 @@ class ProxyConnection extends EventEmitter {
         );
       }
 
+      // wait for the instance to come back online, max 20 attempts at 2.5 seconds intervals
       logger.info('Waiting for instance tcp port', this.getConnectionInfo());
       await utils.waitUntil(this.instance.hostname, this.instance.port, 20);
     } catch (e) {
+
+      // if we can't connect to the instance, close the connection
       logger.fatal('Reconnect failed.  Killing client connection', this.getConnectionInfo());
       if (this.shutdownMsg && this.clientSocket) {
         this.clientSocket.write(this.shutdownMsg);
@@ -560,6 +680,7 @@ class ProxyConnection extends EventEmitter {
 
     logger.info('Reconnect server detected, establishing connection', this.getConnectionInfo());
 
+    // the instance is back online, attempt to standard connection
     await this.createServerSocket();
   }
 
@@ -630,8 +751,7 @@ class ProxyConnection extends EventEmitter {
 
     if( len !== data.length ) {
       logger.warn(`Invalid startup message, supplied length does not match message length (${len} != ${data.length}).`);
-      // TODO
-      // throw new Error(`Invalid startup message, length does not match message length.  Closing connection.`);
+      throw new Error(`Invalid startup message, length does not match message length.  Closing connection.`);
     }
 
     this.version = data.readInt32BE(offset);
@@ -675,6 +795,7 @@ class ProxyConnection extends EventEmitter {
       this.startupMessageHandled = true;
     }
 
+    // check for organization in database name
     if( startupProperties.database && startupProperties.database.match('/') ) {
       let parts = startupProperties.database.split('/');
       this.dbOrganization = parts[0];
@@ -685,7 +806,7 @@ class ProxyConnection extends EventEmitter {
 
     this.startupProperties = startupProperties;
 
-    // now create new startup message, with organization remove from database
+    // now create new startup message, with organization remove from database name
     offset = 0;
 
     // set version
@@ -723,7 +844,8 @@ class ProxyConnection extends EventEmitter {
    * the password, which should be jwt token, from the message and 
    * verifies it with keycloak.
    * 
-   * @param {*} data 
+   * @param {Buffer} data tcp message from client
+   * 
    * @returns {Promise} 
    */
   async handleJwt(data) {
@@ -771,11 +893,15 @@ class ProxyConnection extends EventEmitter {
     }
 
     this.jwtUsername = this.parsedJwt.user.username || this.parsedJwt.user.preferred_username;
+
+    // create a set of roles from the jwt token
     let roles = new Set();
     (this.parsedJwt.roles || []).forEach(role => roles.add(role));
     (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
 
     let userType = this.pgFarmUser.user_type;
+
+    // if the user is an admin and the request login user is postgres, allow the connection if so below
     let isAdminAndPGuser = (
       (userType === 'ADMIN' || roles.has('admin')) &&
       this.startupProperties.user === 'postgres'
@@ -794,6 +920,7 @@ class ProxyConnection extends EventEmitter {
       return;
     }
 
+    // now that we have authenticated the user, open real connection to the server
     await this.createServerSocket();
   }
 
@@ -804,7 +931,7 @@ class ProxyConnection extends EventEmitter {
    * @returns {Promise}
    */
   async sendUserPassword() {
-    logger.info('Sending user pgfarm password', this.startupProperties.user, 'to pg instance', this.instance.name);
+    logger.info('Sending user pgfarm password to pg instance', this.getConnectionInfo());
     let password = config.proxy.password.static;
     if (config.proxy.password.type === 'pg') {
       password = this.pgFarmUser.password;
@@ -850,6 +977,8 @@ class ProxyConnection extends EventEmitter {
    * @method sendNotice
    * @description send a notice or error message on a socket in the pg wire format
    * depending on the severity of the message.
+   * 
+   * https://www.postgresql.org/docs/current/protocol-error-fields.html
    * 
    * @param {String} severity 
    * @param {String} code 
@@ -924,7 +1053,7 @@ class ProxyConnection extends EventEmitter {
    * @method parseError
    * @description parse an pg wire format error message
    * 
-   * @param {Buffer} data
+   * @param {Buffer} data binary data from the tcp server socket
    *  
    * @returns {Object}
    */
@@ -1002,6 +1131,10 @@ class ProxyConnection extends EventEmitter {
     }
   }
 
+  /**
+   * @method emitStat
+   * @description emit a stat event for metrics collection
+   **/
   emitStat(type, data) {
     this.emit('stat', {
       type,
