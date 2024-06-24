@@ -129,7 +129,7 @@ router.get('/:organization/:database/init', keycloak.protect('admin'), async (re
     let inst = await instance.getByDatabase(dbName, organization);
     await instance.initInstanceDb(inst.instance_id, organization);
     await database.ensurePgDatabase(inst.name, organization, dbName);
-    await pgRest.initDb(inst.instance_id, organization);
+    await pgRest.initDb(dbName, inst.instance_id, organization);
 
     res.status(200).json({success: true});
   } catch(e) {

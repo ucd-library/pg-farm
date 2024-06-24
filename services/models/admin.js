@@ -110,7 +110,7 @@ class AdminModel {
     }
 
     // initialize the database for PostgREST roles and schem
-    await this.models.pgRest.initDb(instance.name, opts.organization);
+    await this.models.pgRest.initDb(database.database_name, instance.name, opts.organization);
 
     // start pg rest once instance is running
     await this.models.pgRest.start(database.database_name, opts.organization);

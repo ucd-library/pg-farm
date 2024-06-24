@@ -40,13 +40,14 @@ server-port = ${config.pgRest.port}`
    * @method initDb
    * @description Initialize the database for PostgREST roles and schema
    * 
+   * @param {String} dbNameOrId
    * @param {String} instNameOrId 
    * @param {String} orgNameOrId
    * 
    * @returns {Promise}
    */
-  async initDb(instNameOrId, orgNameOrId=null) {
-    let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
+  async initDb(dbNameOrId, instNameOrId, orgNameOrId=null) {
+    let con = await this.models.instance.getConnection(dbNameOrId, instNameOrId, orgNameOrId);
 
     // add authenticator user
     logger.info('Ensuring authenticator user: '+config.pgRest.authenticator.username+' on instance: '+instNameOrId+' for organization: '+orgNameOrId)
