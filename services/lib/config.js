@@ -78,6 +78,10 @@ const config = {
     https : {
       port : 443,
       certFolder : env.GATEWAY_HTTPS_CERT_FOLDER || '/etc/pgfarm/certs'
+    },
+    cidrDeny : {
+      enabled : env.GATEWAY_CIDR_DENY_ENABLED === 'true',
+      listFile : env.GATEWAY_CIDR_DENY_LIST_FILE || '/etc/pgfarm/cidr-deny-list.txt',
     }
   },
 

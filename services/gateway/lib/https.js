@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
+import cidrDeny from './cidr-deny.js';
 
 let defaultKey, defaultCert;
 
@@ -62,6 +63,10 @@ function start() {
   }
 
   const app = express();
+  app.set('trust proxy', 1);
+
+  config.gateway.cidrDeny.logger = logger;
+  app.use(cidrDeny(config.gateway.cidrDeny));
 
   const certOpts = {
     SNICallback: (domain, cb) => {
