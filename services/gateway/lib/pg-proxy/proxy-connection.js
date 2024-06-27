@@ -205,7 +205,7 @@ class ProxyConnection extends EventEmitter {
 
       // check first message, provides the connection properties
       if ( !this.startupMessageHandled && data.length ) {
-        this.handleStartupMessage();
+        this.handleStartupMessage(data);
         return;
       }
 
@@ -238,7 +238,7 @@ class ProxyConnection extends EventEmitter {
    * @description handle the startup message from the pg client.
    * This message provides the connection properties such as user and database.
    **/
-  async handleStartupMessage() {
+  async handleStartupMessage(data) {
     logger.info('client handling startup message', data.length, this.getConnectionInfo())
   
 

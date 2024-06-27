@@ -16,7 +16,7 @@ spec:
       - name: pgrest
         image: 
         command: ["/services/pg-rest/run.sh"]
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: PGREST_DATABASE_NAME
           value: 

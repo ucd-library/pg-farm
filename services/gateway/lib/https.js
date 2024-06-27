@@ -63,10 +63,10 @@ function start() {
   }
 
   const app = express();
-  app.set('trust proxy', 1);
+  // app.set('trust proxy', 1);
 
-  config.gateway.cidrDeny.logger = logger;
-  app.use(cidrDeny(config.gateway.cidrDeny));
+  // config.gateway.cidrDeny.logger = logger;
+  // app.use(cidrDeny(config.gateway.cidrDeny));
 
   const certOpts = {
     SNICallback: (domain, cb) => {

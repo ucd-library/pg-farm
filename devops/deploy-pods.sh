@@ -6,6 +6,8 @@ cd $ROOT_DIR
 
 YAML_DIR=$ROOT_DIR/k8s
 
+./setup-kubectl.sh
+
 ./generate-deployment-files.sh
 
 kubectl apply -f $YAML_DIR/admin-db-statefulset.yaml
