@@ -1,0 +1,12 @@
+{
+  "name": "UC Davis Library - PG Farm",
+  "short_name": "PG Farm",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#002655",
+  "background_color": "#FFFFFF",
+  "description": "UC Davis research databases.",
+  "icons": [
+
+  ]
+}

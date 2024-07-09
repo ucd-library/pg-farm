@@ -58,7 +58,8 @@ const config = {
 
   client : {
     env : clientEnv,
-    assets : (clientEnv === 'prod') ? 'dist' : 'public',
+    port : parseInt(env.CLIENT_PORT || 3000),
+    assets : (clientEnv === 'prod') ? 'dist' : 'dev',
     title : 'PG Farm',
     appRoutes : ['search', 'db'],
     staticAssetsBaseUrl : env.CLIENT_STATIC_ASSETS_BASE_URL || 'https://storage.googleapis.com/application-static-assets',
@@ -70,7 +71,7 @@ const config = {
       port : env.GATEWAY_PG_PROXY_PORT || 5432
     },
     http : {
-      targetHost : env.GATEWAY_HTTP_PROXY_TARGET_HOST || 'admin',
+      targetHost : env.GATEWAY_HTTP_PROXY_TARGET_HOST || 'client',
       targetPort : env.GATEWAY_HTTP_PROXY_TARGET_PORT || 3000,
       enabled : env.GATEWAY_HTTP_ENABLED === 'true',
       port : 80
@@ -117,6 +118,11 @@ const config = {
     platform : 'gke',
     cluster : env.K8S_CLUSTER || 'pgfarm',
     region : env.K8S_REGION || 'us-central1-c',
+  },
+
+  admin : {
+    host : env.ADMIN_HOST || 'admin',
+    port : env.ADMIN_PORT || 3000
   },
   
   adminDb : {

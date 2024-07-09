@@ -148,6 +148,25 @@ class Instances {
     console.log(`Started instance restore: ${instance}`);
   }
 
+  async resize(instance, size) {
+    instance = formatInstName(instance);
+
+    let params = new URLSearchParams({size});
+
+    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/resize?${params}`, {
+      method: 'POST',
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to resize instance', await resp.text());
+      return;
+    }
+
+    console.log(`Started instance resize: ${instance}`);
+    console.log(resp.body);
+  }
+
   async syncUsers(instance) {
     instance = formatInstName(instance);
     let resp = await fetch(`${config.host}/api/admin/instance/${instance}/sync-users`, {

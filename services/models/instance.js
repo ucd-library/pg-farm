@@ -279,7 +279,7 @@ class Instance {
     logger.info('Apply k8s config for instance', instNameOrId, orgNameOrId);
 
     let instance = await this.get(instNameOrId, orgNameOrId);
-    let customProps = await client.getInstanceConfig(instNameOrId);
+    let customProps = await client.getInstanceConfig(instNameOrId, orgNameOrId);
     let instanceImage = customProps.image || config.pgInstance.image;
 
     let hostname = instance.hostname;
@@ -291,6 +291,10 @@ class Instance {
     let spec = k8sConfig.spec;
     spec.selector.matchLabels.app = hostname;
     spec.serviceName = hostname;
+
+    if( customProps.volumeSize ) {
+      spec.volumeClaimTemplates[0].spec.resources.requests.storage = customProps.volumeSize;
+    }
 
     let template = spec.template;
     template.metadata.labels.app = hostname;
@@ -435,6 +439,36 @@ class Instance {
     logger.info(`Rpc request to resync users for instance ${instance.hostname}`);
     
     return remoteExec(instance.hostname, '/sync-users');
+  }
+
+  async resizeVolume(instNameOrId, orgNameOrId, size) {
+    let customProps = await client.getInstanceConfig(instNameOrId, orgNameOrId);
+    
+    // convert size to Gi
+    if( typeof size === 'number' ) {
+      size = size+'Gi';
+    } else {
+      size = size.replace(/[^0-9]/g, '')+'Gi';
+    }
+
+    let intOrgSize = parseInt(customProps.volumeSize || 5);
+    let intNewSize = parseInt(size);
+    if( intNewSize < intOrgSize ) {
+      throw new Error('New volume size must be greater than current size');
+    }
+
+    await client.setInstanceConfig(instNameOrId, orgNameOrId, 'volumeSize', size);
+
+    let instance = await this.get(instNameOrId, orgNameOrId);
+    let pvcName = instance.hostname+'-ps-'+instance.hostname+'-0';
+
+    let currentConfig = await kubectl.get('pvc', pvcName);
+    currentConfig.spec.resources.requests.storage = size;
+
+    await kubectl.apply(currentConfig, {
+      stdin: true,
+      isJson: true
+    });
   }
 
 }

@@ -11,7 +11,11 @@
     "administration": "node administration/src/index.js",
     "gateway": "node gateway/index.js",
     "pg-helper": "node pg-helpers/index.js",
-    "health-probe": "node health-probe/index.js"
+    "health-probe": "node health-probe/index.js",
+    "client": "node client/index.js",
+    "client-watch": "cd client && ./watch.sh",
+    "client-dist": "cd client && ./dist.sh",
+    "client-build": "cd client && ./build.sh"
   },
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",
@@ -31,11 +35,16 @@
     "express": "^4.18.2",
     "express-openid-connect": "^2.17.1",
     "http-proxy": "^1.18.1",
-    "ip-cidr": "^4.0.0",
+    "ip-cidr": "^4.0.1",
     "js-yaml": "^4.1.0",
     "node-fetch": "^3.3.2",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@ucd-lib/cork-app-build": "^0.4.2",
+    "webpack": "^5.92.1",
+    "webpack-cli": "^5.1.4"
   }
 }

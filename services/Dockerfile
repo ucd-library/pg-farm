@@ -41,6 +41,11 @@ COPY package.json .
 COPY package-lock.json .
 RUN npm install
 
+COPY client ./client
+RUN cd client/dev && npm install
+RUN npm run client-build
+RUN npm run client-dist
+
 COPY . .
 
 ARG PG_FARM_VERSION

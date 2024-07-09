@@ -59,6 +59,13 @@ program.command('restore <org/instance>')
     instance.restore(instanceName);
   });
 
+program.command('resize <org/instance> <size>')
+  .description('Increase size postgres volume.  Size in GB (admin only)')
+  .action((instanceName, size) => {
+    instance.resize(instanceName, size);
+  });
+
+
 program.command('sync-users <org/instance>')
   .description('Sync postgres instance user (admin only)')
   .action(instanceName => {

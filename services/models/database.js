@@ -234,6 +234,49 @@ class Database {
     );
   }
 
+  search(opts) {
+    let query = 'SELECT * FROM '+config.adminDb.views.INSTANCE_DATABASE;
+
+    if( opts.organization || opts.text || opts.tags ) {
+      query += ' WHERE';
+    }
+
+    let where = [];
+    let params = [];
+    if( opts.text ) {
+      params.push(opts.text);
+      where.push(` to_tsvector('english', tsv_content) @@ plainto_tsquery('english', $${params.length+1})`);
+    }
+
+    if( opts.organization ) {
+      params.push(opts.organization);
+      where.push(` organization_name = ${params.length+1}`);
+    }
+
+    if( opts.tags ) {
+      params.push(opts.tags);
+      where.push(` tags @> $${params.length+1}`);
+    }
+
+    query += where.join(' AND ');
+
+
+    if( opts.limit ) {
+      params.push(opts.limit);
+      query += ' LIMIT $'+(params.length+1);
+    }
+    if( opts.offset ) {
+      params.push(opts.offset);
+      query += ' OFFSET $'+(params.length+1);
+    }
+    if( opts.orderBy ) {
+      params.push(opts.orderBy);
+      query += ' ORDER BY '+(params.length+1);
+    }
+
+    return client.query(query, params);
+  }
+
 
 }
 

@@ -5,6 +5,7 @@ import keycloak from '../../../lib/keycloak.js';
 import config from '../../../lib/config.js';
 import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
+import pgAdminClient from '../../../lib/pg-admin-client.js';
 import {admin, user as userModel, instance} from '../../../models/index.js';
 
 let tlsOptions = {};
@@ -205,7 +206,7 @@ class ProxyConnection extends EventEmitter {
 
       // check first message, provides the connection properties
       if ( !this.startupMessageHandled && data.length ) {
-        this.handleStartupMessage(data);
+        await this.handleStartupMessage(data);
         return;
       }
 
@@ -213,7 +214,7 @@ class ProxyConnection extends EventEmitter {
       if (data.length && 
           data[0] === this.MESSAGE_CODES.PASSWORD &&
           this.pgFarmUser?.user_type !== 'PUBLIC') {
-        this.handleJwt(data);
+        await this.handleJwt(data);
         return;
       }
 

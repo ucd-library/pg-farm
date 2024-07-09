@@ -1,0 +1,19 @@
+{
+  "name": "pgfarm-client",
+  "version": "0.0.1",
+  "description": "Client webapp for PG Farm",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "jrmerz@ucdavis.edu",
+  "license": "MIT",
+  "dependencies": {
+    "@ucd-lib/cork-app-state": "^2.0.2",
+    "@ucd-lib/cork-app-utils": "^5.1.1",
+    "@ucd-lib/theme-elements": "^2.1.2",
+    "@ucd-lib/theme-sass": "^6.0.1",
+    "clone": "^2.1.2",
+    "lit": "^3.1.4"
+  }
+}

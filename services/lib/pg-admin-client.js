@@ -252,7 +252,7 @@ class PgFarmAdminClient {
    * 
    * @returns {Promise<Object>}
    */
-  async setInstancek8sConfig(nameOrId, orgNameOrId, property, value) {
+  async setInstanceConfig(nameOrId, orgNameOrId, property, value) {
     return client.query(`
       INSERT INTO ${config.adminDb.tables.INSTANCE_CONFIG}
       (instance_id, name, value)
@@ -565,6 +565,19 @@ class PgFarmAdminClient {
     `, [dbId, event]);
   }
 
+  onConnectionOpen(args={}) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.connection_open($1, $2, $3, $4, $5)
+    `, 
+    [args.sessionId, args.databaseName, args.orgName, args.userName, args.remoteAddress, args.data, args.timestamp]);
+  }
+
+  onConnectionClose(sessionId, timestamp) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.connection_close($1, $2)
+    `, 
+    [sessionId, timestamp]);
+  }
 
 }
 

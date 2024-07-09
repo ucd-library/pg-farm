@@ -86,12 +86,14 @@ async function middleware(req, res) {
       .catch(e => logger.error('Error updating database last event: ', e));
 
     pgRestQueryCount++;
-
-  } else if( path === '/api/db' || path === '/api/db/' ) {
-    path = '/api/admin/instance';
   } else if( path.match(/^\/api\/health(\/|$)/) ) {
     path = path.replace(/^\/api\/health/, '/health');
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
+  } else if( path.startsWith('/api/admin') ) {
+    host = 'http://'+config.admin.host+':'+config.admin.port;
+    if( path === '/api/db' || path === '/api/db/' ) {
+      path = '/api/admin/instance';
+    }
   }
 
   proxy.web(req, res, {

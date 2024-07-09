@@ -20,11 +20,24 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   description text,
   url text,
   tags text[],
+  tsv_content tsvector,
   created_at timestamp NOT NULL DEFAULT now(),
   updated_at timestamp NOT NULL DEFAULT now(),
   UNIQUE (instance_id, name)
 );
 CREATE INDEX IF NOT EXISTS database_name_idx ON pgfarm.database(name);
+CREATE INDEX IF NOT EXISTS database_tsv_content_idx ON pgfarm.database USING gin(tsv_content);
+
+CREATE OR REPLACE FUNCTION database_tsvector_trigger() RETURNS trigger AS $$
+BEGIN
+  NEW.tsv_content := to_tsvector('english', NEW.title || ' ' || NEW.short_description || ' ' || NEW.description);
+  RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger to call the function before insert or update
+CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
+ON pgfarm.database FOR EACH ROW EXECUTE FUNCTION database_tsvector_trigger();
 
 CREATE OR REPLACE FUNCTION check_organization_id()
   RETURNS TRIGGER AS $$

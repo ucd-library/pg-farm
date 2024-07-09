@@ -136,6 +136,12 @@ class KubectlWrapper {
     return this.exec(`kubectl delete ${type} ${name}`);
   }
 
+  async get(type, name) {
+    await this.init();
+    let config = await this.exec(`kubectl get ${type} ${name} -o json`);
+    return JSON.parse(config);
+  }
+
 }
 
 const instance = new KubectlWrapper();

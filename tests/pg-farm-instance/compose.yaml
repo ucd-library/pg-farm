@@ -1,9 +1,7 @@
-version: '3'
-
 services:
 
   gateway:
-    image: localhost/local-dev/pg-farm-service:jm-orgs  
+    image: localhost/local-dev/pgfarm-service:main  
     ports:
       - "5432:5432"
       - "3000:80"
@@ -23,7 +21,7 @@ services:
     command: npm run gateway
 
   # pg-proxy:
-  #   image: localhost/local-dev/pg-farm-service:jm-orgs  
+  #   image: localhost/local-dev/pg-farm-service:main  
   #   # ports:
   #   #   - "5432:5432"
   #   environment:
@@ -39,8 +37,33 @@ services:
   #     - ./service-account.json:/etc/google/service-account.json
   #   command: npm run proxy
 
+  client:
+    image: localhost/local-dev/pgfarm-service:main  
+    # ports:
+    #   - "3000:3000"
+    environment:
+      - SERVICE_PORT=3000
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/google/service-account.json
+    env_file:
+      - .env
+    volumes:
+      - ./service-account.json:/etc/google/service-account.json
+      - ../../services/lib:/services/lib
+      - ../../services/models:/services/models
+      - ../../services/administration:/services/administration
+      - ../../services/health-probe:/services/health-probe
+      - ../../services/pg-helpers:/services/pg-helpers
+      - ../../services/gateway:/services/gateway
+      - ../../services/client/dev/elements:/services/client/dev/elements
+      - ../../services/client/dev/src:/services/client/dev/src
+      - ../../services/client/dev/index.html:/services/client/dev/index.html
+      - ../../services/client/index.js:/services/client/index.js
+      - ../../services/client/controllers:/services/client/controllers
+    # command: npm run administration
+    command: bash -c "tail -f /dev/null"
+
   admin:
-    image: localhost/local-dev/pg-farm-service:jm-orgs  
+    image: localhost/local-dev/pgfarm-service:main  
     # ports:
     #   - "3000:3000"
     environment:
@@ -68,32 +91,32 @@ services:
     volumes:
       - pg-admin-data:/var/lib/postgresql/data
 
-  pgrest:
-    image: localhost/local-dev/pg-farm-service:jm-orgs  
-    ports:
-      - "3001:3000"
-    environment:
-      - PGREST_INSTANCE_NAME=test
-    env_file:
-      - .env
-    volumes:
-      - ../../services/lib:/services/lib
-      - ../../services/models:/services/models
-      - ../../services/administration:/services/administration
-      - ../../services/health-probe:/services/health-probe
-      - ../../services/pg-helpers:/services/pg-helpers
-      - ../../services/gateway:/services/gateway
-      - ../../services/pg-rest:/services/pg-rest
-    command: ./pg-rest/run.sh
+  # pgrest:
+  #   image: localhost/local-dev/pgfarm-service:main  
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     - PGREST_INSTANCE_NAME=test
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ../../services/lib:/services/lib
+  #     - ../../services/models:/services/models
+  #     - ../../services/administration:/services/administration
+  #     - ../../services/health-probe:/services/health-probe
+  #     - ../../services/pg-helpers:/services/pg-helpers
+  #     - ../../services/gateway:/services/gateway
+  #     - ../../services/pg-rest:/services/pg-rest
+  #   command: ./pg-rest/run.sh
 
-  pg-inst-test-test:
-    image: localhost/local-dev/pg-farm-instance:16
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-    volumes:
-      - pg-data:/var/lib/postgresql/data
+  # pg-inst-test-test:
+  #   image: localhost/local-dev/pgfarm-instance:16
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=postgres
+  #   volumes:
+  #     - pg-data:/var/lib/postgresql/data
 
 volumes:
   pg-admin-data:

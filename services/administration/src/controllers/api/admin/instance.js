@@ -128,6 +128,16 @@ router.post('/sleep', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.post('/:organization/:instance/resize', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let {instance, organization} = getOrgAndIsntFromReq(req);
+    let resp = await instanceModel.resizeVolume(instance, organization, req.query.size);
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 
 function getOrgAndIsntFromReq(req) {
   let organization = req.params.organization;

@@ -37,7 +37,7 @@ class PGInstance {
     if( exists ) return;
 
     logger.info('Creating database '+dbName+' on instance', connection.host);
-    query = pgFormat(`CREATE DATABASE %s`, dbName);
+    query = pgFormat(`CREATE DATABASE %L`, dbName);
     return this.query(connection, query);
   }
 
@@ -55,22 +55,22 @@ class PGInstance {
       noinherit = 'NOINHERIT';
     }
 
-    query = pgFormat(`CREATE ROLE "%s" WITH LOGIN ${noinherit} PASSWORD %L`, opts.username, opts.password);
+    query = pgFormat(`CREATE ROLE %I WITH LOGIN ${noinherit} PASSWORD %L`, opts.username, opts.password);
     return this.query(connection, query);
   }
 
   async alterPgUserPassword(connection, opts={}) {
-    let query = pgFormat(`ALTER USER "%s" WITH PASSWORD %L`, opts.username, opts.password);
+    let query = pgFormat(`ALTER USER %I WITH PASSWORD %L`, opts.username, opts.password);
     return this.query(connection, query);
   }
 
   async ensurePgSchema(connection, schemaName) {
-    let query = pgFormat(`CREATE SCHEMA IF NOT EXISTS "%s"`, schemaName);
+    let query = pgFormat(`CREATE SCHEMA IF NOT EXISTS %I`, schemaName);
     return this.query(connection, query);
   }
 
   async getTableSequenceNames(con, schemaName, tableName) {
-    let resp = await this.query(con, `
+    let resp = await this.query(con, pgFormat(`
     SELECT
         a.attname AS column_name,
         s.relname AS sequence_name
@@ -80,9 +80,9 @@ class PGInstance {
         JOIN pg_depend d ON d.refobjid = t.oid AND d.refobjsubid = a.attnum
         JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S'
     WHERE
-        t.relname = $1 
-        AND t.relnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = $2);`,
-    [tableName, schemaName]);
+        t.relname = %I
+        AND t.relnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = %I);`,
+    tableName, schemaName));
 
     return resp.rows.map(row => row.sequence_name)
   };
@@ -102,7 +102,9 @@ class PGInstance {
     if( Array.isArray(permission) ) { 
       permission = permission.join(', ');
     }
-    let query = pgFormat(`GRANT ${permission} ON ALL TABLES IN SCHEMA "%s" TO "%s"`, schemaName, roleName);
+    permission = permission.replace(/;/g, '');
+
+    let query = pgFormat(`GRANT ${permission} ON %L IN SCHEMA %I TO %I`, permission, tableName, schemaName, roleName);
     return this.query(connection, query);
   }
 
@@ -114,8 +116,10 @@ class PGInstance {
     return this.query(connection, query);
   }
 
-  grantFnUsage(connection, schemaName, roleName) {
-    let query = pgFormat(`GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA "%s" to "%s"`, schemaName, roleName);
+  grantFnUsage(connection, schemaName, roleName, functionName) {
+    if( !functionName ) functionName = "";
+    else functionName = '"'+functionName+'"';
+    let query = pgFormat(`GRANT EXECUTE ON ${functionName} IN SCHEMA "%s" to "%s"`, schemaName, roleName);
     return this.query(connection, query);
   }
 
@@ -154,6 +158,84 @@ class PGInstance {
     let query = pgFormat(`IMPORT FOREIGN SCHEMA "%s" FROM SERVER "%s" INTO "%s";`, opts.remoteSchema, serverName, opts.localSchema);
     return this.query(connection, query);
   }
+
+  /**
+   * @method listSchema
+   * 
+   * @description List all schemas in the database
+   * 
+   * @param {Object} connection
+   * 
+   * @returns {Promise}
+   **/
+  listSchema(connection) {
+    let query = `SELECT schema_name, schema_owner FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog')`;
+    return this.query(connection, query);
+  }
+
+  getSchemaAccess(connection, schemaName) {
+    let query = pgFormat(`SELECT
+          n.nspname AS schema_name,
+          r.rolname AS role_name,
+          COALESCE(has_schema_privilege(r.rolname, n.nspname, 'USAGE'), FALSE) AS usage,
+          COALESCE(has_schema_privilege(r.rolname, n.nspname, 'CREATE'), FALSE) AS create
+      FROM
+          pg_namespace n
+          CROSS JOIN pg_roles r
+      WHERE
+          n.nspname = %L`, schemaName);
+    return this.query(connection, query);
+  }
+
+
+  /**
+   * @method listTables
+   * 
+   * @description List all tables in the schema
+   * 
+   * @param {Object} connection
+   * 
+   * @returns {Promise}
+   **/
+  listTables(connection, schemaName) {
+    let query = pgFormat(`SELECT table_schema, table_name, table_type FROM information_schema.tables WHERE table_schema = %L`, schemaName);
+    return this.query(connection, query);
+  }
+
+  /**
+   * @method getTableAccess
+   * @description Get the access for a table
+   * 
+   * @param {Object} connection 
+   * @param {String} schemaName 
+   * @param {String} tableName 
+   * @returns 
+   */
+  getTableAccess(connection, schemaName, tableName) {
+    let query = pgFormat(`SELECT * FROM information_schema.role_table_grants WHERE table_schema = %L and table_catalog = %L`, schemaName, tableName);
+    return this.query(connection, query);
+  }
+
+  /**
+   * @method getTableAccessByUser
+   * @description Get the access for a table by user
+   * 
+   * @param {Object} connection
+   * @param {String} schemaName
+   * @param {String} username
+   * 
+   * @returns {Promise}
+   */
+  getTableAccessByUser(connection, schemaName, username) {
+    let query = pgFormat(`SELECT * FROM information_schema.role_table_grants WHERE table_schema = %L AND grantee = %L`, schemaName, username);
+    return this.query(connection, query);
+  }
+
+  getUsageAccess(connection, schemaName) {
+    let query = pgFormat(`SELECT * FROM information_schema.usage_privileges WHERE schema_name = %L`, schemaName);
+    return this.query(connection, query);
+  }
+
 
 }
 
