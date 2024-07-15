@@ -15,6 +15,19 @@ if( !Array.isArray(configs) ) configs = [configs];
 configs.forEach((config, index) => {
   config.output.publicPath = '/js/'
   config.output.chunkFilename = '[name]-[chunkhash].'+config.output.filename;
+
+  let cssModule = config.module.rules.find(rule => {
+    if( !Array.isArray(rule.use) ) return false;
+    return rule.use.includes('css-loader');
+  });
+
+  let mindex = cssModule.use.indexOf('css-loader');
+  cssModule.use[mindex] = {
+    loader: 'css-loader',
+    options: {
+      url : false
+    }
+  }
 });
 
 module.exports = configs;

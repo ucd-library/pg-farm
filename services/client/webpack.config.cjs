@@ -27,8 +27,6 @@ configs.forEach((config, index) => {
       url : false
     }
   }
-
-  console.log('cssModule', cssModule)
 });
 
 

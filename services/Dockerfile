@@ -1,5 +1,5 @@
 # install postgrest
-FROM postgrest/postgrest:v12.0.2 as postgrest
+FROM postgrest/postgrest:v12.0.2 AS postgrest
 
 FROM node:20
 
@@ -50,8 +50,6 @@ COPY . .
 
 ARG PG_FARM_VERSION
 ENV PG_FARM_VERSION=${PG_FARM_VERSION}
-ARG PG_FARM_REPO_BRANCH
-ENV PG_FARM_REPO_BRANCH=${PG_FARM_REPO_BRANCH}
 ARG PG_FARM_REPO_TAG
 ENV PG_FARM_REPO_TAG=${PG_FARM_REPO_TAG}
 ARG PG_FARM_REPO_HASH
@@ -59,4 +57,4 @@ ENV PG_FARM_REPO_HASH=${PG_FARM_REPO_HASH}
 ARG BUILD_DATETIME
 ENV BUILD_DATETIME=${BUILD_DATETIME}
 
-CMD bash -c 'tail -f /dev/null'
+CMD ["bash", "-c", "tail -f /dev/null"]
