@@ -115,7 +115,7 @@ const config = {
 
   k8s : {
     enabled : env.K8S_DISABLED === 'true' ? false : true,
-    platform : 'gke',
+    platform : env.K8S_PLATFORM || 'gke',
     cluster : env.K8S_CLUSTER || 'pgfarm',
     region : env.K8S_REGION || 'us-central1-c',
   },

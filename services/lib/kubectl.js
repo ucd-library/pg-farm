@@ -12,6 +12,14 @@ class KubectlWrapper {
 
   async init() {
     if( this.initalized ) return;
+
+
+    if( config.k8s.platform === 'docker-desktop' ) {
+      logger.info('kubectl initialized for local environment. /root/.kube should already be mounted');
+      this.initalized = true;
+      return;
+    }
+
     if( this.initializing ) return this.initializing;
 
     this.initializing = new Promise(async (resolve, reject) => {  

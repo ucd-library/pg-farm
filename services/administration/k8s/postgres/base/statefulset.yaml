@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: 
+  name: pgfarm-instance
 spec:
   selector:
     matchLabels:
@@ -12,14 +12,12 @@ spec:
     metadata:
       labels:
         app:
-      annotations:
-        gke-gcsfuse/volumes: "true"  
     spec:
       containers:
       - name: postgres
         image: pg
         args: ["-c", "max_connections=100"]
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         env:
         - name: PGDATA
           value: "/var/lib/postgresql/data/pgdata"
@@ -29,18 +27,16 @@ spec:
           value: "postgres"
         resources:
           limits:
-            memory: "2Gi"
-            cpu: "2"
+            memory: "3Gi"
+            cpu: "1"
           requests:
-            memory: "500Mi"
-            cpu: "0.2"
+            memory: "1Gi"
+            cpu: "0.5"
         ports:
         - containerPort: 5432
         volumeMounts:
         - name: 
           mountPath: /var/lib/postgresql/data
-        - name: gcs-fuse
-          mountPath: /backups
         - name: pg-socket
           mountPath: /var/run/postgresql
       - name: pg-helper
@@ -61,19 +57,11 @@ spec:
         - name: SERVICE_NAME
           value: "pg-helper"
         volumeMounts:
-        - name: gcs-fuse
-          mountPath: /backups
         - name: pg-socket
           mountPath: /var/run/postgresql
         - name: service-account
           mountPath: /etc/google        
-      serviceAccountName: pgfarm-ksa
-      nodeSelector:
-        intendedfor: instance-pool
       volumes:
-      - name: gcs-fuse
-        persistentVolumeClaim:
-          claimName: gcs-fuse-pvc
       - name: pg-socket
         emptyDir: {}
       - name: service-account

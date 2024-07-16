@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pgfarm-instance
+spec:
+  template:
+    metadata:
+      annotations:
+        gke-gcsfuse/volumes: "true"  
+    spec:
+      containers:
+      - name: postgres
+        volumeMounts:
+        - name: gcs-fuse
+          mountPath: /backups
+      - name: pg-helper
+        volumeMounts:
+        - name: gcs-fuse
+          mountPath: /backups       
+      serviceAccountName: pgfarm-ksa
+      nodeSelector:
+        intendedfor: instance-pool
+      volumes:
+      - name: gcs-fuse
+        persistentVolumeClaim:
+          claimName: gcs-fuse-pvc
