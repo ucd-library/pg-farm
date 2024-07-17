@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: 
+  name: instance-rest-api
 spec:
   # this enables direct access to the pod from within the cluster
   # and no load balancing is done

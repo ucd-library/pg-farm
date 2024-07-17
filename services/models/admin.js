@@ -398,8 +398,7 @@ class AdminModel {
     } else {
       logger.info('Health test failed, starting instance', {
         hostname: instance.hostname,
-        instanceState: health.state,
-        tcpStatus: health?.tcpStatus?.instance
+        health
       });
     }
     
@@ -421,6 +420,8 @@ class AdminModel {
       // wait for instance to be ready
       await utils.waitUntil(instance.hostname, instance.port);
 
+      logger.info('Instance is ready', instance.hostname);
+
       // if there are pgRest services, wait for them to be ready if flag is set
       if( opts.startPgRest && opts.waitForPgRest && dbs.length ) {
         // wait for all instances to be deploy
@@ -433,6 +434,14 @@ class AdminModel {
         });
         await Promise.all(proms);
       }
+
+      // hack for docker-desktop to wait for the instance DNS to be ready
+      // there seems to be issues with it going up and down when instance first starts
+      if( config.k8s.platform === 'docker-desktop' ) {
+        logger.info('Waiting for DNS to be ready in docker-desktop');
+        await utils.sleep(5000);
+      }
+
     } catch(e) {
       logger.error('Error starting instance', e);
       this.rejectStart(instance, e);

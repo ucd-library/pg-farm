@@ -47,17 +47,6 @@ async function middleware(req, res) {
   let path = req.originalUrl;
   let host = DEFAULT_HOST;
   let dbRouteMatch = path.match(dbRouteRegex);
-
-  if( req.query.debug ) {
-    logger.info('HTTP Proxy Request: ', {
-      url: req.originalUrl, 
-      method: req.method, 
-      headers: req.headers,
-      remoteIp : req.connection.remoteAddress,
-      ipAddress : req.ip,
-      forwarded : req.ips
-    });
-  }
   
   if( dbRouteMatch ) {
     let orgName = dbRouteMatch[1];
@@ -94,6 +83,18 @@ async function middleware(req, res) {
     if( path === '/api/db' || path === '/api/db/' ) {
       path = '/api/admin/instance';
     }
+  }
+
+  if( req.query.debug ) {
+    logger.info('HTTP Proxy Request: ', {
+      url: req.originalUrl, 
+      method: req.method, 
+      headers: req.headers,
+      remoteIp : req.connection.remoteAddress,
+      ipAddress : req.ip,
+      forwarded : req.ips,
+      target : host+path
+    });
   }
 
   proxy.web(req, res, {

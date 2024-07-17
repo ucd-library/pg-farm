@@ -1,7 +1,13 @@
 import exec from './exec.js'
 import yaml from 'js-yaml';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import config from './config.js';
 import logger from './logger.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let k8sTemplatePath = path.join(__dirname, '..', 'administration', 'k8s');
 
 class KubectlWrapper {
 
@@ -148,6 +154,35 @@ class KubectlWrapper {
     await this.init();
     let config = await this.exec(`kubectl get ${type} ${name} -o json`);
     return JSON.parse(config);
+  }
+
+  /**
+   * @method getKustomizeTemplate
+   * @description Get the kustomize template as a json object.  The template
+   * can be in the base or overlay directory.
+   * 
+   * @param {String} template service template name
+   * @param {String} overlay overlay name.  defaults to null which will use the base template.
+   * @returns 
+   */
+  async renderKustomizeTemplate(template, overlay=null) {
+    let templatePath;
+    if( overlay ) {
+      templatePath = path.join(k8sTemplatePath, template, 'overlays', overlay);
+
+      // revert to base template if overlay does not exist
+      if( !fs.existsSync(templatePath) ) {
+        templatePath = null;
+      }
+    }
+
+    if( !templatePath ) {
+      templatePath = path.join(k8sTemplatePath, template, 'base');
+    }
+
+    let yamlStr = await this.exec(`kubectl kustomize ${templatePath}`);
+    return yamlStr.split('---\n')
+                  .map(t => yaml.load(t));
   }
 
 }

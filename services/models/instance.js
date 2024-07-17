@@ -175,10 +175,10 @@ class Instance {
   async initInstanceDb(nameOrId, orgNameOrId) {
     // create postgres user to admin database, resets password
     try {
-      logger.info('Ensuring postgres user', nameOrId)
+      logger.info('Ensuring postgres user', orgNameOrId, nameOrId)
       await this.models.user.create(nameOrId, orgNameOrId, 'postgres');
     } catch(e) {
-      logger.warn(`Failed to create postgres user for database ${nameOrId} on instance ${orgNameOrId}/${nameOrId}`, e.message);
+      logger.warn(`Failed to create postgres user for on instance ${orgNameOrId}/${nameOrId}`, e.message, e.stack);
     }
 
     // add public user
@@ -186,7 +186,7 @@ class Instance {
       logger.info('Ensuring public user', nameOrId)
       await this.models.user.create(nameOrId, orgNameOrId, config.pgInstance.publicRole.username);
     } catch(e) {
-      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${orgNameOrId}/${nameOrId}`, e.message);
+      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${orgNameOrId}/${nameOrId}`, e.message, e.stack);
     }
   }
 
@@ -284,8 +284,10 @@ class Instance {
 
     let hostname = instance.hostname;
 
+    let templates = await modelUtils.getTemplate('postgres');
+
     // Postgres
-    let k8sConfig = modelUtils.getTemplate('postgres');
+    let k8sConfig = templates.find(t => t.kind === 'StatefulSet');
     k8sConfig.metadata.name = hostname;
     
     let spec = k8sConfig.spec;
@@ -329,7 +331,7 @@ class Instance {
     logger.info('Applied instance k8s config', hostname);
 
     // Postgres Service
-    k8sConfig = modelUtils.getTemplate('postgres-service');
+    k8sConfig = templates.find(t => t.kind === 'Service');
     k8sConfig.metadata.name = hostname;
     k8sConfig.spec.selector.app = hostname;
 

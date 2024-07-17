@@ -110,9 +110,11 @@ server-port = ${config.pgRest.port}`
       orgName = org.name;
     }
 
+    let templates = await modelUtils.getTemplate('pgrest');
+
     // PostgREST
     let hostname = database.pgrest_hostname;
-    let k8sConfig = modelUtils.getTemplate('pgrest');
+    let k8sConfig = templates.find((t) => t.kind === 'Deployment');
     k8sConfig.metadata.name = hostname;
     
     let spec = k8sConfig.spec;
@@ -138,7 +140,7 @@ server-port = ${config.pgRest.port}`
     });
 
     // PostgREST
-    k8sConfig = modelUtils.getTemplate('pgrest-service');
+    k8sConfig = templates.find((t) => t.kind === 'Service');
     k8sConfig.metadata.name = hostname;
     k8sConfig.spec.selector.app = hostname;
 

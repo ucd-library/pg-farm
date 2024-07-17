@@ -10,10 +10,22 @@ import config from './config.js';
  */
 class PGInstance {
 
-  async getConnection(opts={}) {
-    const client = new PG.Client(opts);
-    await client.connect()
-    return client;
+  async getConnection(opts={}, attempts=3) {
+    let error;
+
+    for( let i = 0; i < attempts; i++ ) {
+      try {
+        let client = new PG.Client(opts);
+        await client.connect();
+        return client;
+      } catch(e) {
+        error = e;
+        logger.warn('Error connecting to database, attempt='+i, opts.host, e);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    throw error;
   }
 
   async query(connection, query, args) {
@@ -37,7 +49,7 @@ class PGInstance {
     if( exists ) return;
 
     logger.info('Creating database '+dbName+' on instance', connection.host);
-    query = pgFormat(`CREATE DATABASE %L`, dbName);
+    query = pgFormat(`CREATE DATABASE %I`, dbName);
     return this.query(connection, query);
   }
 

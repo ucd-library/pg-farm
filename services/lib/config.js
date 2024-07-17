@@ -33,6 +33,11 @@ if( healthProbePort.match(/^tcp:/) ) {
 
 let clientEnv = env.CLIENT_ENV || 'dev';
 
+let clientPort = env.CLIENT_PORT || '3000';
+if( clientPort.match(/^tcp:/) ) {
+  clientPort = new URL(clientPort).port;
+}
+
 const config = {
 
   appUrl : env.APP_URL || 'http://localhost:3000',
@@ -58,7 +63,7 @@ const config = {
 
   client : {
     env : clientEnv,
-    port : parseInt(env.CLIENT_PORT || 3000),
+    port : parseInt(clientPort),
     assets : (clientEnv === 'prod') ? 'dist' : 'dev',
     title : 'PG Farm',
     appRoutes : ['search', 'db'],
@@ -208,7 +213,7 @@ const config = {
   healthProbe : {
     port : parseInt(healthProbePort),
     host : env.HEALTH_PROBE_HOSTNAME || 'health-probe',
-    interval : env.HEALTH_PROBE_INTERVAL || 1000*60,
+    interval : env.HEALTH_PROBE_INTERVAL || 1000*30,
   },
 
 }

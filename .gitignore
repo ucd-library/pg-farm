@@ -2,6 +2,8 @@ node_modules
 .env
 test.yaml
 devops/k8s
+services/client/dev/js
+services/client/dist
 secrets
 service-account.json
 tests/connections/package-lock.json

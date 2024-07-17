@@ -3,6 +3,8 @@ import yaml from 'js-yaml';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import exec from '../lib/exec.js';
+import kubectl from '../lib/kubectl.js';
+import config from '../lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let k8sTemplatePath = path.join(__dirname, '..', 'administration', 'k8s');
@@ -20,9 +22,7 @@ class ModelUtils {
    * @returns {Object}
    */
   getTemplate(template) {
-    let templatePath = path.join(k8sTemplatePath, template+'.yaml');
-    let k8sConfig = yaml.load(fs.readFileSync(templatePath, 'utf-8'));
-    return k8sConfig;
+    return kubectl.renderKustomizeTemplate(template, config.k8s.platform);
   }
 
   /**

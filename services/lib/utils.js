@@ -1,9 +1,10 @@
 import crypto from 'crypto';
 import net from 'net';
+import dns from 'dns';
 import fetch from 'node-fetch';
 import config from './config.js';
 
-const DELAY_TIME = 2500;
+const DELAY_TIME = 1000;
 const TIMEOUT = 5000;
 
 class PgFarmUtils {
@@ -31,13 +32,13 @@ class PgFarmUtils {
    * 
    * @param {String} host
    * @param {Number} port
-   * @param {Number} maxAttempts Optional.  Maximum number of attempts to try before
+   * @param {Number} maxAttempts Optional.  Maximum number of attempts to try before.  Less than 0 means no limit.
    * @param {Number} delayTime Optional.  Time to wait between connect attempts.  Defaults
-   * to 2.5s.
+   * to 1s.
    * 
    * @returns {Promise}
    */
-  waitUntil(host, port, maxAttempts=0, delayTime) {
+  async waitUntil(host, port, maxAttempts=-1, delayTime) {
     if( !delayTime ) delayTime = DELAY_TIME;
     port = parseInt(port);
 
@@ -47,11 +48,12 @@ class PgFarmUtils {
       attempt : 0
     }
 
-    return new Promise((resolve, reject) => {
+    let tcpConnection = new Promise((resolve, reject) => {
       opts.resolve = resolve;
       opts.reject = reject;
       setTimeout(() => attempt(host, port, opts), delayTime);
     });
+    await tcpConnection;
   }
 
   /**
@@ -111,10 +113,12 @@ function attempt(host, port, opts) {
     setTimeout(() => attempt(host, port, opts), opts.delayTime);
     client.destroy(); 
   });
+
   client.connect(port, host, function() {
     opts.resolve();
     client.destroy();
   });
+
   client.on('error', function(e) {
     opts.attempt++;
     if( opts.maxAttempts > 0 && opts.attempt >= opts.maxAttempts ) {
@@ -126,6 +130,20 @@ function attempt(host, port, opts) {
     client.destroy(); 
   });
 }
+
+// function testDNS(host) {
+//   return new Promise((resolve, reject) => {
+//     dns.lookup(host, (err, address, family) => {
+//       if( err ) {
+//         console.log('DNS lookup for', err);
+//         resolve();
+//         return;
+//       }
+//       console.log('DNS lookup for', host, 'returned', address, family);
+//       resolve();
+//     });
+//   });
+// }
 
 
 const instance = new PgFarmUtils();
