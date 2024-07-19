@@ -234,8 +234,10 @@ class Database {
     );
   }
 
-  search(opts) {
-    let query = 'SELECT * FROM '+config.adminDb.views.INSTANCE_DATABASE;
+  async search(opts) {
+    let itemQuery = 'SELECT * FROM '+config.adminDb.views.INSTANCE_DATABASE;
+    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE;
+    let query = '';
 
     if( opts.organization || opts.text || opts.tags ) {
       query += ' WHERE';
@@ -243,38 +245,56 @@ class Database {
 
     let where = [];
     let params = [];
+    let countParams = [];
     if( opts.text ) {
       params.push(opts.text);
-      where.push(` to_tsvector('english', tsv_content) @@ plainto_tsquery('english', $${params.length+1})`);
+      countParams.push(opts.text);
+      where.push(` to_tsvector('english', tsv_content) @@ plainto_tsquery('english', $${params.length})`);
     }
 
     if( opts.organization ) {
       params.push(opts.organization);
-      where.push(` organization_name = ${params.length+1}`);
+      countParams.push(opts.organization);
+      where.push(` organization_name = ${params.length}`);
     }
 
     if( opts.tags ) {
       params.push(opts.tags);
-      where.push(` tags @> $${params.length+1}`);
+      countParams.push(opts.tags);
+      where.push(` tags @> $${params.length}`);
     }
 
     query += where.join(' AND ');
 
+    countQuery += query;
+
 
     if( opts.limit ) {
       params.push(opts.limit);
-      query += ' LIMIT $'+(params.length+1);
+      query += ' LIMIT $'+(params.length);
     }
     if( opts.offset ) {
       params.push(opts.offset);
-      query += ' OFFSET $'+(params.length+1);
+      query += ' OFFSET $'+(params.length);
     }
     if( opts.orderBy ) {
       params.push(opts.orderBy);
-      query += ' ORDER BY '+(params.length+1);
+      query += ' ORDER BY '+(params.length);
     }
 
-    return client.query(query, params);
+    itemQuery += query;
+
+    console.log(itemQuery, params);
+    let results = await client.query(itemQuery, params);
+
+    console.log(countQuery, countParams);
+    let count = await client.query(countQuery, countParams);
+
+    return {
+      items : results.rows,
+      total : count.rows[0].total,
+      query : params
+    }
   }
 
 

@@ -36,38 +36,6 @@ router.patch(
   }
 });
 
-router.get('/', async (req, res) => {
-  try {
-    let opts = {};
-    if( req.query.onlyMine === 'true' ) {
-      if( !req.user ) {
-        throw new Error('You must provide an authorization token to view your instances');
-      }
-      opts.username = req.user.username;
-    }
-
-    res.json(await model.getDatabases(opts));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
-router.post('/search', async (req, res) => {
-  try {
-    let opts = {
-      text : req.body.text,
-      tags : req.body.tags,
-      organization : req.body.organization,
-      limit : req.body.limit || 10,
-      offset : req.body.offset || 0
-    };
-
-    res.json(await model.search(opts));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
 router.put('/:organization/:database/grant/:schema/:user/:permission', 
   keycloak.protect('{instance}-admin'), 
   async (req, res) => {

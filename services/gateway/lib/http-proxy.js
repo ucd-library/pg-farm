@@ -47,8 +47,8 @@ async function middleware(req, res) {
   let path = req.originalUrl;
   let host = DEFAULT_HOST;
   let dbRouteMatch = path.match(dbRouteRegex);
-  
-  if( dbRouteMatch ) {
+
+  if( dbRouteMatch && orgName !== 'metadata' ) {
     let orgName = dbRouteMatch[1];
     let dbName = dbRouteMatch[2];
     path = path.replace(dbRouteRegex, '/');
@@ -78,24 +78,19 @@ async function middleware(req, res) {
   } else if( path.match(/^\/api\/health(\/|$)/) ) {
     path = path.replace(/^\/api\/health/, '/health');
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
-  } else if( path.startsWith('/api/admin') ) {
+  } else if( path.startsWith('/api') ) {
     host = 'http://'+config.admin.host+':'+config.admin.port;
-    if( path === '/api/db' || path === '/api/db/' ) {
-      path = '/api/admin/instance';
-    }
   }
 
-  if( req.query.debug ) {
-    logger.info('HTTP Proxy Request: ', {
-      url: req.originalUrl, 
-      method: req.method, 
-      headers: req.headers,
-      remoteIp : req.connection.remoteAddress,
-      ipAddress : req.ip,
-      forwarded : req.ips,
-      target : host+path
-    });
-  }
+  logger.debug('HTTP Proxy Request: ', {
+    url: req.originalUrl, 
+    method: req.method, 
+    headers: req.headers,
+    remoteIp : req.connection.remoteAddress,
+    ipAddress : req.ip,
+    forwarded : req.ips,
+    target : host+path
+  });
 
   proxy.web(req, res, {
     target : host+path

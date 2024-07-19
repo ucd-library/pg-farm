@@ -19,6 +19,7 @@ import '@ucd-lib/theme-elements/brand/ucd-theme-primary-nav/ucd-theme-primary-na
 import '../src/index.js';
 
 import './pages/app-home.js';
+import './pages/app-search.js';
 import './components/footer/ucdlib-site-footer.js';
 
 export default class PgfarmApp extends Mixin(LitElement)
@@ -51,6 +52,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     if( e.page && e.page !== this.page ) {
       this.page = e.page;
     }
+
     this.pathInfo = e.location.pathname;
   }
 

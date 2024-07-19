@@ -69,7 +69,7 @@ return html`
     figure-src=""
     prevent-fixed>
     <ucd-theme-primary-nav>
-      <a href="/search">Discover</a>
+      <a href="/discover">Discover</a>
       <a href="/about">About</a>
     </ucd-theme-primary-nav>
   </ucd-theme-header>
@@ -88,6 +88,7 @@ return html`
         </div>
       </div>
       <app-home id="home"></app-home>
+      <app-search id="search"></app-search>
     </ucdlib-pages>
 
     <div class="footer site-frame">

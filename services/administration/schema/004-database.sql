@@ -153,6 +153,10 @@ CREATE OR REPLACE VIEW pgfarm.instance_database AS
     i.port as instance_port,
     db.name as database_name,
     db.title as database_title,
+    db.short_description as database_short_description,
+    db.description as database_description,
+    db.url as database_url,
+    db.tags as database_tags,
     db.pgrest_hostname as pgrest_hostname,
     db.database_id as database_id
   FROM pgfarm.database db
