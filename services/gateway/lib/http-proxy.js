@@ -48,7 +48,7 @@ async function middleware(req, res) {
   let host = DEFAULT_HOST;
   let dbRouteMatch = path.match(dbRouteRegex);
 
-  if( dbRouteMatch && orgName !== 'metadata' ) {
+  if( dbRouteMatch && dbRouteMatch[1] !== 'metadata' ) {
     let orgName = dbRouteMatch[1];
     let dbName = dbRouteMatch[2];
     path = path.replace(dbRouteRegex, '/');
