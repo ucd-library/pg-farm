@@ -235,9 +235,11 @@ class Database {
   }
 
   async search(opts) {
-    let itemQuery = 'SELECT * FROM '+config.adminDb.views.INSTANCE_DATABASE;
-    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE;
     let query = '';
+
+    if( opts.tags && !Array.isArray(opts.tags) ) {
+      opts.tags = opts.tags.split(',');
+    }
 
     if( opts.organization || opts.text || opts.tags ) {
       query += ' WHERE';
@@ -246,10 +248,15 @@ class Database {
     let where = [];
     let params = [];
     let countParams = [];
+    let additionalSelect = '';
+    let orderBy = 'database_title';
+
     if( opts.text ) {
       params.push(opts.text);
       countParams.push(opts.text);
-      where.push(` to_tsvector('english', tsv_content) @@ plainto_tsquery('english', $${params.length})`);
+      orderBy = 'rank';
+      additionalSelect += ', ts_rank_cd(tsv_content, plainto_tsquery(\'english\', $'+params.length+')) AS rank';
+      where.push(` tsv_content @@ plainto_tsquery('english', $${params.length})`);
     }
 
     if( opts.organization ) {
@@ -261,10 +268,13 @@ class Database {
     if( opts.tags ) {
       params.push(opts.tags);
       countParams.push(opts.tags);
-      where.push(` tags @> $${params.length}`);
+      where.push(` database_tags && $${params.length}`);
     }
 
     query += where.join(' AND ');
+
+    let itemQuery = 'SELECT * '+additionalSelect+' FROM '+config.adminDb.views.INSTANCE_DATABASE;
+    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE;
 
     countQuery += query;
 
@@ -282,18 +292,21 @@ class Database {
       query += ' ORDER BY '+(params.length);
     }
 
-    itemQuery += query;
+    itemQuery += query+' ORDER BY '+orderBy;
 
     console.log(itemQuery, params);
+
+
+    // console.log(itemQuery, params);
     let results = await client.query(itemQuery, params);
 
-    console.log(countQuery, countParams);
+    // console.log(countQuery, countParams);
     let count = await client.query(countQuery, countParams);
 
     return {
       items : results.rows,
-      total : count.rows[0].total,
-      query : params
+      total : parseInt(count.rows[0].total),
+      query : opts
     }
   }
 

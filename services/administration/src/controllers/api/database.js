@@ -23,8 +23,8 @@ async function search(req, res) {
       text : input.text,
       tags : input.tags,
       organization : input.organization,
-      limit : input.limit || 10,
-      offset : input.offset || 0
+      limit : input.limit ? parseInt(input.limit) : 10,
+      offset : input.offset ? parseInt(input.offset) : 0
     };
 
     if( input.onlyMine && req.user ) {
@@ -39,7 +39,7 @@ async function search(req, res) {
         title : db.database_title || '',
         short_description : db.database_short_description || '',
         description : db.database_description || '',
-        tags : db.database_tags ? db.database_tags.split(',') : [],
+        tags : db.database_tags,
         url : db.database_url || '',
         organization : null,
         state : db.instance_state,

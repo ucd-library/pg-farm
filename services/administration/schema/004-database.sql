@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS database_tsv_content_idx ON pgfarm.database USING gin
 
 CREATE OR REPLACE FUNCTION database_tsvector_trigger() RETURNS trigger AS $$
 BEGIN
-  NEW.tsv_content := to_tsvector('english', NEW.title || ' ' || NEW.short_description || ' ' || NEW.description);
+  NEW.tsv_content := to_tsvector('english', CONCAT(NEW.name, ' ', NEW.title, ' ', ARRAY_TO_STRING(NEW.tags, ' '), ' ', NEW.short_description, ' ', NEW.description));
   RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
@@ -158,7 +158,8 @@ CREATE OR REPLACE VIEW pgfarm.instance_database AS
     db.url as database_url,
     db.tags as database_tags,
     db.pgrest_hostname as pgrest_hostname,
-    db.database_id as database_id
+    db.database_id as database_id,
+    db.tsv_content as tsv_content
   FROM pgfarm.database db
   LEFT JOIN pgfarm.instance i ON i.instance_id = db.instance_id
   LEFT JOIN pgfarm.organization o ON o.organization_id = i.organization_id;

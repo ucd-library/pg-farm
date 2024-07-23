@@ -27,8 +27,14 @@ class SearchModel extends BaseModel {
    *  
    * @returns {Object}
    */
-  search(params) {
-    return this.service.search(params);
+  async search(params) {
+    let resp = await this.service.search(params);
+    resp.body.items = resp.body.items.map(item => {
+      let org = item?.organization?.name ? item.organization.name : '_';
+      item.pathName = `${org}/${item.name}`;
+      return item;
+    });
+    return resp.body;
   }
 
 }

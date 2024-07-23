@@ -69,7 +69,7 @@ return html`
     figure-src=""
     prevent-fixed>
     <ucd-theme-primary-nav>
-      <a href="/discover">Discover</a>
+      <a href="/search">Discover</a>
       <a href="/about">About</a>
     </ucd-theme-primary-nav>
   </ucd-theme-header>
@@ -97,7 +97,7 @@ return html`
           <ul>
             <li><a href="/search">Discover</a></li>
             <li><a href="/about">About PG Farm</a></li>
-            <!-- <li><a href="">FAQ</a></li> -->
+            <li><a href="">FAQ</a></li>
           </ul>
         </ucdlib-site-footer-column>
         <ucdlib-site-footer-column header="Library Info">
