@@ -78,7 +78,7 @@ async function middleware(req, res) {
   } else if( path.match(/^\/api\/health(\/|$)/) ) {
     path = path.replace(/^\/api\/health/, '/health');
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
-  } else if( path.startsWith('/api') ) {
+  } else if( path.startsWith('/api') || path.startsWith('/auth') || path.startsWith('/login') ) {
     host = 'http://'+config.admin.host+':'+config.admin.port;
   }
 
