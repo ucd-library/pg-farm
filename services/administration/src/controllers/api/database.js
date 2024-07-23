@@ -43,6 +43,7 @@ async function search(req, res) {
         url : db.database_url || '',
         organization : null,
         state : db.instance_state,
+        score : db.rank || -1
       }
 
       if( db.organization_id ) {

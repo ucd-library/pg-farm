@@ -249,12 +249,12 @@ class Database {
     let params = [];
     let countParams = [];
     let additionalSelect = '';
-    let orderBy = 'database_title';
+    opts.orderBy = 'database_title';
 
     if( opts.text ) {
       params.push(opts.text);
       countParams.push(opts.text);
-      orderBy = 'rank';
+      opts.orderBy = 'rank';
       additionalSelect += ', ts_rank_cd(tsv_content, plainto_tsquery(\'english\', $'+params.length+')) AS rank';
       where.push(` tsv_content @@ plainto_tsquery('english', $${params.length})`);
     }
@@ -278,7 +278,10 @@ class Database {
 
     countQuery += query;
 
-
+    if( opts.orderBy ) {
+      params.push(opts.orderBy);
+      query += ' ORDER BY $'+(params.length);
+    }
     if( opts.limit ) {
       params.push(opts.limit);
       query += ' LIMIT $'+(params.length);
@@ -287,15 +290,8 @@ class Database {
       params.push(opts.offset);
       query += ' OFFSET $'+(params.length);
     }
-    if( opts.orderBy ) {
-      params.push(opts.orderBy);
-      query += ' ORDER BY '+(params.length);
-    }
 
-    itemQuery += query+' ORDER BY '+orderBy;
-
-    console.log(itemQuery, params);
-
+    itemQuery += query;
 
     // console.log(itemQuery, params);
     let results = await client.query(itemQuery, params);
