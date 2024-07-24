@@ -307,22 +307,64 @@ class Database {
   }
 
   async getDatabaseUsers(dbId) {
-    return client.getDatabaseUsers(dbId);
+    return pgInstClient.getDatabaseUsers(dbId);
   }
 
   async listSchema(orgNameOrId, dbNameOrId) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
-    return client.listSchema(con);
+    let resp = await pgInstClient.listSchema(con);
+    return resp.rows.map(row => row.schema_name);
   }
 
   async listTables(orgNameOrId, dbNameOrId, schemaName) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
-    return client.listTables(con, schemaName);
+    let resp = await pgInstClient.listTables(con, schemaName);
+    return resp.rows;
   }
 
-  async listTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
+  async getTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
-    return client.listTables(con, schemaName, tableName);
+    let resp = await pgInstClient.getTableAccess(con, con.database, schemaName, tableName);
+    
+    let userMap = {};
+    for( let row of resp.rows ) {
+      if( !userMap[row.grantee] ) {
+        userMap[row.grantee] = [];
+      }
+      userMap[row.grantee].push(row.privilege_type);
+    }
+    
+    return userMap;
+  }
+
+  async getTableAccessByUser(orgNameOrId, dbNameOrId, schemaName, username) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    let resp = await pgInstClient.getTableAccessByUser(con, con.database, schemaName, username);
+    
+    let tableMap = {};
+    for( let row of resp.rows ) {
+      if( !tableMap[row.table_name] ) {
+        tableMap[row.table_name] = [];
+      }
+      tableMap[row.table_name].push(row.privilege_type);
+    }
+
+    resp = await pgInstClient.getSchemaAccess(con, schemaName, username);
+    let schemaAccess = resp.rows.find(row => row.role_name === username);
+    if( schemaAccess ) {
+      delete schemaAccess.role_name;
+      delete schemaAccess.schema_name;
+    } else {
+      schemaAccess = {
+        usage : false,
+        create : false,
+      }
+    }
+
+    return {
+      schema : schemaAccess,
+      tables: tableMap
+    };
   }
 
 }

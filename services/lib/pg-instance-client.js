@@ -219,12 +219,20 @@ class PGInstance {
    * @description Get the access for a table
    * 
    * @param {Object} connection 
+   * @param {String} databaseName
    * @param {String} schemaName 
    * @param {String} tableName 
    * @returns 
    */
-  getTableAccess(connection, schemaName, tableName) {
-    let query = pgFormat(`SELECT * FROM information_schema.role_table_grants WHERE table_schema = %L and table_catalog = %L`, schemaName, tableName);
+  getTableAccess(connection, databaseName, schemaName, tableName) {
+    let query = pgFormat(`
+      SELECT * FROM 
+        information_schema.role_table_grants 
+      WHERE 
+        table_catalog = %L and
+        table_schema = %L and 
+        table_name = %L`, 
+      databaseName, schemaName, tableName);
     return this.query(connection, query);
   }
 
@@ -233,13 +241,21 @@ class PGInstance {
    * @description Get the access for a table by user
    * 
    * @param {Object} connection
+   * @param {String} databaseName
    * @param {String} schemaName
    * @param {String} username
    * 
    * @returns {Promise}
    */
-  getTableAccessByUser(connection, schemaName, username) {
-    let query = pgFormat(`SELECT * FROM information_schema.role_table_grants WHERE table_schema = %L AND grantee = %L`, schemaName, username);
+  getTableAccessByUser(connection, databaseName, schemaName, username) {
+    let query = pgFormat(`
+      SELECT * FROM 
+        information_schema.role_table_grants 
+      WHERE 
+        table_catalog = %L AND
+        table_schema = %L AND 
+        grantee = %L`, 
+      databaseName, schemaName, username);
     return this.query(connection, query);
   }
 

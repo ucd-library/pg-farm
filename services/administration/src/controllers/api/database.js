@@ -8,63 +8,6 @@ const router = Router();
 router.get('/', search);
 router.post('/', search);
 
-router.get('/metadata/:org/:name', async (req, res) => {
-  try {
-    res.json(await model.getDatabase(req.params.id));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
-router.get('/metadata/:org/:name/users', 
-  keycloak.protect('{instance}-admin'),
-  async (req, res) => {
-  try {
-    res.json(await model.getDatabaseUsers(req.params.id));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
-router.get('/metadata/:org/:name/schemas', 
-  keycloak.protect('{instance}-admin'),
-  async (req, res) => {
-  try {
-    res.json(await model.listSchema(req.params.org, req.params.name));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
-router.get('/metadata/:org/:name/tables/:schema', 
-  keycloak.protect('{instance}-admin'),
-  async (req, res) => {
-  try {
-    res.json(await model.listTables(req.params.org, req.params.name, req.params.schema));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
-router.get('/metadata/:org/:name/table/:tableName',
-  keycloak.protect('{instance}-admin'),
-  async (req, res) => {
-  try {
-    res.json(await model.listTableAccess(req.params.id));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
-
-router.get('/metadata/:org/:name/access/:username',
-  keycloak.protect('{instance}-admin'),
-  async (req, res) => {
-  try {
-    res.json(await model.getDatabaseUsers(req.params.id));
-  } catch(e) {
-    handleError(res, e);
-  }
-});
 
 async function search(req, res) {
   try {

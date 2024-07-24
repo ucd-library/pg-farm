@@ -36,6 +36,79 @@ router.patch(
   }
 });
 
+router.get('/:organization/:database/metadata', async (req, res) => {
+  try {
+    res.json(await database.getDatabase(req.params.id));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/users', 
+  keycloak.protect('{instance}-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.getDatabaseUsers(req.params.id));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/schemas', 
+  keycloak.protect('{instance}-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.listSchema(req.params.organization, req.params.database));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/schema/:schema/tables', 
+  keycloak.protect('{instance}-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.listTables(
+      req.params.organization, 
+      req.params.database, 
+      req.params.schema
+    ));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/schema/:schema/table/:tableName',
+  keycloak.protect('{instance}-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.getTableAccess(
+      req.params.organization,
+      req.params.database,
+      req.params.schema,
+      req.params.tableName
+    ));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+
+router.get('/:organization/:database/schema/:schema/access/:username',
+  keycloak.protect('{instance}-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.getTableAccessByUser(
+      req.params.organization,
+      req.params.database,
+      req.params.schema,
+      req.params.username
+    ));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.put('/:organization/:database/grant/:schema/:user/:permission', 
   keycloak.protect('{instance}-admin'), 
   async (req, res) => {

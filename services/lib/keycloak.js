@@ -275,9 +275,6 @@ class KeycloakUtils {
           reqRoles = reqRoles.map(role => role.replace('{instance}', req.params.instance));
         }
 
-        console.log('user', req.user);
-        console.log('roles', reqRoles);
-
         // no user
         if( !req.user ) return res.status(403).send('Unauthorized');
 
