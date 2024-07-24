@@ -306,6 +306,24 @@ class Database {
     }
   }
 
+  async getDatabaseUsers(dbId) {
+    return client.getDatabaseUsers(dbId);
+  }
+
+  async listSchema(orgNameOrId, dbNameOrId) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    return client.listSchema(con);
+  }
+
+  async listTables(orgNameOrId, dbNameOrId, schemaName) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    return client.listTables(con, schemaName);
+  }
+
+  async listTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    return client.listTables(con, schemaName, tableName);
+  }
 
 }
 

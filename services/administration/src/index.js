@@ -1,5 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import auth from './controllers/auth/index.js';
 import api from './controllers/api.js';
 import config from '../../lib/config.js';
@@ -10,6 +11,7 @@ import './lib/cron/index.js';
 
 const app = express();
 
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(keycloak.setUser);
 

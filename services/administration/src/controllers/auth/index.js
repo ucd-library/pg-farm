@@ -69,13 +69,16 @@ function register(app) {
     if( req.query.redirect ) {
       res.redirect(req.query.redirect+'?jwt='+jwt);
       return;
+    } else if( req.query.headless === 'true' ) {
+      let html = await fs.readFile(path.join(__dirname, 'headless.html'), 'utf8');4
+      html = html.replace('{{JWT_TOKEN}}', jwt);
+
+      res.set('Content-Type', 'text/html');
+      res.send(html);
+    } else {
+      res.cookie(config.jwt.cookieName, jwt, {httpOnly: true});
+      res.redirect('/');
     }
-
-    let html = await fs.readFile(path.join(__dirname, 'headless.html'), 'utf8');4
-    html = html.replace('{{JWT_TOKEN}}', jwt);
-
-    res.set('Content-Type', 'text/html');
-    res.send(html);
   });
 
 }
