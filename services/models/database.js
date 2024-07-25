@@ -76,16 +76,18 @@ class Database {
    * 
    * @param {String} nameOrId database name or ID 
    * @param {String} orgNameOrId organization name or ID
+   * @param {Array} columns optional.  columns to return
+   * 
    * @returns 
    */
-  async get(nameOrId, orgNameOrId) {
+  async get(nameOrId, orgNameOrId, columns=null) {
     let organizationId = null;
     if( orgNameOrId ) {
       let org = await client.getOrganization(orgNameOrId);
       organizationId = org.organization_id;
     }
 
-    return client.getDatabase(nameOrId, organizationId);
+    return client.getDatabase(nameOrId, organizationId, columns);
   }
 
   async exists(name, orgNameOrId) {

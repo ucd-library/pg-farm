@@ -2,6 +2,7 @@ import PG from 'pg';
 import pgFormat from 'pg-format';
 import logger from './logger.js';
 import config from './config.js';
+import pgAdminClient from './pg-admin-client.js';
 
 /**
  * @class PGInstance
@@ -12,6 +13,11 @@ class PGInstance {
 
   async getConnection(opts={}, attempts=3) {
     let error;
+
+    let db = await pgAdminClient.getDatabase(opts.database, opts.organization);
+    if( db.instance_state !== 'RUN' ) {
+      throw new Error('Database is currently in a '+db.instance_state+' state. The database must be in a RUN state before trying this operation.');
+    }
 
     for( let i = 0; i < attempts; i++ ) {
       try {

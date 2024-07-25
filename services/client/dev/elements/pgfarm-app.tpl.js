@@ -89,6 +89,7 @@ return html`
       </div>
       <app-home id="home"></app-home>
       <app-search id="search"></app-search>
+      <app-database id="db"></app-database>
     </ucdlib-pages>
 
     <div class="footer site-frame">

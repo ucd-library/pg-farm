@@ -294,14 +294,23 @@ class PgFarmAdminClient {
    * 
    * @returns {Promise<Object>}
    */
-  async getDatabase(nameOrId, orgNameOrId) {
+  async getDatabase(nameOrId, orgNameOrId, columns=null) {
+    if( !columns ) {
+      columns = ["organization_name", "organization_title","organization_id",
+        "instance_hostname","instance_name","instance_state","instance_id",
+        "instance_port","database_name","database_title","database_short_description",
+        "database_description","database_url","database_tags",
+        "pgrest_hostname","database_id","tsv_content"
+      ];
+    }
+
     let res = await client.query(`
-      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE}
+      SELECT ${columns.join(', ')} FROM ${config.adminDb.views.INSTANCE_DATABASE}
       WHERE database_id = ${this.schema}.get_database_id($1, $2)
     `, [nameOrId, orgNameOrId]);
 
     if( res.rows.length === 0 ) {
-      throw new Error('Database not found: '+nameOrId);
+      throw new Error('Database not found: '+(orgNameOrId || '_')+'/'+nameOrId);
     }
 
     return res.rows[0];

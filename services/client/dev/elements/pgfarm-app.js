@@ -20,6 +20,7 @@ import '../src/index.js';
 
 import './pages/app-home.js';
 import './pages/app-search.js';
+import './pages/app-database.js';
 import './components/footer/ucdlib-site-footer.js';
 
 export default class PgfarmApp extends Mixin(LitElement)

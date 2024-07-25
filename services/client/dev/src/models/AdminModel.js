@@ -13,6 +13,10 @@ class AdminModel extends BaseModel {
     this.register('AdminModel');
   }
 
+  getDatabaseMetadata(org, db) {
+    return this.service.getDatabaseMetadata(org, db);
+  }
+
 }
 
 const model = new AdminModel();

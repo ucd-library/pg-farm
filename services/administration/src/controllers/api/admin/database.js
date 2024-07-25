@@ -18,7 +18,7 @@ router.patch(
   '/:organization/:database/metadata', 
   keycloak.protect('{instance}-admin'), 
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -36,9 +36,14 @@ router.patch(
   }
 });
 
+const GET_DB_COLUMNS = ["organization_name", "organization_title","organization_id",
+  "instance_name","instance_state","instance_id",
+  "database_name","database_title","database_short_description",
+  "database_description","database_url","database_tags","database_id"
+];
 router.get('/:organization/:database/metadata', async (req, res) => {
   try {
-    res.json(await database.getDatabase(req.params.id));
+    res.json(await database.get(req.params.database, req.params.organization, GET_DB_COLUMNS));
   } catch(e) {
     handleError(res, e);
   }
@@ -48,7 +53,7 @@ router.get('/:organization/:database/users',
   keycloak.protect('{instance}-admin'),
   async (req, res) => {
   try {
-    res.json(await database.getDatabaseUsers(req.params.id));
+    res.json(await database.getDatabaseUsers(req.params.database, req.params.organization));
   } catch(e) {
     handleError(res, e);
   }
@@ -78,7 +83,7 @@ router.get('/:organization/:database/schema/:schema/tables',
   }
 });
 
-router.get('/:organization/:database/schema/:schema/table/:tableName',
+router.get('/:organization/:database/schema/:schema/table/:tableName/access',
   keycloak.protect('{instance}-admin'),
   async (req, res) => {
   try {

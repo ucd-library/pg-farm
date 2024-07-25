@@ -96,7 +96,6 @@ const config = {
     bucket : env.BACKUP_BUCKET || 'app-database-backups',
     autoBackupEnabled : env.AUTO_BACKUP_ENABLED === 'true', // mostly used by admin database
     autoBackupName : env.AUTO_BACKUP_NAME || 'pgfarm-admin-db',
-    
   },
 
   // Keycloak configuration
