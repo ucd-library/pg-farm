@@ -7,7 +7,6 @@ class LruStore {
    * 
    * @param {Object} opts
    * @param {String} opts.name name of the store
-   * @param {Boolean} opts.debug log when cache is cleaned
    * @param {Number} opts.maxSize max number of items to store in cache 
    */
   constructor(opts={}) {
@@ -16,7 +15,6 @@ class LruStore {
     this.logger = logger('lru-store');
     
     this.name = opts.name;
-    this.debug = opts.debug;
     this.maxSize = opts.maxSize;
     this.cache = new Map();
   }
