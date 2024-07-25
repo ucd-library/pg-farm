@@ -1,3 +1,4 @@
+import logger from '../logger.js';
 
 class LruStore {
 
@@ -11,6 +12,8 @@ class LruStore {
    */
   constructor(opts={}) {
     if( !opts.maxSize ) opts.maxSize = 50;
+
+    this.logger = logger('lru-store');
     
     this.name = opts.name;
     this.debug = opts.debug;
@@ -55,7 +58,7 @@ class LruStore {
     keyTime.sort((a, b) => a.lastUsed - b.lastUsed);
 
     for (let i = this.maxSize; i < keys.length; i++) {
-      console.log('lru-store ['+(this.name || 'generic')+']: removing ', keys[i]);
+      this.logger.info(this.name+' removing ', keys[i]);
       this.cache.delete(keys[i]);
     }
   }
