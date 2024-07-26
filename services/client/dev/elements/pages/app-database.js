@@ -54,12 +54,13 @@ export default class AppDatabase extends Mixin(LitElement)
     }
     this.renderedPath = e.location.pathname;
 
-    let [page, organization, database, subPage, subPageValue, subPageView, subPageViewValue] 
+    let [page, organization, database, schema, subPage, subPageValue, subPageView, subPageViewValue] 
       = e.location.path;
 
     this.view = {
       organization, 
       database, 
+      schema,
       subPage,
       subPageValue, 
       subPageView, 

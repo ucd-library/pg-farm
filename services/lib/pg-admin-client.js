@@ -473,9 +473,9 @@ class PgFarmAdminClient {
    * 
    * @returns {Promise<Object>}
    */
-  async getInstanceUsers(instId) {
+  async getInstanceUsers(instId, columns='*') {
     let resp = await client.query(`
-      select * from pgfarm.instance_user iu 
+      select ${columns.join(', ')} from pgfarm.instance_user iu 
       left join pgfarm.user u on iu.user_id = u.user_id 
       where iu.instance_id = $1;
     `, [instId]);

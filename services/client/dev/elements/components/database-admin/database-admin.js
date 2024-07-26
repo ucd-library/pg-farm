@@ -29,13 +29,25 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.rendered = {};
     this.render = render.bind(this);
 
-    this.loading = {
-      metadata : false,
-    }
-
+    this.reset();
     this.logger = logger('database-admin');
 
-    this._injectModel('AdminModel');
+    this._injectModel('AdminModel', 'AppStateModel');
+  }
+
+  reset() {
+    this.users = [];
+    this.schemas = [];
+    this.tables = [];
+    this.tableData = {};
+    this.userData = {};
+    this.metadata = null;
+    this.startingInstance = false;
+    this.loading = {
+      metadata : false,
+      users : false,
+      schemas : false
+    }
   }
 
   updated(changedProperties) {
@@ -56,8 +68,23 @@ export default class DatabaseAdmin extends Mixin(LitElement)
       this.rendered.organization = this.view.organization;
     }
 
+    // check if we need to load the main database metadata
     if( ! this.metadata ) {
       this.AdminModel.getDatabaseMetadata(this.view.organization, this.view.database);
+    }
+
+    if( this.view.schema && !this.tables.length ) {
+      this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.schema);
+    }
+
+    // if no subpage, we are done
+    if( !this.view.subPage ) return;
+
+    // load root subpage data
+    if( this.view.subPage === 'user' ) {
+      this.AdminModel.getTableAccessByUser(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
+    } else {
+      this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.subPageValue);
     }
 
   }
@@ -74,17 +101,106 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.loading.metadata = false;
 
     this.metadata = e.payload;
-    if( this.metadata === null ) debugger
-    this.logger.info('db metadata', this.metadata);    
+    this.logger.info('db metadata', this.metadata);   
+
+    if( !this.metadata?.isAdmin ) {
+      this.style.display = 'none';
+      return;
+    }
+    this.style.display = 'block';
+
+    if( this.metadata.instance.state !== 'RUN' ) {
+      return;
+    }
+
+    this.AdminModel.getDatabaseUsers(this.view.organization, this.view.database);
+    this.AdminModel.getDatabaseSchemas(this.view.organization, this.view.database);
   }
 
-  reset() {
-    this.users = [];
-    this.schemas = [];
-    this.tables = [];
-    this.tableData = {};
-    this.userData = {};
-    this.metadata = null;
+  _onDatabaseUsersUpdate(e) { 
+    if( e.database !== this.view.database || e.organization !== this.view.organization ) {
+      return;
+    }
+
+    if( e.state === 'loading' ) {
+      this.loading.users = true;
+      return;
+    }
+    this.loading.users = false;
+
+    this.users = e.payload;
+    this.logger.info('db users', this.users);
+  }
+
+  _onDatabaseSchemasUpdate(e) {
+    if( e.database !== this.view.database || e.organization !== this.view.organization ) {
+      return;
+    }
+
+    if( e.state === 'loading' ) {
+      this.loading.schemas = true;
+      return;
+    }
+    this.loading.schemas = false;
+
+
+    this.schemas = e.payload;
+    this.logger.info('db schemas', this.schemas);   
+  }
+
+  _onSchemaTablesUpdate(e) {
+    if( e.database !== this.view.database || e.organization !== this.view.organization ) {
+      return;
+    } else if( e.state === 'loading' ) {
+      this.loading.tables = true;
+      return;
+    } else if( e.schema !== this.view.schema ) {
+      return;
+    }
+
+    this.tables = e.payload;
+    this.logger.info('db schema tables', this.tables);   
+  }
+
+  _onTableAccessByUserUpdate(e) {
+    if( e.database !== this.view.database || e.organization !== this.view.organization  ) {
+      return;
+    } else if( e.state === 'loading' ) {
+      this.loading.tableData = true;
+      return;
+    } else if ( e.user !== this.view.subPageValue ) {
+      return;
+    }
+
+    let view = Object.assign({}, e.payload);
+    view.tables = [];
+    for( let table in e.payload.tables ) {
+      view.tables.push({
+        name: table,
+        access : e.payload.tables[table]
+      });
+    }
+
+    view.tables.sort((a,b) => a.name.localeCompare(b.name));
+
+    this.userData = view;
+    this.logger.info('user table data', this.userData);   
+  }
+
+  async _onWakeUpBtnClick() {
+    this.startingInstance = true;
+    await this.AdminModel.startInstance(this.view.organization, this.view.database);
+    this.startingInstance = false;
+
+    this.AdminModel.getDatabaseMetadata(this.view.organization, this.view.database);
+  }
+
+  _onSchemaSelectChange(e) {
+    this.AppStateModel.setLocation(e.currentTarget.value);
+  }
+
+  _onUserSelectChange(e) {
+    this.AppStateModel.setLocation(e.currentTarget.value);
   }
 
 }

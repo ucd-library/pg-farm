@@ -220,6 +220,11 @@ class PGInstance {
     return this.query(connection, query);
   }
 
+  getDatabaseUsers(connection) {
+    let query = `SELECT rolname FROM pg_roles`;
+    return this.query(connection, query);
+  }
+
   /**
    * @method getTableAccess
    * @description Get the access for a table

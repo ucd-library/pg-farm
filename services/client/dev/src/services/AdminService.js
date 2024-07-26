@@ -19,6 +19,24 @@ class AdminService extends BaseService {
     }
   }
 
+  async startInstance(org, db) {
+    if( this.startInstanceRequest ) { 
+      return this.startInstanceRequest;
+    }
+
+    try {
+      this.startInstance = this.request({
+        url: `${this.basePath}/instance/${org}/${db}/start`,
+      });
+      await this.startInstance;
+    } catch(e) {
+      this.startInstance = null;
+      throw e;
+    }
+  
+    return this.startInstance;
+  }
+
   async getDatabaseMetadata(org, db) {
     await this.checkRequesting(
       `${org}/${db}`, 'databaseMetadata',

@@ -24,19 +24,22 @@ class AdminStore extends BaseStore {
     };
   }
 
-  _getBasePayload(org, db, state, payload=null, error=null, request=null) {
-    let id = [org, db];
+  _getBasePayload(ido, state, payload=null, error=null, request=null) {
+    let id = [ido.org, ido.db];
 
     if( !state ) throw new Error('state is required');
 
-    if( payload?.schema ) id.push(payload.schema);
-    if( payload?.table ) id.push(payload.table);
-    if( payload?.user ) id.push(payload.user);
+    if( ido.schema ) id.push(ido.schema);
+    if( ido.table ) id.push(ido.table);
+    if( ido.user ) id.push(ido.user);
 
     return {
       id : id.join('/'),
-      database : db,
-      organization : org,
+      database : ido.db,
+      organization : ido.org,
+      schema : ido.schema,
+      table : ido.table,
+      user : ido.user,
       state,
       request,
       payload,
@@ -47,19 +50,19 @@ class AdminStore extends BaseStore {
   /* Database Metadata */
   onDatabaseMetadataLoading(org, db, request) {
     this._onDatabaseMetadataUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADING, null, null, request)
+      this._getBasePayload({org, db}, this.STATE.LOADING, null, null, request)
     );
   }
 
   onDatabaseMetadataLoaded(org, db, payload) {
     this._onDatabaseMetadataUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADED, payload),
+      this._getBasePayload({org, db}, this.STATE.LOADED, payload),
     );
   }
 
   onDatabaseMetadataError(org, db, error) {
     this._onDatabaseMetadataUpdate(
-      this._getBasePayload(org, db, this.STATE.ERROR, null, error)
+      this._getBasePayload({org, db}, this.STATE.ERROR, null, error)
     );
   }
 
@@ -71,19 +74,19 @@ class AdminStore extends BaseStore {
   /* Database Users */
   onDatabaseUsersLoading(org, db, request) {
     this._onDatabaseUsersUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADING, null, null, request)
+      this._getBasePayload({org, db}, this.STATE.LOADING, null, null, request)
     );
   }
 
   onDatabaseUsersLoaded(org, db, payload) {
     this._onDatabaseUsersUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADED, payload),
+      this._getBasePayload({org, db}, this.STATE.LOADED, payload),
     );
   }
 
   onDatabaseUsersError(org, db, error) {
     this._onDatabaseUsersUpdate(
-      this._getBasePayload(org, db, this.STATE.ERROR, null, error)
+      this._getBasePayload({org, db}, this.STATE.ERROR, null, error)
     );
   }
 
@@ -95,19 +98,19 @@ class AdminStore extends BaseStore {
   /* Database Schemas */
   onDatabaseSchemasLoading(org, db, request) {
     this._onDatabaseSchemasUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADING, null, null, request)
+      this._getBasePayload({org, db}, this.STATE.LOADING, null, null, request)
     );
   }
 
   onDatabaseSchemasLoaded(org, db, payload) {
     this._onDatabaseSchemasUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADED, payload),
+      this._getBasePayload({org, db}, this.STATE.LOADED, payload),
     );
   }
 
   onDatabaseSchemasError(org, db, error) {
     this._onDatabaseSchemasUpdate(
-      this._getBasePayload(org, db, this.STATE.ERROR, null, error)
+      this._getBasePayload({org, db}, this.STATE.ERROR, null, error)
     );
   }
 
@@ -119,20 +122,19 @@ class AdminStore extends BaseStore {
   /* Schema Tables */
   onSchemaTablesLoading(org, db, schema, request) {
     this._onSchemaTablesUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADING, {schema}, null, request)
+      this._getBasePayload({org, db, schema}, this.STATE.LOADING, null, null, request)
     );
   }
 
   onSchemaTablesLoaded(org, db, schema, payload) {
-    payload.schema = schema;
     this._onSchemaTablesUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADED, payload),
+      this._getBasePayload({org, db, schema}, this.STATE.LOADED, payload),
     );
   }
 
   onSchemaTablesError(org, db, schema, error) {
     this._onSchemaTablesUpdate(
-      this._getBasePayload(org, db, this.STATE.ERROR, {schema}, error)
+      this._getBasePayload({org, db, schema}, this.STATE.ERROR, null, error)
     );
   }
 
@@ -144,21 +146,19 @@ class AdminStore extends BaseStore {
   /* Table Access */
   onTableAccessLoading(org, db, schema, table, request) {
     this._onTableAccessUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADING, {schema, table}, null, request)
+      this._getBasePayload({org, db, schema, table}, this.STATE.LOADING, null, null, request)
     );
   }
 
   onTableAccessLoaded(org, db, schema, table, payload) {
-    payload.schema = schema;
-    payload.table = table;
     this._onTableAccessUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADED, payload),
+      this._getBasePayload({org, db, schema, table}, this.STATE.LOADED, payload),
     );
   }
 
   onTableAccessError(org, db, schema, table, error) {
     this._onTableAccessUpdate(
-      this._getBasePayload(org, db, this.STATE.ERROR, {schema, table}, error)
+      this._getBasePayload({org, db, schema, table}, this.STATE.ERROR, null, error)
     );
   }
 
@@ -170,21 +170,19 @@ class AdminStore extends BaseStore {
   /* Table Access By User */
   onTableAccessByUserLoading(org, db, schema, user, request) {
     this._onTableAccessByUserUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADING, {schema, user}, null, request)
+      this._getBasePayload({org, db, schema, user}, this.STATE.LOADING, null, null, request)
     );
   }
 
   onTableAccessByUserLoaded(org, db, schema, user, payload) {
-    payload.schema = schema;
-    payload.user = user;
     this._onTableAccessByUserUpdate(
-      this._getBasePayload(org, db, this.STATE.LOADED, payload),
+      this._getBasePayload({org, db, schema, user}, this.STATE.LOADED, payload),
     );
   }
 
   onTableAccessByUserError(org, db, schema, user, error) {
     this._onTableAccessByUserUpdate(
-      this._getBasePayload(org, db, this.STATE.ERROR, {schema, user}, error)
+      this._getBasePayload({org, db, schema, user}, this.STATE.ERROR, null, error)
     );
   }
 

@@ -1,5 +1,6 @@
 import {Router} from 'express';
-import {admin as model, pgRest, database, instance, user} from '../../../../../models/index.js';
+import {admin as model, pgRest, database, instance, user, organization} from '../../../../../models/index.js';
+import pgAdminClient from '../../../../../lib/pg-admin-client.js';
 import keycloak from '../../../../../lib/keycloak.js';
 import handleError from '../../handle-errors.js';
 
@@ -41,9 +42,44 @@ const GET_DB_COLUMNS = ["organization_name", "organization_title","organization_
   "database_name","database_title","database_short_description",
   "database_description","database_url","database_tags","database_id"
 ];
+
+const USER_COLUMNS = ["username","type"];
+
 router.get('/:organization/:database/metadata', async (req, res) => {
   try {
-    res.json(await database.get(req.params.database, req.params.organization, GET_DB_COLUMNS));
+
+    let db = await database.get(req.params.database, req.params.organization, GET_DB_COLUMNS);
+    let resp = {
+      id : db.database_id,
+      name : db.database_name,
+      title : db.database_title,
+      shortDescription : db.database_short_description,
+      description : db.database_description,
+      url : db.database_url,
+      tags : db.database_tags,
+      organization : {
+        id : db.organization_id,
+        name : db.organization_name,
+        title : db.organization_title
+      },
+      instance : {
+        name : db.instance_name,
+        state : db.instance_state,
+        id : db.instance_id
+      }
+    };
+
+    if( req.user && resp.instance.id ) {
+      let users = await pgAdminClient.getInstanceUsers(resp.instance.id, USER_COLUMNS);
+
+      let user = users.find(user => user.username === req.user.username);
+      if( user ) {
+        resp.isAdmin = user.type === 'ADMIN';
+        resp.users = users;
+      }
+    }
+
+    res.json(resp);
   } catch(e) {
     handleError(res, e);
   }
@@ -53,7 +89,7 @@ router.get('/:organization/:database/users',
   keycloak.protect('{instance}-admin'),
   async (req, res) => {
   try {
-    res.json(await database.getDatabaseUsers(req.params.database, req.params.organization));
+    res.json(await database.getDatabaseUsers(req.params.organization, req.params.database));
   } catch(e) {
     handleError(res, e);
   }

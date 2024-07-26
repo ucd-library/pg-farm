@@ -308,8 +308,11 @@ class Database {
     }
   }
 
-  async getDatabaseUsers(dbId) {
-    return pgInstClient.getDatabaseUsers(dbId);
+  async getDatabaseUsers(orgNameOrId, dbNameOrId) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    let resp = await pgInstClient.getDatabaseUsers(con);
+    return resp.rows.filter(row => !row.rolname.match(/^pg_/))
+      .map(row => row.rolname);
   }
 
   async listSchema(orgNameOrId, dbNameOrId) {

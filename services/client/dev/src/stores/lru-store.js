@@ -63,4 +63,4 @@ class LruStore {
 
 }
 
-module.exports = LruStore;
+export default LruStore;
