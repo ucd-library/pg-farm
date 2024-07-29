@@ -442,25 +442,56 @@ class PgFarmAdminClient {
   }
 
   /**
-   * @method getInstanceUser
-   * @description get instance user by name or ID.  Note this is for looking up
-   * a user by database instance name, not database name.  See getInstanceUserForDb()
-   * for that more common use case.
+   * @method deleteInstanceUser
+   * @description delete a user from an instance
    * 
-   * @param {String} instNameOrId instance name or ID
+   * @param {String} instNameOrId 
+   * @param {String} orgNameOrId 
+   * @param {String} username 
+   * @returns 
+   */
+  async deleteInstanceUser(instNameOrId, orgNameOrId, username) {
+    return client.query(`
+      DELETE FROM 
+        ${this.schema}.instance_user 
+      WHERE 
+        instance_user_id = (SELECT * FROM ${this.schema}.get_instance_user_id($1, $2, $3))`, 
+    [username, instNameOrId, orgNameOrId]);
+  }
+
+  /**
+   * @method getInstanceUser
+   * @description get instance user by instance name/id or database name/id. 
+   * 
+   * @param {String} nameOrId instance or database, name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {String} username 
    * @returns {Promise<Object>}
    */
-  async getInstanceUser(instNameOrId, orgNameOrId, username) {
+  async getInstanceUser(nameOrId, orgNameOrId=null, username) {
+    // let resp = await client.query(`
+    //   SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
+    //   WHERE instance_user_id = ${this.schema}.get_instance_user($1, $2, $3)
+    // `, [instNameOrId, orgNameOrId, username]);
+
+    // if( resp.rows.length === 0 ) {
+    //   throw new Error('User not found: '+username);
+    // }
+
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
-      WHERE instance_user_id = ${this.schema}.get_instance_user($1, $2, $3)
-    `, [instNameOrId, orgNameOrId, username]);
+      WHERE 
+        (organization_name = $2 OR organization_id=try_cast_uuid($2)) AND
+        (
+          (instance_name = $1 OR instance_id=try_cast_uuid($1)) OR
+          (database_name = $1 OR database_id=try_cast_uuid($1))
+        ) AND 
+        username = $3
+    `, [nameOrId, orgNameOrId, username]);
 
     if( resp.rows.length === 0 ) {
       throw new Error('User not found: '+username);
-    }
+    } 
 
     return resp.rows[0];
   }

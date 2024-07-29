@@ -55,6 +55,10 @@ class AdminStore extends BaseStore {
   }
 
   onDatabaseMetadataLoaded(org, db, payload) {
+    // set pathname
+    let orgName = payload.organization?.name || '_';
+    payload.pathname = `${orgName}/${payload.name}`;
+
     this._onDatabaseMetadataUpdate(
       this._getBasePayload({org, db}, this.STATE.LOADED, payload),
     );

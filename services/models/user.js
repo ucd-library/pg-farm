@@ -88,6 +88,33 @@ class User {
     await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });  
   }
 
+  async delete(nameOrId, orgNameOrId=null, username) {
+    let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
+    if( !instance ) {
+      let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
+      if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
+      instance = await this.models.instance.get(db.instance_id);
+    } 
+
+    // get instance connection information
+    let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
+
+    logger.info('Removing pg user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
+    await pgInstClient.deletePgUser(con, { username });  
+
+    // add user to database
+    try {
+      logger.info('Deleting instance user: ', {
+        username,
+        instance: instance.name,
+        organization: orgNameOrId
+      });
+      await client.deleteInstanceUser(instance.instance_id, orgNameOrId, username);
+    } catch(e) {
+      logger.error('Error deleting user: '+username, instance, e);
+    }
+  }
+
   /**
    * @method get
    * @description Returns a user.  Provide either instance or database plus
@@ -99,22 +126,7 @@ class User {
    * @returns {Promise<Object>}
    */
   async get(nameOrId, orgNameOrId=null, username) {
-    let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
-      WHERE 
-        (organization_name = $2 OR organization_id=try_cast_uuid($2)) AND
-        (
-          (instance_name = $1 OR instance_id=try_cast_uuid($1)) OR
-          (database_name = $1 OR database_id=try_cast_uuid($1))
-        ) AND 
-        username = $3
-    `, [nameOrId, orgNameOrId, username]);
-
-    if( resp.rows.length === 0 ) {
-      throw new Error('User not found: '+username);
-    } 
-
-    return resp.rows[0];
+    return client.getInstanceUser(nameOrId, orgNameOrId, username);
   }
 
   async exists(nameOrId, orgNameOrId=null, username) {
@@ -125,8 +137,6 @@ class User {
       return false;
     }
   }
-
-
 
   /**
    * @method resetUserPassword
@@ -197,10 +207,9 @@ class User {
       permission,
     });
 
-    let con = await this.models.database.getConnection(
+    let con = await this.models.instance.getConnection(
       database.database_name,
-      database.organization_name,
-      {useSocket: true}
+      database.organization_name
     );
 
     // grant table access
@@ -221,6 +230,8 @@ class User {
     } else {
       if( permission === 'ALL' ) {
         await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['CREATE', 'USAGE']);
+      } else {
+        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['USAGE']);
       }
 
       await pgInstClient.grantTableAccess(con, schemaName, roleName, permission);
@@ -231,7 +242,60 @@ class User {
         await pgInstClient.grantSequenceUsage(con, schemaName, roleName);
       }
     }
+  }
 
+  async revoke(dbNameOrId, orgNameOrId, schemaName, roleName) {
+    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+
+    let tableName = null;
+    if( schemaName.includes('.') ) {
+      let parts = schemaName.split('.');
+      schemaName = parts[0];
+      tableName = parts[1];
+    }
+
+    logger.info('running user revoke', {
+      database,
+      schemaName,
+      tableName,
+      roleName
+    });
+
+    let con = await this.models.instance.getConnection(
+      database.database_name,
+      database.organization_name
+    );
+
+    // revoke table access
+    if( tableName ) {
+      await pgInstClient.grantSchemaUsage(con, schemaName, roleName);
+      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission, tableName);
+
+      // grant sequence access if permission is ALL
+      // common pattern is for primary key's to be serial. So this is required for inserts
+      if( permission === 'ALL' ) {
+        let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
+        for( let seq of tableSeqs ) {
+          await pgInstClient.grantSequenceUsage(con, schemaName, roleName, seq);
+        }
+      }
+
+    // grant schema access
+    } else {
+      if( permission === 'ALL' ) {
+        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['CREATE', 'USAGE']);
+      } else {
+        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['USAGE']);
+      }
+
+      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission);
+
+      // grant function access if permission is ALL
+      if( permission === 'ALL' ) {
+        await pgInstClient.grantFnUsage(con, schemaName, roleName);
+        await pgInstClient.grantSequenceUsage(con, schemaName, roleName);
+      }
+    }
   }
 
   async remoteGrant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='ALL') {

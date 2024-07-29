@@ -2,6 +2,7 @@ import { LitElement } from 'lit';
 import {render, styles} from "./database-admin.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import logger from '../../../src/logger.js';
+import "./database-grant.js";
 
 export default class DatabaseAdmin extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -14,8 +15,9 @@ export default class DatabaseAdmin extends Mixin(LitElement)
       users : {type: Array},
       schemas : {type: Array},
       tables : {type: Array},
-      tableData : {type: Object},
+      tableData : {type: Array},
       userData : {type: Object},
+      startingInstance : {type: Boolean}
     }
   }
 
@@ -32,6 +34,9 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.reset();
     this.logger = logger('database-admin');
 
+    this.grantPopup = document.createElement('database-grant');
+    document.body.appendChild(this.grantPopup);
+
     this._injectModel('AdminModel', 'AppStateModel');
   }
 
@@ -39,10 +44,11 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.users = [];
     this.schemas = [];
     this.tables = [];
-    this.tableData = {};
+    this.tableData = [];
     this.userData = {};
     this.metadata = null;
     this.startingInstance = false;
+    this.rendered = {};
     this.loading = {
       metadata : false,
       users : false,
@@ -73,19 +79,26 @@ export default class DatabaseAdmin extends Mixin(LitElement)
       this.AdminModel.getDatabaseMetadata(this.view.organization, this.view.database);
     }
 
-    if( this.view.schema && !this.tables.length ) {
-      this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.schema);
-    }
 
     // if no subpage, we are done
     if( !this.view.subPage ) return;
 
     // load root subpage data
+    
     if( this.view.subPage === 'user' ) {
-      this.AdminModel.getTableAccessByUser(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
-    } else {
-      this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.subPageValue);
+      if( this.rendered.subPageValue !== this.view.subPageValue ) {
+        this.AdminModel.getTableAccessByUser(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
+      }
+    } else if( this.view.subPage === 'table' ) {
+      if( this.rendered.subPage !== this.view.subPage ) {
+        this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.schema);
+      }
+      if( this.rendered.subPageValue !== this.view.subPageValue ) {
+        this.AdminModel.getTableAccess(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
+      }
     }
+    this.rendered.subPage = this.view.subPage;
+    this.rendered.subPageValue = this.view.subPageValue;
 
   }
 
@@ -187,6 +200,29 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.logger.info('user table data', this.userData);   
   }
 
+  _onTableAccessUpdate(e) {
+    if( e.database !== this.view.database || e.organization !== this.view.organization ) {
+      return;
+    } else if( e.state === 'loading' ) {
+      this.loading.tableData = true;
+      return;
+    } else if ( e.table !== this.view.subPageValue ) {
+      return;
+    }
+
+    let view = [];
+    for( let user in e.payload ) {
+      view.push({
+        name: user,
+        access : e.payload[user]
+      });
+    }
+    view.sort((a, b) => a.name.localeCompare(b.name));
+
+    this.tableData = view;
+    this.logger.info('table data', this.tableData);   
+  }
+
   async _onWakeUpBtnClick() {
     this.startingInstance = true;
     await this.AdminModel.startInstance(this.view.organization, this.view.database);
@@ -201,6 +237,30 @@ export default class DatabaseAdmin extends Mixin(LitElement)
 
   _onUserSelectChange(e) {
     this.AppStateModel.setLocation(e.currentTarget.value);
+  }
+
+  _onEditUserTableAccessClick(e) {
+    let table = null;
+    if( this.view.subPage === 'table' ) {
+      table = this.view.subPageValue;
+    } else if ( e.currentTarget.getAttribute('table') ) {
+      table = e.currentTarget.getAttribute('table');
+    }
+
+    let user = null;
+    if( this.view.subPage === 'user' ) {
+      user = this.view.subPageValue;
+    } else if ( e.currentTarget.getAttribute('user') ) {
+      user = e.currentTarget.getAttribute('user');
+    }
+
+    this.grantPopup.show({
+      database : this.metadata,
+      schema : this.view.schema,
+      table,
+      user,
+      users : this.users
+    });
   }
 
 }

@@ -57,6 +57,14 @@ class AdminModel extends BaseModel {
     return this.service.getTableAccessByUser(org, db, schema, user);
   }
 
+  getTableAccess(org, db, schema, table) {
+    return this.service.getTableAccess(org, db, schema, table);
+  }
+
+  grantAccess(org, db, schemaTable, user, access) {
+    return this.service.grantAccess(org, db, schemaTable, user, access);
+  }
+
 }
 
 const model = new AdminModel();

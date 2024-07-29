@@ -121,6 +121,13 @@ class AdminService extends BaseService {
     return this.store.data.tableAccessByUser.get(`${org}/${db}/${schema}/${user}`);
   }
 
+  async grantTableAccess(org, db, schemaTable, user, permission) {
+    return this.request({
+      url: `${this.basePath}/database/${org}/${db}/schema/${schemaTable}/access/${user}/${permission}`,
+      method: 'PUT'
+    });
+  }
+
 }
 
 const service = new AdminService();

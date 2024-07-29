@@ -17,7 +17,7 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
 
 router.patch(
   '/:organization/:database/metadata', 
-  keycloak.protect('{instance}-admin'), 
+  keycloak.protect('instance-admin'), 
   async (req, res) => {
 
   try {
@@ -86,7 +86,7 @@ router.get('/:organization/:database/metadata', async (req, res) => {
 });
 
 router.get('/:organization/:database/users', 
-  keycloak.protect('{instance}-admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.getDatabaseUsers(req.params.organization, req.params.database));
@@ -96,7 +96,7 @@ router.get('/:organization/:database/users',
 });
 
 router.get('/:organization/:database/schemas', 
-  keycloak.protect('{instance}-admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.listSchema(req.params.organization, req.params.database));
@@ -106,7 +106,7 @@ router.get('/:organization/:database/schemas',
 });
 
 router.get('/:organization/:database/schema/:schema/tables', 
-  keycloak.protect('{instance}-admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.listTables(
@@ -120,7 +120,7 @@ router.get('/:organization/:database/schema/:schema/tables',
 });
 
 router.get('/:organization/:database/schema/:schema/table/:tableName/access',
-  keycloak.protect('{instance}-admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.getTableAccess(
@@ -136,7 +136,7 @@ router.get('/:organization/:database/schema/:schema/table/:tableName/access',
 
 
 router.get('/:organization/:database/schema/:schema/access/:username',
-  keycloak.protect('{instance}-admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessByUser(
@@ -151,7 +151,7 @@ router.get('/:organization/:database/schema/:schema/access/:username',
 });
 
 router.put('/:organization/:database/grant/:schema/:user/:permission', 
-  keycloak.protect('{instance}-admin'), 
+  keycloak.protect('instance-admin'), 
   async (req, res) => {
   
   try {
@@ -160,7 +160,7 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
       organization = null;
     }
 
-    let resp = await user.remoteGrant(
+    let resp = await user.grant(
       req.params.database, 
       organization, 
       req.params.schema, 
@@ -174,7 +174,7 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
 });
 
 router.post('/:organization/:database/link/:remoteOrg/:remoteDb', 
-  keycloak.protect('{instance}-admin'), 
+  keycloak.protect('instance-admin'), 
   async (req, res) => {
   
     try {

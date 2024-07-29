@@ -77,6 +77,11 @@ class PGInstance {
     return this.query(connection, query);
   }
 
+  deletePgUser(connection, opts={}) {
+    let query = pgFormat(`DROP USER %I`, opts.username);
+    return this.query(connection, query);
+  }
+
   async alterPgUserPassword(connection, opts={}) {
     let query = pgFormat(`ALTER USER %I WITH PASSWORD %L`, opts.username, opts.password);
     return this.query(connection, query);
@@ -126,6 +131,15 @@ class PGInstance {
     return this.query(connection, query);
   }
 
+  revokeTableAccess(connection, schemaName, roleName, permission='ALL PRIVILEGES') {
+    if( Array.isArray(permission) ) {
+      permission = permission.join(', ');
+    }
+
+    let query = pgFormat(`REVOKE ${permission} ON %L IN SCHEMA %I FROM %I`, permission, tableName, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
   grantSchemaUsage(connection, schemaName, roleName, permission='USAGE') {
     if( Array.isArray(permission) ) {
       permission = permission.join(', ');
@@ -134,10 +148,26 @@ class PGInstance {
     return this.query(connection, query);
   }
 
+  revokeSchemaUsage(connection, schemaName, roleName, permission='ALL') {
+    if( Array.isArray(permission) ) {
+      permission = permission.join(', ');
+    }
+    let query = pgFormat(`REVOKE ${permission} ON SCHEMA "%s" FROM "%s"`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
   grantFnUsage(connection, schemaName, roleName, functionName) {
-    if( !functionName ) functionName = "";
+    if( !functionName ) functionName = "ALL FUNCTIONS";
     else functionName = '"'+functionName+'"';
     let query = pgFormat(`GRANT EXECUTE ON ${functionName} IN SCHEMA "%s" to "%s"`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+
+  revokeFnUsage(connection, schemaName, roleName, functionName) {
+    if( !functionName ) functionName = "ALL FUNCTIONS";
+    else functionName = '"'+functionName+'"';
+    let query = pgFormat(`REVOKE EXECUTE ON ${functionName} IN SCHEMA "%s" to "%s"`, schemaName, roleName);
     return this.query(connection, query);
   }
 
@@ -147,6 +177,17 @@ class PGInstance {
       query = pgFormat(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "%s" to "%s"`, schemaName, roleName);
     } else {
       query = pgFormat(`GRANT USAGE, SELECT ON "%s".${seqName} to "%s"`, schemaName, roleName);
+    }
+
+    return this.query(connection, query);
+  }
+
+  revokeSequenceUsage(connection, schemaName, roleName, seqName=null) {
+    let query;
+    if( !seqName ) {
+      query = pgFormat(`REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "%s" to "%s"`, schemaName, roleName);
+    } else {
+      query = pgFormat(`REVOKE ALL PRIVILEGES ON "%s".${seqName} to "%s"`, schemaName, roleName);
     }
 
     return this.query(connection, query);

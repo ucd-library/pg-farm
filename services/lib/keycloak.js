@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import clone from 'clone';
 import config from './config.js';
 import adminClient from './pg-admin-client.js';
+import { organization } from '../models/index.js';
 class KeycloakUtils {
 
   constructor() {
@@ -270,35 +271,59 @@ class KeycloakUtils {
 
         let reqRoles = roles;
 
-        // replace role instance template with instance name
-        if( req.params.instance ) {
-          reqRoles = reqRoles.map(role => role.replace('{instance}', req.params.instance));
+        if( roles.includes('instance-admin') ) {
+          return this._protectInstance(req, res, next, ['ADMIN']);
+        }
+
+        if( roles.includes('admin') ) {
+          return this._protectInstance(req, res, next, reqRoles);
         }
 
         // no user
-        if( !req.user ) return res.status(403).send('Unauthorized');
-
-        // there is a user and no roles required, good to go
-        if( reqRoles.length === 0 ) {
+        if( roles.includes('logged-in') ) {
+          if( !req.user ) return res.status(403).send('Unauthorized');
           return next();
         }
 
-        if( req.user.roles.includes('admin') ) {
-          return next();
-        }
-
-        for( let role of reqRoles ) {
-          if( req.user.roles.includes(role) ) {
-            return next();
-          }
-        }
-
-        return res.status(403).send();
+        return res.status(403).send('Unknown protection: '+);
       })
     };
 
     authorize = authorize.bind(this);
     return authorize;
+  }
+
+  _protectAdmin(req, res, next) {
+    if( !req.user ) return res.status(403).send('Unauthorized');
+
+    if( req.user.roles.includes('admin') ) {
+      return next();
+    }
+
+    return res.status(403).send('Unauthorized');
+  }
+
+  _protectInstance(req, res, next, types=['ADMIN']) {
+    if( !req.user ) return res.status(403).send('Unauthorized');
+
+    if( req.user.roles.includes('admin') ) {
+      return next();
+    }
+
+    let nameOrId = req.params.instance || req.params.database;
+    let organization = req.params.organization;
+    if( organization === '_' ) organization = null;
+
+    try {
+      let instUser = adminClient.getInstanceUser(nameOrId, organization, req.user.username);
+      if( types.includes(instUser?.user_type))  {
+        return next();
+      }
+    } catch(e) {
+      // todo; silence is golden?
+    }
+
+    return res.status(403).send('Unauthorized');
   }
 
 }

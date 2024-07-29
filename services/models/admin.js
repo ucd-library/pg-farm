@@ -55,6 +55,10 @@ class AdminModel {
     }
   }
 
+  async deleteUser(instNameOrId, orgNameOrId, user) {
+    await this.models.user.delete(instNameOrId, orgNameOrId, user);
+  }
+
   /**
    * @method ensureDatabase
    * @description Creates a new database.  This will also create the instance and

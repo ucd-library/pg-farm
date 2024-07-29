@@ -17,7 +17,7 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
 });
 
 router.put('/:organization/:instance/:user', 
-  keycloak.protect(['admin','{instance}-admin']), 
+  keycloak.protect('instance-admin'), 
   async (req, res) => {
   
     try {
@@ -34,6 +34,21 @@ router.put('/:organization/:instance/:user',
 
     let id = await model.createUser(instance, organization, user, type, {parent});
     res.status(204).json({id});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.delete('/:organization/:instance/:user', 
+  keycloak.protect('instance-admin'), 
+  async (req, res) => {
+
+  try {
+    let {instance, organization} = getOrgAndIsntFromReq(req);
+    let user = req.params.user;
+
+    let success = await model.deleteUser(instance, organization, user);
+    res.status(204).json({success});
   } catch(e) {
     handleError(res, e);
   }
