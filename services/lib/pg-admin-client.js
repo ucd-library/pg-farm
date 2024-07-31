@@ -133,6 +133,27 @@ class PgFarmAdminClient {
   }
 
   /**
+   * @method getInstanceByHostname
+   * @description get instance by hostname
+   * 
+   * @param {String} hostname
+   * 
+   * @returns {Promise<Object>}
+   **/
+  async getInstanceByHostname(hostname) {
+    let res = await client.query(
+      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE} WHERE instance_hostname = $1`, 
+      [hostname]
+    );
+
+    if( res.rows.length === 0 ) {
+      throw new Error('Instance hostname not found: '+hostname);
+    }
+
+    return res.rows[0];
+  }
+
+  /**
    * @method getInstances
    * @description get all instances
    * 

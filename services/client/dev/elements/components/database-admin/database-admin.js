@@ -29,6 +29,7 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     super();
 
     this.rendered = {};
+    this.view = {};
     this.render = render.bind(this);
 
     this.reset();
@@ -63,6 +64,8 @@ export default class DatabaseAdmin extends Mixin(LitElement)
   }
 
   async _onViewUpdate() {
+    if( Object.keys(this.view).length === 0 ) return;
+
     if( this.rendered.database !== this.view.database ||
         this.rendered.organization !== this.view.organization ) {
 

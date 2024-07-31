@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   url text,
   tags text[],
   tsv_content tsvector,
+  discoverable BOOLEAN NOT NULL DEFAULT TRUE,
   created_at timestamp NOT NULL DEFAULT now(),
   updated_at timestamp NOT NULL DEFAULT now(),
   UNIQUE (instance_id, name)

@@ -22,6 +22,7 @@ export default class AppDatabase extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
 
+    this.view = {};
     this.page = 'db';
     this.logger = logger('app-database');
 

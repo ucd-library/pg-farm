@@ -175,7 +175,7 @@ class Instance {
   async initInstanceDb(nameOrId, orgNameOrId) {
     // create postgres user to admin database, resets password
     try {
-      logger.info('Ensuring postgres user', orgNameOrId, nameOrId)
+      logger.info('Ensuring postgres user on', orgNameOrId, nameOrId)
       await this.models.user.create(nameOrId, orgNameOrId, 'postgres');
     } catch(e) {
       logger.warn(`Failed to create postgres user for on instance ${orgNameOrId}/${nameOrId}`, e.message, e.stack);

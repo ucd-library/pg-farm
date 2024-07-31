@@ -285,7 +285,7 @@ class KeycloakUtils {
           return next();
         }
 
-        return res.status(403).send('Unknown protection: '+);
+        return res.status(403).send('Unknown protection: '+roles.join(', '));
       })
     };
 

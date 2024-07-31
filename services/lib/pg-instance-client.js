@@ -11,12 +11,50 @@ import pgAdminClient from './pg-admin-client.js';
  */
 class PGInstance {
 
+  constructor() {
+    // https://www.postgresql.org/docs/current/ddl-priv.html 
+    this.ALL_PRIVILEGE = 'ALL';
+
+    this.ALL = {
+      TABLES : 'ALL TABLES',
+      FUNCTIONS : 'ALL FUNCTIONS',
+      SEQUENCES : 'ALL SEQUENCES',
+      TYPES : 'ALL TYPES'
+    }
+    this.ALL_KEYWORD_ARRAY = Object.values(this.ALL);
+
+    this.GRANTS = {
+      DATABASE : {
+        READ : ['CONNECT'],
+        WRITE : ['CREATE', 'TEMPORARY']
+      },
+      SCHEMA : {
+        READ : ['USAGE'],
+        WRITE : ['CREATE']
+      },
+      TABLE : {
+        READ : ['SELECT'],
+        WRITE : ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']
+      },
+      FUNCTION : {
+        EXECUTE : ['EXECUTE']
+      },
+      SEQUENCE : {
+        READ : ['SELECT'],
+        WRITE : ['UPDATE', 'USAGE']
+      },
+      TYPE : {
+        WRITE : ['USAGE']
+      }
+    }
+  }
+
   async getConnection(opts={}, attempts=3) {
     let error;
 
-    let db = await pgAdminClient.getDatabase(opts.database, opts.organization);
+    let db = await pgAdminClient.getInstanceByHostname(opts.host);
     if( db.instance_state !== 'RUN' ) {
-      throw new Error('Database is currently in a '+db.instance_state+' state. The database must be in a RUN state before trying this operation.');
+      throw new Error('Database instance is currently in a '+db.instance_state+' state. The database instance must be in a RUN state before trying this operation.');
     }
 
     for( let i = 0; i < attempts; i++ ) {
@@ -111,36 +149,63 @@ class PGInstance {
   };
 
   /**
-   * @method grantAllTableAccess
+   * @method grantSchemaObjectAccess
+   * 
+   * @param {*} connection connection object
+   * @param {*} schemaName schema name
+   * @param {*} roleName username
+   * @param {*} permission pg privileges.  Can be an array of privileges or ALL
+   * @param {*} objectName can be a table, function, sequence, or type or ALL TABLES, ALL FUNCTIONS, ALL SEQUENCES, ALL TYPES
+   * 
+   * @returns {Promise}
+   */
+  grantSchemaObjectAccess(connection, schemaName, roleName, permission, objectName) {
+    if( !schemaName ) throw new Error('schemaName is required');
+    if( !roleName ) throw new Error('roleName is required');
+    if( !objectName ) throw new Error('objectName is required');
+    if( !permission ) throw new Error('permission is required');
+
+
+    if( !this.ALL_KEYWORD_ARRAY.includes(objectName) ) {
+      objectName = '"'+objectName+'"';
+    }
+
+    if( Array.isArray(permission) ) { 
+      permission = permission.join(', ');
+    }
+
+    let query = pgFormat(`GRANT ${permission} ON ${objectName} IN SCHEMA %I TO %I`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+  revokeSchemaObjectAccess(connection, schemaName, roleName, permission, objectName) {
+    if( !schemaName ) throw new Error('schemaName is required');
+    if( !roleName ) throw new Error('roleName is required');
+    if( !permission ) throw new Error('permission is required');
+    if( !objectName ) throw new Error('objectName is required');
+
+    if( !this.ALL_KEYWORD_ARRAY.includes(objectName) ) {
+      objectName = '"'+objectName+'"';
+    }
+
+    if( Array.isArray(permission) ) {
+      permission = permission.join(', ');
+    }
+
+    let query = pgFormat(`REVOKE ${permission} ON ${objectName} IN SCHEMA %I FROM %I`, schemaName, roleName);
+    return this.query(connection, query);
+  }
+
+  /**
+   * @method grantSchemaAccess
    * 
    * @param {*} connection 
    * @param {*} schemaName 
    * @param {*} roleName 
    * @param {*} permission 
-   * @param {*} tableName
-   * 
    * @returns 
    */
-  grantTableAccess(connection, schemaName, roleName, permission='ALL', tableName='ALL TABLES') {
-    if( Array.isArray(permission) ) { 
-      permission = permission.join(', ');
-    }
-    permission = permission.replace(/;/g, '');
-
-    let query = pgFormat(`GRANT ${permission} ON %L IN SCHEMA %I TO %I`, permission, tableName, schemaName, roleName);
-    return this.query(connection, query);
-  }
-
-  revokeTableAccess(connection, schemaName, roleName, permission='ALL PRIVILEGES') {
-    if( Array.isArray(permission) ) {
-      permission = permission.join(', ');
-    }
-
-    let query = pgFormat(`REVOKE ${permission} ON %L IN SCHEMA %I FROM %I`, permission, tableName, schemaName, roleName);
-    return this.query(connection, query);
-  }
-
-  grantSchemaUsage(connection, schemaName, roleName, permission='USAGE') {
+  grantSchemaAccess(connection, schemaName, roleName, permission) {
     if( Array.isArray(permission) ) {
       permission = permission.join(', ');
     }
@@ -148,7 +213,7 @@ class PGInstance {
     return this.query(connection, query);
   }
 
-  revokeSchemaUsage(connection, schemaName, roleName, permission='ALL') {
+  revokeSchemaAccess(connection, schemaName, roleName, permission) {
     if( Array.isArray(permission) ) {
       permission = permission.join(', ');
     }
@@ -156,42 +221,30 @@ class PGInstance {
     return this.query(connection, query);
   }
 
-  grantFnUsage(connection, schemaName, roleName, functionName) {
-    if( !functionName ) functionName = "ALL FUNCTIONS";
-    else functionName = '"'+functionName+'"';
-    let query = pgFormat(`GRANT EXECUTE ON ${functionName} IN SCHEMA "%s" to "%s"`, schemaName, roleName);
-    return this.query(connection, query);
-  }
-
-
-  revokeFnUsage(connection, schemaName, roleName, functionName) {
-    if( !functionName ) functionName = "ALL FUNCTIONS";
-    else functionName = '"'+functionName+'"';
-    let query = pgFormat(`REVOKE EXECUTE ON ${functionName} IN SCHEMA "%s" to "%s"`, schemaName, roleName);
-    return this.query(connection, query);
-  }
-
-  grantSequenceUsage(connection, schemaName, roleName, seqName=null) {
-    let query;
-    if( !seqName ) {
-      query = pgFormat(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "%s" to "%s"`, schemaName, roleName);
-    } else {
-      query = pgFormat(`GRANT USAGE, SELECT ON "%s".${seqName} to "%s"`, schemaName, roleName);
+  grantDatabaseAccess(connection, dbName, roleName, permission) {
+    if( Array.isArray(permission) ) {
+      permission = permission.join(', ');
     }
-
+    let query = pgFormat(`GRANT ${permission} ON DATABASE "%s" TO "%s"`, dbName, roleName);
     return this.query(connection, query);
   }
 
-  revokeSequenceUsage(connection, schemaName, roleName, seqName=null) {
-    let query;
-    if( !seqName ) {
-      query = pgFormat(`REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "%s" to "%s"`, schemaName, roleName);
-    } else {
-      query = pgFormat(`REVOKE ALL PRIVILEGES ON "%s".${seqName} to "%s"`, schemaName, roleName);
+  revokeDatabaseAccess(connection, dbName, roleName, permission) {
+    if( Array.isArray(permission) ) {
+      permission = permission.join(', ');
     }
-
+    let query = pgFormat(`REVOKE ${permission} ON DATABASE "%s" TO "%s"`, dbName, roleName);
     return this.query(connection, query);
   }
+
+  async dropUser(connection, username) {
+    let query = pgFormat(`REASSIGN OWNED BY %I to ${config.pgInstance.adminRole}`, username); 
+    await this.query(connection, query);
+
+    query = pgFormat(`DROP USER %I`, username);
+    return this.query(connection, query);
+  }
+
 
   enableExtension(connection, extensionName) {
     let query = pgFormat(`CREATE EXTENSION IF NOT EXISTS %s`, extensionName);

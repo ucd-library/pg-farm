@@ -168,8 +168,8 @@ class User {
   }
 
   checkPermissionType(type) {
-    if( ['SELECT', 'ALL'].indexOf(type) === -1 ) {
-      throw new Error('Invalid permission type: '+type+'. Permission must be one of: SELECT or ALL');
+    if( ['READ', 'WRITE'].indexOf(type) === -1 ) {
+      throw new Error('Invalid permission type: '+type+'. Permission must be one of: READ, WRITE');
     }
   }
 
@@ -181,12 +181,12 @@ class User {
    * @param {String} orgNameOrId name or id of the organization
    * @param {String} schemaName can include table name 
    * @param {String} roleName username to give access 
-   * @param {String} permission must be one of 'SELECT' or 'ALL'.
+   * @param {String} permission must be one of 'READ' or 'WRITE'.
    * 
    * 
    * @returns 
    */
-  async grant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='ALL') {
+  async grant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
     permission = permission.toUpperCase();
     this.checkPermissionType(permission);
 
@@ -207,40 +207,44 @@ class User {
       permission,
     });
 
-    let con = await this.models.instance.getConnection(
+    let con = await this.models.database.getConnection(
       database.database_name,
       database.organization_name
     );
 
     // grant table access
     if( tableName ) {
-      await pgInstClient.grantSchemaUsage(con, schemaName, roleName);
-      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission, tableName);
+      await pgInstClient.grantSchemaAccess(con, schemaName, roleName, pgInstClient.GRANTS.SCHEMA.READ);
 
       // grant sequence access if permission is ALL
       // common pattern is for primary key's to be serial. So this is required for inserts
-      if( permission === 'ALL' ) {
+      if( permission === 'WRITE' ) {
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName);
+
         let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
         for( let seq of tableSeqs ) {
           await pgInstClient.grantSequenceUsage(con, schemaName, roleName, seq);
         }
+      } else {
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.READ, tableName);
       }
 
     // grant schema access
     } else {
-      if( permission === 'ALL' ) {
-        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['CREATE', 'USAGE']);
+
+      if( permission === 'WRITE' ) {
+        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TABLES);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.FUNCTIONS);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.SEQUENCES);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TYPES);
       } else {
-        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['USAGE']);
+        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, pgInstClient.GRANTS.SCHEMA.READ);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.READ, pgInstClient.ALL.TABLES);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.FUNCTION.EXECUTE, pgInstClient.ALL.FUNCTIONS);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.SEQUENCE.READ, pgInstClient.ALL.SEQUENCES);
       }
 
-      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission);
-
-      // grant function access if permission is ALL
-      if( permission === 'ALL' ) {
-        await pgInstClient.grantFnUsage(con, schemaName, roleName);
-        await pgInstClient.grantSequenceUsage(con, schemaName, roleName);
-      }
     }
   }
 
