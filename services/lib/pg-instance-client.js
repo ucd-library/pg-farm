@@ -289,8 +289,14 @@ class PGInstance {
     let query = pgFormat(`SELECT
           n.nspname AS schema_name,
           r.rolname AS role_name,
-          COALESCE(has_schema_privilege(r.rolname, n.nspname, 'USAGE'), FALSE) AS usage,
-          COALESCE(has_schema_privilege(r.rolname, n.nspname, 'CREATE'), FALSE) AS create
+          CASE 
+            WHEN has_schema_privilege(r.rolname, n.nspname, 'USAGE') THEN 'USAGE' 
+            ELSE NULL 
+          END AS usage_priv,
+          CASE 
+            WHEN has_schema_privilege(r.rolname, n.nspname, 'CREATE') THEN 'CREATE' 
+            ELSE NULL 
+          END AS create_priv
       FROM
           pg_namespace n
           CROSS JOIN pg_roles r
@@ -366,6 +372,32 @@ class PGInstance {
 
   getUsageAccess(connection, schemaName) {
     let query = pgFormat(`SELECT * FROM information_schema.usage_privileges WHERE schema_name = %L`, schemaName);
+    return this.query(connection, query);
+  }
+
+  getDatabaseAccess(connection, dbName) {
+    let query = pgFormat(`SELECT
+        r.rolname AS role_name,
+        d.datname AS database_name,
+        CASE 
+            WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') THEN 'CONNECT' 
+            ELSE NULL 
+        END AS connect_priv,
+        CASE 
+            WHEN has_database_privilege(r.rolname, d.datname, 'CREATE') THEN 'CREATE' 
+            ELSE NULL 
+        END AS create_priv,
+        CASE 
+            WHEN has_database_privilege(r.rolname, d.datname, 'TEMPORARY') THEN 'TEMPORARY' 
+            ELSE NULL 
+        END AS temporary_priv
+    FROM
+        pg_database d,
+        pg_roles r
+    WHERE
+        d.datname = %L
+    ORDER BY
+        d.datname;`, dbName);
     return this.query(connection, query);
   }
 

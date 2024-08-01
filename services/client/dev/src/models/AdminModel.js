@@ -61,8 +61,40 @@ class AdminModel extends BaseModel {
     return this.service.getTableAccess(org, db, schema, table);
   }
 
+  /**
+   * @method setUserAccess
+   * @description set access for a user on a database, schema or table.
+   * For a database, schemaTable should be null.  For a table, the schemaTable
+   * should be [schema].[table].  Otherwise just provide the [schema] name.
+   * 
+   * @param {String} org organization name or id
+   * @param {String} db database name or id
+   * @param {String|Null} schemaTable Either the [schema] name, [schema].[table] name or null for database
+   * @param {String} user database user name
+   * @param {String} access Either 'READ', 'WRITE' or 'NONE'.  NONE will revoke all access.
+   */
+  async setUserAccess(org, db, schemaTable='_', user, access) {
+    let responses = [];
+    if( access == 'READ' ) {
+      responses.push(await this.revokeAccess(org, db, schemaTable, user, 'WRITE'));
+      responses.push(await this.grantAccess(org, db, schemaTable, user, 'READ'));
+    } else if( access == 'WRITE' ) {
+      responses.push(await this.grantAccess(org, db, schemaTable, user, 'WRITE'));
+    } else if( access == 'NONE' ) {
+      responses.push(await this.revokeAccess(org, db, schemaTable, user, 'WRITE'));
+    } else {
+      throw new Error('Invalid access type: '+access);
+    }
+
+    return responses;
+  }
+
   grantAccess(org, db, schemaTable, user, access) {
     return this.service.grantAccess(org, db, schemaTable, user, access);
+  }
+
+  revokeAccess(org, db, schemaTable, user, access) {
+    return this.service.revokeAccess(org, db, schemaTable, user, access);
   }
 
 }

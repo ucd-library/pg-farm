@@ -85,7 +85,9 @@ class User {
     let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
 
     logger.info('Ensuring pg user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
-    await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });  
+    await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });
+
+
   }
 
   async delete(nameOrId, orgNameOrId=null, username) {
@@ -173,6 +175,56 @@ class User {
     }
   }
 
+  async grantDatabaseAccess(dbNameOrId, orgNameOrId, roleName, permission='READ') {
+    this.checkPermissionType(permission);
+
+    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+
+    if( permission === 'WRITE' ) {
+      permission = pgInstClient.ALL_PRIVILEGE;
+    } else {
+      permission = pgInstClient.GRANTS.DATABASE.READ;
+    }
+
+    logger.info('running user database grant', {
+      database,
+      roleName,
+      permission: pgInstClient.GRANTS.DATABASE
+    });
+
+    let con = await this.models.database.getConnection(
+      database.database_name,
+      database.organization_name
+    );
+
+    return pgInstClient.grantDatabaseAccess(con, database.database_name, roleName, pgInstClient.GRANTS.DATABASE[permission]);
+  }
+
+  async revokeDatabaseAccess(dbNameOrId, orgNameOrId, roleName, permission='READ') {
+    this.checkPermissionType(permission);
+
+    if( permission === 'WRITE' ) {
+      permission = pgInstClient.GRANTS.DATABASE.WRITE;
+    } else {
+      permission = pgInstClient.ALL_PRIVILEGE;
+    }
+
+    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+
+    logger.info('running user database revoke', {
+      database,
+      roleName,
+      permission: pgInstClient.GRANTS.DATABASE[permission]
+    });
+
+    let con = await this.models.database.getConnection(
+      database.database_name,
+      database.organization_name
+    );
+
+    return pgInstClient.revokeDatabaseAccess(con, database.database_name, roleName, pgInstClient.GRANTS.DATABASE[permission]);
+  }
+
   /**
    * @method grant
    * @description Simplified helper to grant a user access to a schema or table.
@@ -248,7 +300,7 @@ class User {
     }
   }
 
-  async revoke(dbNameOrId, orgNameOrId, schemaName, roleName) {
+  async revoke(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
     let database = await this.models.database.get(dbNameOrId, orgNameOrId);
 
     let tableName = null;
@@ -272,45 +324,39 @@ class User {
 
     // revoke table access
     if( tableName ) {
-      await pgInstClient.grantSchemaUsage(con, schemaName, roleName);
-      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission, tableName);
 
-      // grant sequence access if permission is ALL
-      // common pattern is for primary key's to be serial. So this is required for inserts
-      if( permission === 'ALL' ) {
-        let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
-        for( let seq of tableSeqs ) {
-          await pgInstClient.grantSequenceUsage(con, schemaName, roleName, seq);
+      if( permission === 'READ' ) {
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, tableName);
+      } else {
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName);
+      }
+
+      
+      let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
+      for( let seq of tableSeqs ) {
+        if( permission === 'READ' ) {
+          await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, seq);
+        } else {
+          await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.SEQUENCE.WRITE, seq);
         }
       }
 
     // grant schema access
     } else {
-      if( permission === 'ALL' ) {
-        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['CREATE', 'USAGE']);
+      if( permission === 'READ' ) {
+        await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TABLES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.FUNCTIONS);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.SEQUENCES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TYPES);
       } else {
-        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, ['USAGE']);
-      }
-
-      await pgInstClient.grantTableAccess(con, schemaName, roleName, permission);
-
-      // grant function access if permission is ALL
-      if( permission === 'ALL' ) {
-        await pgInstClient.grantFnUsage(con, schemaName, roleName);
-        await pgInstClient.grantSequenceUsage(con, schemaName, roleName);
+        await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.GRANTS.SCHEMA.WRITE);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, pgInstClient.ALL.TABLES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.FUNCTION.EXECUTE, pgInstClient.ALL.FUNCTIONS);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.SEQUENCE.WRITE, pgInstClient.ALL.SEQUENCES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TYPE.WRITE, pgInstClient.ALL.TYPES);
       }
     }
-  }
-
-  async remoteGrant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='ALL') {
-    this.checkPermissionType(permission);
-
-    let db = await this.models.database.get(dbNameOrId, orgNameOrId);
-    return remoteExec(
-      db.instance_hostname, 
-      `/grant/${db.database_name}/${schemaName}/${roleName}/${permission}`,
-      {method: 'PUT'}
-    );
   }
 
 }

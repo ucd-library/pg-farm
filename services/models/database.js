@@ -309,10 +309,25 @@ class Database {
   }
 
   async getDatabaseUsers(orgNameOrId, dbNameOrId) {
+    let database = await this.get(dbNameOrId, orgNameOrId);
+
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
     let resp = await pgInstClient.getDatabaseUsers(con);
-    return resp.rows.filter(row => !row.rolname.match(/^pg_/))
-      .map(row => row.rolname);
+
+    let access = await pgInstClient.getDatabaseAccess(con, database.database_name);
+    access = access.rows;
+
+    let users = resp.rows.filter(row => !row.rolname.match(/^pg_/))
+      .map(row => {
+        let user = row.rolname;
+        let uaccess = access.find(row => row.role_name === user) || {};
+        delete uaccess.role_name;
+        delete uaccess.database_name;
+        uaccess = Object.values(uaccess).filter(v => v);
+        return {name: user, access: uaccess}
+      });
+
+    return users;
   }
 
   async listSchema(orgNameOrId, dbNameOrId) {
@@ -359,16 +374,14 @@ class Database {
     if( schemaAccess ) {
       delete schemaAccess.role_name;
       delete schemaAccess.schema_name;
+      schemaAccess = Object.values(schemaAccess).filter(v => v);
     } else {
-      schemaAccess = {
-        usage : false,
-        create : false,
-      }
+      schemaAccess = []
     }
 
     return {
       schema : schemaAccess,
-      tables: tableMap
+      tables : tableMap
     };
   }
 

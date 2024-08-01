@@ -160,13 +160,59 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
       organization = null;
     }
 
-    let resp = await user.grant(
-      req.params.database, 
-      organization, 
-      req.params.schema, 
-      req.params.user,
-      req.query.permissions
-    );
+    let resp;
+    if( req.params.schema === '_' ) {
+      resp = await user.grantDatabaseAccess(
+        req.params.database, 
+        organization, 
+        req.params.schema, 
+        req.params.user,
+        req.query.permission
+      );
+    } else {
+      resp = await user.grant(
+        req.params.database, 
+        organization, 
+        req.params.schema, 
+        req.params.user,
+        req.query.permission
+      );
+    }
+
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.put('/:organization/:database/revoke/:schema/:user/:permission', 
+  keycloak.protect('instance-admin'), 
+  async (req, res) => {
+  
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let resp;
+    if( req.params.schema === '_' ) {
+      resp = await user.revokeDatabaseAccess(
+        req.params.database, 
+        organization, 
+        req.params.user,
+        req.query.permission
+      );
+    } else {
+      resp = await user.revoke(
+        req.params.database, 
+        organization, 
+        req.params.schema, 
+        req.params.user,
+        req.query.permission
+      );
+    }
+
     res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);

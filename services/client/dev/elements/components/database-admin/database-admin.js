@@ -200,6 +200,9 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     view.tables.sort((a,b) => a.name.localeCompare(b.name));
 
     this.userData = view;
+
+    this.userData.databasePrivileges = this.users.find(u => u.name === this.view.subPageValue)?.access || [];
+
     this.logger.info('user table data', this.userData);   
   }
 

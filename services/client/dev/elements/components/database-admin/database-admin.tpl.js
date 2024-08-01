@@ -68,7 +68,6 @@ return html`
 
   <div class="sub-page-layout">
 
-
     <div ?hidden="${!this.view.schema}">
       <div class="toggle-btns">
         <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/user">
@@ -82,8 +81,8 @@ return html`
       <div ?hidden="${this.view.subPage != "user"}" >
         ${this.users.map(user => html`
           <div>
-            <button class="btn btn--sm ${this.view.subPageValue === user ? "btn--primary" : ""}">
-              <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/user/${user}">${user}</a>
+            <button class="btn btn--sm ${this.view.subPageValue === user.name ? "btn--primary" : ""}">
+              <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/user/${user.name}">${user.name}</a>
             </button>
           </div>
         `)}
@@ -103,11 +102,16 @@ return html`
 
     <div class="sub-page" ?hidden="${this.view.subPage != 'user'}">
       <div ?hidden="${!this.view.subPageValue}">
-        <div><b>Schema Access for ${this.view.subPageValue}</b></div>
+        <h3>User ${this.view.subPageValue}</h3>
+
+        <div>
+          <b>Database Access:</b> 
+          <span>${(this.userData?.databasePrivileges || []).join(', ')}</span>
+        </div>
 
         <div style="margin-bottom: 25px">
-          <span>Read: ${this.userData?.schema?.usage}</span>,
-          <span>Write: ${this.userData?.schema?.create}</span>
+          <b>Schema Access:</b>
+          <span>${this.userData?.schema?.join(', ')}</span>
           <a @click=${this._onEditUserTableAccessClick}>Edit</a>
         </div>
 

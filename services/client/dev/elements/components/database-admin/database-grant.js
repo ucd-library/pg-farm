@@ -11,6 +11,7 @@ export default class DatabaseGrant extends Mixin(LitElement)
       database : {type: Object},
       user : {type: String},
       currentUsers : {type: Array},
+      databasePrivileges : {type: Array},
       table : {type: String},
       schema : {type: String},
       options : {type: Array},
@@ -28,6 +29,7 @@ export default class DatabaseGrant extends Mixin(LitElement)
     this.logger = logger('database-grant');
 
     this.database = {};
+    this.databaseAccess = [];
     this.currentUsers = [];
     this.userInDb = false;
 
@@ -100,7 +102,7 @@ export default class DatabaseGrant extends Mixin(LitElement)
   }
 
   setUserInDb() {
-    this.userInDb = this.currentUsers.includes(this.user);
+    this.userInDb = this.currentUsers.find(u => u.name === this.user) ? true : false;
   }
 
 
