@@ -167,7 +167,7 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
         organization, 
         req.params.schema, 
         req.params.user,
-        req.query.permission
+        req.params.permission
       );
     } else {
       resp = await user.grant(
@@ -175,11 +175,11 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
         organization, 
         req.params.schema, 
         req.params.user,
-        req.query.permission
+        req.params.permission
       );
     }
 
-    res.status(200).json(resp);
+    res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
   }
@@ -201,7 +201,7 @@ router.put('/:organization/:database/revoke/:schema/:user/:permission',
         req.params.database, 
         organization, 
         req.params.user,
-        req.query.permission
+        req.params.permission
       );
     } else {
       resp = await user.revoke(
@@ -209,11 +209,11 @@ router.put('/:organization/:database/revoke/:schema/:user/:permission',
         organization, 
         req.params.schema, 
         req.params.user,
-        req.query.permission
+        req.params.permission
       );
     }
 
-    res.status(200).json(resp);
+    res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
   }

@@ -7,9 +7,13 @@ export function styles() {
     }
 
     .toggle-btns {
+      display: flex;
       margin-bottom: 25px;
     }
-
+    .toggle-btns button {
+      flex: 1;
+      margin: 0;
+    }
     .toggle-btns a {
       text-decoration: none;
     }
@@ -20,6 +24,7 @@ export function styles() {
 
     .sub-page {
       flex: 1;
+      margin: 15px;
     } 
   `;
 
@@ -47,7 +52,8 @@ return html`
 </div>
 
 <div ?hidden="${this.metadata?.instance?.state == 'SLEEP'}">
-  <div>Schemas: 
+  <div style="display: flex">
+    <div>Schema:</div> 
     <select @change="${this._onSchemaSelectChange}">
       <option 
         .selected="${!this.view.schema}"
@@ -70,11 +76,13 @@ return html`
 
     <div ?hidden="${!this.view.schema}">
       <div class="toggle-btns">
-        <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/user">
-          <button class="btn btn--sm ${this.view.subPage == "user" ? "btn--primary" : ""}">Users</button>
+        <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/user"
+          class="btn btn--sm ${this.view.subPage == "user" ? "btn--primary" : ""}">
+          Users
         </a>
-        <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/table">
-          <button class="btn btn--sm ${this.view.subPage == "table" ? "btn--primary" : ""}">Tables</button>
+        <a href="/db/${this.view.organization}/${this.view.database}/${this.view.schema}/table"
+          class="btn btn--sm ${this.view.subPage == "table" ? "btn--primary" : ""}">
+          Tables
         </a>
       </div>
 
@@ -115,7 +123,7 @@ return html`
           <a @click=${this._onEditUserTableAccessClick}>Edit</a>
         </div>
 
-        <div><b>Table Access</b></div>
+        <div><b>Table Access (<a @click=${this._onEditUserTableAccessClick} select-table>Add</a>)</b></div>
         <div>
           ${(this.userData.tables || []).map(table => html`
             <div>
@@ -126,6 +134,9 @@ return html`
             </div>
           `)}
         </div>
+        <div ?hidden="${(this.userData.tables || []).length !== 0}">
+            User does not have access to any tables in schema ${this.view.schema}
+        </div>
       </div>
       <div ?hidden="${this.view.subPageValue}">
         Select a user to view/modify schema access
@@ -133,14 +144,19 @@ return html`
     </div>
 
     <div class="sub-page" ?hidden="${this.view.subPage != 'table'}">
-      <div>User Access for ${this.view.subPageValue} (<a @click=${this._onEditUserTableAccessClick}>Add</a>)</div>
+      <div ?hidden="${!this.view.subPageValue}">
+        <div>User Access for ${this.view.subPageValue} (<a @click=${this._onEditUserTableAccessClick} select-user>Add</a>)</div>
 
-      <div>
-        ${(this.tableData || []).map(user => html`
-          <div>
-            <span>${user.name} (<a user=${user.name} @click=${this._onEditUserTableAccessClick}>Edit</a>): ${user.access.join(', ')}</span>
-          </div>
-        `)}
+        <div>
+          ${(this.tableData || []).map(user => html`
+            <div>
+              <span>${user.name} (<a user=${user.name} @click=${this._onEditUserTableAccessClick}>Edit</a>): ${user.access.join(', ')}</span>
+            </div>
+          `)}
+        </div>
+      </div>
+      <div ?hidden="${this.view.subPageValue}">
+        Select a table to view/modify user access
       </div>
     </div>
   

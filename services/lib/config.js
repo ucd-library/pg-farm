@@ -1,3 +1,4 @@
+import { error, log } from 'console';
 import fs from 'fs';
 const env = process.env;
 
@@ -68,6 +69,15 @@ const config = {
     title : 'PG Farm',
     appRoutes : ['search', 'db'],
     staticAssetsBaseUrl : env.CLIENT_STATIC_ASSETS_BASE_URL || 'https://storage.googleapis.com/application-static-assets',
+    logger : {
+      logLevel : env.CLIENT_LOG_LEVEL || 'info',
+      logLevels : env.CLIENT_LOG_LEVELS ? JSON.parse(env.CLIENT_LOG_LEVELS) : {},
+      reportErrors : {
+        enabled : env.CLIENT_ERROR_REPORTING_ENABLED === 'true',
+        url : env.CLIENT_ERROR_REPORTING_URL || '',
+        key : env.CLIENT_ERROR_REPORTING_KEY || ''
+      }
+    }
   },
 
   gateway : {

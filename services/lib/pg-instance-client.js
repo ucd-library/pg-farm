@@ -14,6 +14,7 @@ class PGInstance {
   constructor() {
     // https://www.postgresql.org/docs/current/ddl-priv.html 
     this.ALL_PRIVILEGE = 'ALL';
+    this.ALL_PRIVILEGES = 'ALL PRIVILEGES';
 
     this.ALL = {
       TABLES : 'ALL TABLES',
@@ -141,8 +142,8 @@ class PGInstance {
         JOIN pg_depend d ON d.refobjid = t.oid AND d.refobjsubid = a.attnum
         JOIN pg_class s ON s.oid = d.objid AND s.relkind = 'S'
     WHERE
-        t.relname = %I
-        AND t.relnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = %I);`,
+        t.relname = %L
+        AND t.relnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = %L);`,
     tableName, schemaName));
 
     return resp.rows.map(row => row.sequence_name)
@@ -159,40 +160,83 @@ class PGInstance {
    * 
    * @returns {Promise}
    */
-  grantSchemaObjectAccess(connection, schemaName, roleName, permission, objectName) {
+  grantSchemaObjectAccess(connection, schemaName, roleName, permission, objectName, type) {
     if( !schemaName ) throw new Error('schemaName is required');
     if( !roleName ) throw new Error('roleName is required');
     if( !objectName ) throw new Error('objectName is required');
     if( !permission ) throw new Error('permission is required');
 
-
-    if( !this.ALL_KEYWORD_ARRAY.includes(objectName) ) {
-      objectName = '"'+objectName+'"';
+    // there is no revoke ALL TYPES in postgres so we have to do it manually :(
+    if( objectName === this.ALL.TYPES ) {
+      let query = pgFormat(`DO $$ 
+        DECLARE 
+            r RECORD;
+        BEGIN 
+            FOR r IN 
+                SELECT n.nspname as schema_name, t.typname as type_name 
+                FROM pg_type t 
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace 
+                WHERE n.nspname = %L AND
+                t.typtype = 'e'
+            LOOP 
+                EXECUTE 'GRANT ${permission} ON TYPE ' || quote_ident(r.schema_name) || '.' || quote_ident(r.type_name) || ' TO "${roleName}"';
+            END LOOP; 
+        END $$;`, schemaName);
+      logger.info('Running revoke all types query', query);
+      return this.query(connection, query);
+    } else if( !this.ALL_KEYWORD_ARRAY.includes(objectName) ) {
+      objectName = `${type} "${schemaName}"."${objectName}"`;
+    } else {
+      objectName += ` IN SCHEMA "${schemaName}"`;
     }
+
 
     if( Array.isArray(permission) ) { 
       permission = permission.join(', ');
     }
 
-    let query = pgFormat(`GRANT ${permission} ON ${objectName} IN SCHEMA %I TO %I`, schemaName, roleName);
+    let query = pgFormat(`GRANT ${permission} ON ${objectName} TO %I`, roleName);
+    logger.info('Running grant schema object query', query);
+
     return this.query(connection, query);
   }
 
-  revokeSchemaObjectAccess(connection, schemaName, roleName, permission, objectName) {
+  revokeSchemaObjectAccess(connection, schemaName, roleName, permission, objectName, type) {
     if( !schemaName ) throw new Error('schemaName is required');
     if( !roleName ) throw new Error('roleName is required');
     if( !permission ) throw new Error('permission is required');
     if( !objectName ) throw new Error('objectName is required');
 
-    if( !this.ALL_KEYWORD_ARRAY.includes(objectName) ) {
-      objectName = '"'+objectName+'"';
+    // there is no revoke ALL TYPES in postgres so we have to do it manually :(
+    if( objectName === this.ALL.TYPES ) {
+      let query = pgFormat(`DO $$ 
+        DECLARE 
+            r RECORD;
+        BEGIN 
+            FOR r IN 
+                SELECT n.nspname as schema_name, t.typname as type_name 
+                FROM pg_type t 
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace 
+                WHERE n.nspname = %L AND
+                t.typtype = 'e'
+            LOOP 
+                EXECUTE 'REVOKE ${permission} ON TYPE ' || quote_ident(r.schema_name) || '.' || quote_ident(r.type_name) || ' FROM "${roleName}"';
+            END LOOP; 
+        END $$;`, schemaName);
+      logger.info('Running revoke all types query', query);
+      return this.query(connection, query);
+    } else if( !this.ALL_KEYWORD_ARRAY.includes(objectName) ) {
+      objectName = `${type} "${schemaName}"."${objectName}"`;
+    } else {
+      objectName += ` IN SCHEMA "${schemaName}"`;
     }
 
     if( Array.isArray(permission) ) {
       permission = permission.join(', ');
     }
 
-    let query = pgFormat(`REVOKE ${permission} ON ${objectName} IN SCHEMA %I FROM %I`, schemaName, roleName);
+    let query = pgFormat(`REVOKE ${permission} ON ${objectName} FROM %I`, roleName);
+    logger.info('Running revoke schema object query', query);
     return this.query(connection, query);
   }
 

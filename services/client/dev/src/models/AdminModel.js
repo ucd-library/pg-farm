@@ -81,7 +81,7 @@ class AdminModel extends BaseModel {
     } else if( access == 'WRITE' ) {
       responses.push(await this.grantAccess(org, db, schemaTable, user, 'WRITE'));
     } else if( access == 'NONE' ) {
-      responses.push(await this.revokeAccess(org, db, schemaTable, user, 'WRITE'));
+      responses.push(await this.revokeAccess(org, db, schemaTable, user, 'READ'));
     } else {
       throw new Error('Invalid access type: '+access);
     }

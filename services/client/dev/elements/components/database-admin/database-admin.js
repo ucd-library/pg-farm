@@ -3,6 +3,7 @@ import {render, styles} from "./database-admin.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import logger from '../../../src/logger.js';
 import "./database-grant.js";
+import "../schema-grant-popup/schema-grant-popup.js";
 
 export default class DatabaseAdmin extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -35,8 +36,9 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.reset();
     this.logger = logger('database-admin');
 
-    this.grantPopup = document.createElement('database-grant');
+    this.grantPopup = document.createElement('schema-grant-popup');
     document.body.appendChild(this.grantPopup);
+    this.grantPopup.addEventListener('access-updated', e => this._onAccessUpdated(e));
 
     this._injectModel('AdminModel', 'AppStateModel');
   }
@@ -87,22 +89,36 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     if( !this.view.subPage ) return;
 
     // load root subpage data
-    
+    if( this.view.schema !== this.rendered.schema ) {
+      this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.schema);
+    }
+    this.rendered.schema = this.view.schema;
+
     if( this.view.subPage === 'user' ) {
       if( this.rendered.subPageValue !== this.view.subPageValue ) {
         this.AdminModel.getTableAccessByUser(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
       }
     } else if( this.view.subPage === 'table' ) {
-      if( this.rendered.subPage !== this.view.subPage ) {
-        this.AdminModel.getSchemaTables(this.view.organization, this.view.database, this.view.schema);
-      }
       if( this.rendered.subPageValue !== this.view.subPageValue ) {
         this.AdminModel.getTableAccess(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
       }
     }
     this.rendered.subPage = this.view.subPage;
     this.rendered.subPageValue = this.view.subPageValue;
+  }
 
+  /**
+   * @method _onAccessUpdated
+   * @description triggered from schema-grant-popup when access is updated
+   * 
+   * @param {Event} e 
+   */
+  _onAccessUpdated(e) {
+    if( this.view.subPage === 'user' ) {
+      this.AdminModel.getTableAccessByUser(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
+    } else if( this.view.subPage === 'table' ) {
+      this.AdminModel.getTableAccess(this.view.organization, this.view.database, this.view.schema, this.view.subPageValue);
+    }
   }
 
   _onDatabaseMetadataUpdate(e) {
@@ -246,11 +262,22 @@ export default class DatabaseAdmin extends Mixin(LitElement)
   }
 
   _onEditUserTableAccessClick(e) {
+    let editProps = {
+      pathname : this.metadata.pathname,
+      schema : this.view.schema,
+    };
+
     let table = null;
     if( this.view.subPage === 'table' ) {
       table = this.view.subPageValue;
     } else if ( e.currentTarget.getAttribute('table') ) {
       table = e.currentTarget.getAttribute('table');
+    }
+
+    if( table ) {
+      editProps.table = table;
+    } else if( e.currentTarget.getAttribute('select-table') != null ) {
+      editProps.tables = this.tables;
     }
 
     let user = null;
@@ -260,13 +287,13 @@ export default class DatabaseAdmin extends Mixin(LitElement)
       user = e.currentTarget.getAttribute('user');
     }
 
-    this.grantPopup.show({
-      database : this.metadata,
-      schema : this.view.schema,
-      table,
-      user,
-      users : this.users
-    });
+    if( user ) {
+      editProps.username = user;
+    } else if( e.currentTarget.getAttribute('select-user') != null ) {
+      editProps.users = this.users;
+    }
+
+    this.grantPopup.show(editProps, e.currentTarget);
   }
 
 }

@@ -2,6 +2,7 @@ import spaMiddleware from '@ucd-lib/spa-router-middleware';
 import express from 'express';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
+import pgInstClient from '../../lib/pg-instance-client.js';
 import path from 'path';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
@@ -35,7 +36,9 @@ async function setup(app) {
       next({
         user,
         appRoutes : config.client.appRoutes,
-        env : config.client.env
+        env : config.client.env,
+        grants : pgInstClient.GRANTS,
+        logger : config.client.logger
       });
     },
     template : async (req, res, next) => {

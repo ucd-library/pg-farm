@@ -124,14 +124,18 @@ class AdminService extends BaseService {
   async grantAccess(org, db, schemaTable='_', user, permission) {
     return this.request({
       url: `${this.basePath}/database/${org}/${db}/grant/${schemaTable}/${user}/${permission}`,
-      method: 'PUT'
+      fetchOptions: {
+        method: 'PUT'
+      }
     });
   }
 
   async revokeAccess(org, db, schemaTable='_', user, permission) {
     return this.request({
       url: `${this.basePath}/database/${org}/${db}/revoke/${schemaTable}/${user}/${permission}`,
-      method: 'PUT'
+      fetchOptions: {
+        method: 'PUT'
+      }
     });
   }
 

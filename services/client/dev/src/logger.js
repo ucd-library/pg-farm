@@ -1,19 +1,25 @@
-import config from './config.js';
 const loggers = {};
+let config = {};
 
 class Logger {
 
   constructor(name) {
     this.name = name;
 
-    if( !config.logLevel ) {
-      config.logLevel = {};
+    if( !config.logLevels ) {
+      config.logLevels = {};
     }
 
     if( typeof config.logLevel === 'string' ) {
       this.defaultLevel = config.logLevel;
     } else {
-      this.defaultLevel = config.logLevel[name] || 'info';
+      this.defaultLevel = config.logLevels[name] || 'info';
+    }
+
+    if( config.logLevels[name] ) {
+      this.defaultLevel = config.logLevels[name];
+    } else {
+      this.defaultLevel = config.logLevel || 'info';
     }
   }
 
@@ -51,8 +57,89 @@ class Logger {
   error(...args) {
     if( this.levelInt > 3 ) return;
     console.error(`[${this.name}] error:`, ...args);
+
+    if( config.reportErrors ) {
+      args.unshift(`[${this.name}] error:`);
+      this.reportError(args);
+    }
   }
 
+  reportError(error) {
+    reportError(this.name, error);
+  }
+
+}
+
+function setLoggerConfig(_config={}) {
+  config = _config;
+  console.log('Logger config', config);
+
+  initErrorReporting();  
+}
+
+function initErrorReporting() {
+  if( !config.reportErrors ) return;
+  if( !config.reportErrors.enabled ) return;
+
+  if( !config.reportErrors.url ) {
+    console.warn('No error reporting URL set, ignoring error reporting');
+    config.reportErrors = null;
+  }
+
+  window.addEventListener('error', event => {
+    let {message, filename, lineno, colno, error} = event;
+
+    reportError('window', {
+      message, filename, lineno, colno,
+      stack : error.stack,
+      event : 'error'
+    });
+  }, {passive: true});
+  
+  // Catching unhandled promise rejections
+  window.addEventListener('unhandledrejection', event => {
+    let error = event.reason;
+
+    if( error instanceof Error ) {
+      reportError('window', {
+        message : error.message,
+        stack : error.stack,
+        event : 'unhandledrejection'
+      });
+    } else {
+      reportError('window', error);
+    }
+  }, {passive: true});
+}
+
+function reportError(name, error) {
+  if( !config.reportErrors ) return;
+  if( !config.reportErrors.enabled ) return;
+
+  let headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if( config.reportErrors.key ) {
+    headers['x-api-key'] = config.reportErrors.key;
+  }
+
+  if( config.reportErrors.headers ) {
+    headers = Object.assign(headers, config.reportErrors.headers);
+  }
+
+  fetch(config.reportErrors.url, {
+    method: config.reportErrors.method || 'POST',
+    headers,
+    body: JSON.stringify({
+      error, 
+      name,
+      pathname : window.location.pathname,
+      search : window.location.search
+    })
+  }).catch(err => {
+    console.error('Error reporting failed:', err);
+  });
 }
 
 function getLogger(name) {
@@ -61,4 +148,15 @@ function getLogger(name) {
   return loggers[name];
 }
 
-export default getLogger
+if( window.LOGGER_CONFIG_VAR ) {
+  setLoggerConfig(window[window.LOGGER_CONFIG_VAR]);
+} else if( window.APP_CONFIG ) {
+  if( window.APP_CONFIG.logger ) {
+    setLoggerConfig(window.APP_CONFIG.logger);
+  } else {
+    setLoggerConfig(window.APP_CONFIG);
+  }
+}
+
+export default getLogger;
+// export {setLoggerConfig, getLogger};

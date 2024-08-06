@@ -271,27 +271,27 @@ class User {
       // grant sequence access if permission is ALL
       // common pattern is for primary key's to be serial. So this is required for inserts
       if( permission === 'WRITE' ) {
-        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, tableName, 'TABLE');
 
         let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
         for( let seq of tableSeqs ) {
-          await pgInstClient.grantSequenceUsage(con, schemaName, roleName, seq);
+          await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, seq, 'SEQUENCE');
         }
       } else {
-        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.READ, tableName);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.READ, tableName, 'TABLE');
       }
 
     // grant schema access
     } else {
 
       if( permission === 'WRITE' ) {
-        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE);
-        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TABLES);
-        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.FUNCTIONS);
-        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.SEQUENCES);
-        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TYPES);
+        await pgInstClient.grantSchemaAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.TABLES);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.FUNCTIONS);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.SEQUENCES);
+        await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.TYPES);
       } else {
-        await pgInstClient.grantSchemaUsage(con, schemaName, roleName, pgInstClient.GRANTS.SCHEMA.READ);
+        await pgInstClient.grantSchemaAccess(con, schemaName, roleName, pgInstClient.GRANTS.SCHEMA.READ);
         await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.READ, pgInstClient.ALL.TABLES);
         await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.FUNCTION.EXECUTE, pgInstClient.ALL.FUNCTIONS);
         await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.SEQUENCE.READ, pgInstClient.ALL.SEQUENCES);
@@ -317,7 +317,7 @@ class User {
       roleName
     });
 
-    let con = await this.models.instance.getConnection(
+    let con = await this.models.database.getConnection(
       database.database_name,
       database.organization_name
     );
@@ -326,29 +326,29 @@ class User {
     if( tableName ) {
 
       if( permission === 'READ' ) {
-        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, tableName);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, tableName, 'TABLE');
       } else {
-        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName, 'TABLE');
       }
 
       
       let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
       for( let seq of tableSeqs ) {
         if( permission === 'READ' ) {
-          await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, seq);
+          await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, seq, 'SEQUENCE');
         } else {
-          await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.SEQUENCE.WRITE, seq);
+          await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.SEQUENCE.WRITE, seq, 'SEQUENCE');
         }
       }
 
     // grant schema access
     } else {
       if( permission === 'READ' ) {
-        await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE);
-        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TABLES);
-        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.FUNCTIONS);
-        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.SEQUENCES);
-        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE, pgInstClient.ALL.TYPES);
+        await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.TABLES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.FUNCTIONS);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.SEQUENCES);
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.TYPES);
       } else {
         await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.GRANTS.SCHEMA.WRITE);
         await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, pgInstClient.ALL.TABLES);
