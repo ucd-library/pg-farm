@@ -1,9 +1,8 @@
 import { LitElement } from 'lit';
 import {Mixin} from '@ucd-lib/theme-elements/utils/mixins';
-
+import {LitCorkUtils} from '@ucd-lib/cork-app-utils';
 import {render, styles} from "./schema-grant-popup.tpl.js";
 import config from '../../../src/config.js';
-import logger from '../../../src/logger.js';
 
 export default class SchemaGrantPopup extends Mixin(LitElement)
   .with(LitCorkUtils) {
@@ -35,7 +34,6 @@ export default class SchemaGrantPopup extends Mixin(LitElement)
     this.grantMode = null;
 
     this._injectModel('AdminModel');
-    this.logger = logger('schema-grant-popup');
 
     this.render = render.bind(this);
   }

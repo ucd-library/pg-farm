@@ -1,7 +1,7 @@
 import { LitElement } from 'lit';
 import {render, styles} from "./database-admin.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
-import logger from '../../../src/logger.js';
+import {LitCorkUtils} from '@ucd-lib/cork-app-utils';
 import "./database-grant.js";
 import "../schema-grant-popup/schema-grant-popup.js";
 
@@ -34,7 +34,6 @@ export default class DatabaseAdmin extends Mixin(LitElement)
     this.render = render.bind(this);
 
     this.reset();
-    this.logger = logger('database-admin');
 
     this.grantPopup = document.createElement('schema-grant-popup');
     document.body.appendChild(this.grantPopup);

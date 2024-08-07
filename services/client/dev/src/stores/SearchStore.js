@@ -1,4 +1,4 @@
-import {BaseStore} from '@ucd-lib/cork-app-utils';
+import {BaseStore, LruStore} from '@ucd-lib/cork-app-utils';
 
 class SearchStore extends BaseStore {
 

@@ -1,5 +1,6 @@
 import { LitElement, html, svg } from 'lit';
 import {render, styles} from "./ucdlib-site-footer.tpl.js";
+import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import ThemeUtils from "./theme-utils";
 import "./ucdlib-site-footer-column.js";
 

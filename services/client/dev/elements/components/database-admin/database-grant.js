@@ -1,7 +1,7 @@
 import { LitElement } from 'lit';
 import {render, styles} from "./database-grant.tpl.js";
 import {Mixin} from '@ucd-lib/theme-elements/utils/mixins';
-import logger from '../../../src/logger.js';
+import {LitCorkUtils} from '@ucd-lib/cork-app-utils';
 
 export default class DatabaseGrant extends Mixin(LitElement)
   .with(LitCorkUtils) {
@@ -26,7 +26,6 @@ export default class DatabaseGrant extends Mixin(LitElement)
 
   constructor() {
     super();
-    this.logger = logger('database-grant');
 
     this.database = {};
     this.databaseAccess = [];

@@ -1,5 +1,6 @@
 import { LitElement } from 'lit';
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
+import {LitCorkUtils} from '@ucd-lib/cork-app-utils';
 import {render, styles} from "./app-search.tpl.js";
 
 export default class AppSearch extends Mixin(LitElement)

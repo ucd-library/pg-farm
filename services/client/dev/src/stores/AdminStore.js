@@ -1,5 +1,4 @@
-import {BaseStore} from '@ucd-lib/cork-app-utils';
-import LruStore from './lru-store.js';
+import {BaseStore, LruStore} from '@ucd-lib/cork-app-utils';
 
 class AdminStore extends BaseStore {
 

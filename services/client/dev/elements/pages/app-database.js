@@ -1,7 +1,7 @@
 import { LitElement } from 'lit';
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import {render, styles} from "./app-database.tpl.js";
-import {logger} from '../../src/index.js';
+import {LitCorkUtils} from '@ucd-lib/cork-app-utils';
 
 import '../components/database-admin/database-admin.js';
 
@@ -24,7 +24,6 @@ export default class AppDatabase extends Mixin(LitElement)
 
     this.view = {};
     this.page = 'db';
-    this.logger = logger('app-database');
 
     this._injectModel('AppStateModel', 'AdminModel');
     this.AppStateModel.get().then(e => this._onAppStateUpdate(e));
