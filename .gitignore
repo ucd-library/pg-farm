@@ -11,3 +11,4 @@ tests/connections/package-lock.json
 dist
 *.pyc
 __pycache__
+.vscode

@@ -75,7 +75,8 @@ const config = {
       reportErrors : {
         enabled : env.CLIENT_ERROR_REPORTING_ENABLED === 'true',
         url : env.CLIENT_ERROR_REPORTING_URL || '',
-        key : env.CLIENT_ERROR_REPORTING_KEY || ''
+        key : env.CLIENT_ERROR_REPORTING_KEY || '',
+        sourceMapExtension : '.map'
       }
     }
   },

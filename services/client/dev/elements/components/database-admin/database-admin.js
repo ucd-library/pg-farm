@@ -189,7 +189,7 @@ export default class DatabaseAdmin extends Mixin(LitElement)
       return;
     }
 
-    this.tables = e.payload;
+    this.tables = e.payload || [];
     this.logger.info('db schema tables', this.tables);   
   }
 

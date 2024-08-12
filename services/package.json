@@ -44,7 +44,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@ucd-lib/cork-app-build": "^0.4.2",
+    "@ucd-lib/cork-app-build": "^0.5.0",
     "webpack": "^5.92.1",
     "webpack-cli": "^5.1.4"
   }
