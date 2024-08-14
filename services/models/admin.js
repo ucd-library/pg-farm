@@ -358,6 +358,8 @@ class AdminModel {
    */
   async startInstance(nameOrId, orgNameOrId, opts={}) {
     let instance;
+
+    let timestamp = Date.now();
     
     // get instance by database name or instance name depending on opts
     if( opts.isDb ) {
@@ -451,6 +453,8 @@ class AdminModel {
       this.rejectStart(instance, e);
       return;
     }
+
+    logger.info(`Instance health ${instance.hostname} started.  time=`, ((Date.now()-timestamp)/1000).toFixed(1), 's');
 
     this.resolveStart(instance);
 

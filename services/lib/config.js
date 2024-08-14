@@ -223,7 +223,7 @@ const config = {
   healthProbe : {
     port : parseInt(healthProbePort),
     host : env.HEALTH_PROBE_HOSTNAME || 'health-probe',
-    interval : env.HEALTH_PROBE_INTERVAL || 1000*30,
+    interval : env.HEALTH_PROBE_INTERVAL || 1000*10,
   },
 
 }
