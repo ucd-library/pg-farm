@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import headers from './fetch-headers.js';
 import {config} from './config.js';
+import {databaseModel, utils, config} from '../../lib/index.js'
 
 class Database {
 
@@ -19,22 +20,26 @@ class Database {
     };
   }
 
-  async list(opts) {
-    let resp = await fetch(`${config.host}/api/admin/database?onlyMine=${opts.mine}`, {
-      method: 'GET',
-      headers: headers()
-    });
+  async get(name) {
+    let {org, name} = utils.getDbNameObj(name);
 
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to list databases', await resp.text());
+    let metadata = await databaseModel.get(org, name);
+    if( metadata.error ) {
+      console.error(metadata.error);
+      return;
+    }
+    console.log(metadata);
+  }
+
+  async list(opts) {
+    let resp = await databaseModel.search(opts);
+
+    if( resp.state === 'error' ) {
+      console.error('Unable to list databases', resp.error);
       return;
     }
 
-    let body = await resp.json();
-
-    if( opts.json ) { 
-      return console.log(body);
-    }
+    let body = resp.payload;
 
     body.sort((a, b) => {
       if( a.database < b.database ) return -1;

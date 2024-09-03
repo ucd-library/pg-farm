@@ -157,7 +157,7 @@ class KubectlWrapper {
   }
 
   /**
-   * @method getKustomizeTemplate
+   * @method renderKustomizeTemplate
    * @description Get the kustomize template as a json object.  The template
    * can be in the base or overlay directory.
    * 

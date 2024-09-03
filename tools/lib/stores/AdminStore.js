@@ -23,56 +23,6 @@ class AdminStore extends BaseStore {
     };
   }
 
-  _getBasePayload(ido, state, payload=null, error=null, request=null) {
-    let id = [ido.org, ido.db];
-
-    if( !state ) throw new Error('state is required');
-
-    if( ido.schema ) id.push(ido.schema);
-    if( ido.table ) id.push(ido.table);
-    if( ido.user ) id.push(ido.user);
-
-    return {
-      id : id.join('/'),
-      database : ido.db,
-      organization : ido.org,
-      schema : ido.schema,
-      table : ido.table,
-      user : ido.user,
-      state,
-      request,
-      payload,
-      error
-    };
-  }
-
-  /* Database Metadata */
-  onDatabaseMetadataLoading(org, db, request) {
-    this._onDatabaseMetadataUpdate(
-      this._getBasePayload({org, db}, this.STATE.LOADING, null, null, request)
-    );
-  }
-
-  onDatabaseMetadataLoaded(org, db, payload) {
-    // set pathname
-    let orgName = payload.organization?.name || '_';
-    payload.pathname = `${orgName}/${payload.name}`;
-
-    this._onDatabaseMetadataUpdate(
-      this._getBasePayload({org, db}, this.STATE.LOADED, payload),
-    );
-  }
-
-  onDatabaseMetadataError(org, db, error) {
-    this._onDatabaseMetadataUpdate(
-      this._getBasePayload({org, db}, this.STATE.ERROR, null, error)
-    );
-  }
-
-  _onDatabaseMetadataUpdate(result) {
-    this.data.databaseMetadata.set(result.id, result);
-    this.emit(this.events.DATABASE_METADATA_UPDATE, result);
-  }
 
   /* Database Users */
   onDatabaseUsersLoading(org, db, request) {

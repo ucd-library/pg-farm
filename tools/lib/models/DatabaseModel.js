@@ -1,16 +1,16 @@
 import {BaseModel} from '@ucd-lib/cork-app-utils';
-import AdminService from '../services/AdminService.js';
-import AdminStore from '../stores/AdminStore.js';
+import DatabaseService from '../services/DatabaseService.js';
+import DatabaseStore from '../stores/DatabaseStore.js';
 
-class AdminModel extends BaseModel {
+class DatabaseModel extends BaseModel {
 
   constructor() {
     super();
 
-    this.store = AdminStore;
-    this.service = AdminService;
+    this.store = DatabaseStore;
+    this.service = DatabaseService;
       
-    this.register('AdminModel');
+    this.register('DatabaseModel');
   }
 
   /**
@@ -21,44 +21,79 @@ class AdminModel extends BaseModel {
    * @param {String} db database name
    * @returns 
    */
-  getDatabaseMetadata(org, db) {
-    return this.service.getDatabaseMetadata(org, db);
+  get(org, db) {
+    return this.service.get(org, db);
   }
 
   /**
-   * @method startInstance
-   * @description start a PG Farm database instance
+   * @method create
    * 
-   * @param {String} org organization name or null
-   * @param {String} db database name
+   * @param {Object} opts
+   * @param {String} opts.instance instance name
+   **/
+  async create(opts) {
+    if( opts.instance && !opts.instance.match(/^inst-/) ) {
+      opts.instance = 'inst-'+opts.instance;
+    }
+ 
+    return this.service.create(opts);
+  }
+
+  async update(org, db, opts) {
+    return this.service.update(org, db, opts);
+  }
+
+  /**
+   * @method search
+   * @descsription search for databases.  Returns object with id and request promise.
+   * When the request promise resolves, use getSearchResult(id) to get the result.  The
+   * id is provided in the returned object.
+   * 
+   * @param {Object} opts
+   * 
+   * @returns {Object}
+   **/
+  search(opts) {
+    return this.service.search(opts);
+  }
+
+  /**
+   * @method getSearchResult
+   * @description get search result by id retuned from search
+   * 
+   * @param {String} id 
+   * @returns {Object}
+   */
+  getSearchResult(id) {
+    return this.store.data.search.get(id);
+  }
+
+  /**
+   * @method getUsers
+   * @description get list of users for a database
+   * 
+   * @param {*} org 
+   * @param {*} db 
    * @returns 
    */
-  startInstance(org, db) {
-    return this.service.startInstance(org, db);
+  getUsers(org, db) {
+    return this.service.getUsers(org, db);
   }
 
-  getDatabaseUsers(org, db) {
-    return this.service.getDatabaseUsers(org, db);
-  }
-
-  getDatabaseSchemas(org, db) {
-    return this.service.getDatabaseSchemas(org, db);
-  }
-
-  getDatabaseTables(org, db, schema) {
-    return this.service.getDatabaseTables(org, db, schema);
+  getSchemas(org, db) {
+    return this.service.getSchemas(org, db);
   }
 
   getSchemaTables(org, db, schema) {
     return this.service.getSchemaTables(org, db, schema);
   }
 
-  getTableAccessByUser(org, db, schema, user) {
-    return this.service.getTableAccessByUser(org, db, schema, user);
+  getSchemaUserAccess(org, db, schema, user) {
+    return this.service.getSchemaUserAccess(org, db, schema, user);
   }
 
-  getTableAccess(org, db, schema, table) {
-    return this.service.getTableAccess(org, db, schema, table);
+  getSchemaTableAccess(org, db, schema, table) {
+    return this.service.getSchemaTableAccess(org, db, schema, table);
   }
 
   /**
@@ -73,7 +108,7 @@ class AdminModel extends BaseModel {
    * @param {String} user database user name
    * @param {String} access Either 'READ', 'WRITE' or 'NONE'.  NONE will revoke all access.
    */
-  async setUserAccess(org, db, schemaTable='_', user, access) {
+  async setSchemaUserAccess(org, db, schemaTable='_', user, access) {
     let responses = [];
     if( access == 'READ' ) {
       responses.push(await this.revokeAccess(org, db, schemaTable, user, 'WRITE'));
@@ -99,5 +134,5 @@ class AdminModel extends BaseModel {
 
 }
 
-const model = new AdminModel();
+const model = new DatabaseModel();
 export default model;

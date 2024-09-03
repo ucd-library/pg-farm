@@ -16,7 +16,7 @@ import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js'
 import '@ucd-lib/theme-elements/brand/ucd-theme-header/ucd-theme-header.js'
 import '@ucd-lib/theme-elements/brand/ucd-theme-primary-nav/ucd-theme-primary-nav.js'
 
-import '../src/index.js';
+import '../../../../tools/lib/index.js';
 
 import './pages/app-home.js';
 import './pages/app-search.js';

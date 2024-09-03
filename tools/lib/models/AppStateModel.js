@@ -1,7 +1,7 @@
 import {AppStateModel} from '@ucd-lib/cork-app-state';
 import AppStateStore from '../stores/AppStateStore.js';
 import clone from 'clone';
-import config from '../config.js';
+import {config} from '../config.js';
 
 class AppStateModelImpl extends AppStateModel {
 

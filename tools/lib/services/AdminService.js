@@ -37,19 +37,6 @@ class AdminService extends BaseService {
     return this.startInstance;
   }
 
-  async getDatabaseMetadata(org, db) {
-    await this.checkRequesting(
-      `${org}/${db}`, 'databaseMetadata',
-      () => this.request({
-          url: `${this.basePath}/database/${org}/${db}/metadata`,
-          onLoading: request => this.store.onDatabaseMetadataLoading(org, db, request),
-          onLoad: payload => this.store.onDatabaseMetadataLoaded(org, db, payload.body),
-          onError: err => this.store.onDatabaseMetadataError(this.store, org, db, err)
-        })
-    );
-
-    return this.store.data.databaseMetadata.get(`${org}/${db}`);
-  }
 
   async getDatabaseUsers(org, db) {
     await this.checkRequesting(

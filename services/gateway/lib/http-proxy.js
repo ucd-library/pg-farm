@@ -6,7 +6,7 @@ import logger from '../../lib/logger.js';
 import metrics from '../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
 
-const dbRouteRegex = /^\/api\/db\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
+const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
@@ -48,7 +48,7 @@ async function middleware(req, res) {
   let host = DEFAULT_HOST;
   let dbRouteMatch = path.match(dbRouteRegex);
 
-  if( dbRouteMatch && dbRouteMatch[1] !== 'metadata' ) {
+  if( dbRouteMatch ) {
     let orgName = dbRouteMatch[1];
     let dbName = dbRouteMatch[2];
     path = path.replace(dbRouteRegex, '/');
