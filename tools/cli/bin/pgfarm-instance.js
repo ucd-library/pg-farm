@@ -7,6 +7,7 @@ const program = new Command();
 program.command('create')
   .description('Create a new instance PG Farm postgres instance (admin only)')
   .requiredOption('-n, --name <name>', 'Instance name')
+  .requiredOption('-o, --organization <name>', 'Instance organization name')
   .option('-a, --availability <availability>', 'Availability of the instance (ALWAYS, HIGH, MEDIUM, LOW)')
   .action(options => {
     instance.create(options);

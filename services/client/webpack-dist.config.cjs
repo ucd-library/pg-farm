@@ -7,7 +7,7 @@ let configs = require('@ucd-lib/cork-app-build').dist({
   // folder where bundle.js will be written
   dist : 'dist/js',
   preview : 'dev/js',
-  clientModules : 'dev/node_modules'
+  clientModules : ['dev/node_modules', '../../tools/node_modules']
 });
 
 if( !Array.isArray(configs) ) configs = [configs];
@@ -15,6 +15,15 @@ if( !Array.isArray(configs) ) configs = [configs];
 configs.forEach((config, index) => {
   config.output.publicPath = '/js/'
   config.output.chunkFilename = '[name]-[chunkhash].'+config.output.filename;
+
+  config.resolve = {
+    fallback: {
+      fs : false,
+      path : false,
+      os : false,
+      events : require.resolve("events/")
+    }
+  }
 
   let cssModule = config.module.rules.find(rule => {
     if( !Array.isArray(rule.use) ) return false;

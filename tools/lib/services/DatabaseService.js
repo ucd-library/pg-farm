@@ -14,7 +14,7 @@ class DatabaseService extends BaseService {
   }
 
   async get(org, db) {
-    let id = utils.getIdPath({org, id});
+    let id = utils.getIdPath({org, db});
 
     await serviceUtils.checkRequesting(
       id, this.store.data.metadata,
@@ -39,7 +39,7 @@ class DatabaseService extends BaseService {
 
     await this.request({
       method : 'POST',
-      url: `${this.basePath}/create`,
+      url: this.basePath,
       fetchOptions: {
         body: opts,
         headers: serviceUtils.authHeader()
@@ -76,7 +76,7 @@ class DatabaseService extends BaseService {
     let id = this.searchId++;
 
     let request = this.request({
-      url: `${this.basePath}/search`,
+      url: this.basePath,
       fetchOptions: {
         body: opts,
         headers: serviceUtils.authHeader()
@@ -89,8 +89,7 @@ class DatabaseService extends BaseService {
 
     return {
       id,
-      request,
-      get: () => this.store.data.search.get(id)
+      request
     }
   }
 

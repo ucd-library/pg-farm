@@ -13,8 +13,9 @@ class StoreUtils {
     }
 
     return {
-      id : id.join('/'),
+      id,
       database : ido.db,
+      instance : ido.instance,
       organization : ido.org,
       schema : ido.schema,
       table : ido.table,

@@ -1,17 +1,20 @@
 import {Command} from 'commander';
-import {databaseModel, utils} from '../../lib/index.js'
+import database from '../lib/database.js';
 
 const program = new Command();
 
+function test() {
+  console.log('test');
+}
+
+program
+  .configureHelp({ showGlobalOptions: true })
+  .option('-o, --output <format>', 'Output format (json, yaml, text). Default is json')
+
 program.command('get <org/database>')
   .description('Fetch database metadata')
-  .action(async name => {
-    try {
-    let {org, db} = utils.getDbNameObj(name);
-    await databaseModel.get(org, db);
-    } catch(e) {
-      console.error(e);
-    }
+  .action(async (name, opts, cmd) => {
+    await database.get(name, cmd.optsWithGlobals());
   });
 
 program.command('set-metadata <org/database>')
@@ -56,4 +59,4 @@ program.command('link <org/database> <remoteOrg/remoteDatabase>')
 
 program.command('grant', 'Helper methods for granting user access to a schema or table');
 
-program.parse(process.argv);
+program.parse();

@@ -1,4 +1,4 @@
-const ID_ORDER = ['org', 'db', 'schema', 'table', 'user'];
+const ID_ORDER = ['org', 'instance', 'db', 'schema', 'table', 'user'];
 
 class Utils {
   getIdPath(ido={}) {
@@ -9,8 +9,8 @@ class Utils {
     }
 
     for( let prop of ID_ORDER ) {
-      if( args[prop] !== undefined ) {
-        id.push(args[prop]);
+      if( ido[prop] !== undefined ) {
+        id.push(ido[prop]);
       }
     }
 

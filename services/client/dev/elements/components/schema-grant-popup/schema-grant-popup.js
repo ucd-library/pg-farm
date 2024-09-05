@@ -2,7 +2,7 @@ import { LitElement } from 'lit';
 import {Mixin} from '@ucd-lib/theme-elements/utils/mixins';
 import {LitCorkUtils} from '@ucd-lib/cork-app-utils';
 import {render, styles} from "./schema-grant-popup.tpl.js";
-import config from '../../../src/config.js';
+import {config} from '../../../../../../tools/lib/index.js';
 
 export default class SchemaGrantPopup extends Mixin(LitElement)
   .with(LitCorkUtils) {

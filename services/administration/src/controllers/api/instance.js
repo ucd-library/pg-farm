@@ -1,8 +1,8 @@
 import {Router} from 'express';
-import {admin as model, instance as instanceModel, backup} from '../../../../../models/index.js';
-import keycloak from '../../../../../lib/keycloak.js';
-import handleError from '../../handle-errors.js';
-import remoteExec from '../../../../../lib/pg-helper-remote-exec.js';
+import {admin as model, instance as instanceModel, backup} from '../../../../models/index.js';
+import keycloak from '../../../../lib/keycloak.js';
+import handleError from '../handle-errors.js';
+import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
 
 const router = Router();
 
@@ -54,7 +54,7 @@ router.delete('/:organization/:instance/:user',
   }
 });
 
-router.get('/:organization/:instance/stop', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/stop', keycloak.protect('admin'), async (req, res) => {
   try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
     let resp = await model.stopInstance(instance, organization);
@@ -65,7 +65,7 @@ router.get('/:organization/:instance/stop', keycloak.protect('admin'), async (re
   }
 });
 
-router.get('/:organization/:instance/start', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/start', keycloak.protect('admin'), async (req, res) => {
   try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
     let force = req.query.force === 'true';
@@ -81,7 +81,7 @@ router.get('/:organization/:instance/start', keycloak.protect('admin'), async (r
   }
 });
 
-router.get('/:organization/:instance/restart', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/restart', keycloak.protect('admin'), async (req, res) => {
   try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
     let resp = await instanceModel.restart(instance, organization);

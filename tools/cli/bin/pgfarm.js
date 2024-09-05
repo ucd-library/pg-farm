@@ -20,7 +20,9 @@ program
   .command('organization', 'View/manage your organizations')
   .command('admin', 'PG Farm administer commands')
   .command('auth', 'log in/out of PG Farm')
-  .command('config', 'setup cli');
+  .command('config', 'setup cli')
+  
+
   
 
 

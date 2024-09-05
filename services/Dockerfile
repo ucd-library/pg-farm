@@ -37,16 +37,25 @@ COPY --from=postgrest /bin/postgrest /bin/postgrest
 RUN mkdir /services
 WORKDIR /services
 
-COPY package.json .
-COPY package-lock.json .
+COPY services/package.json .
+COPY services/package-lock.json .
 RUN npm install
 
-COPY client ./client
+RUN mkdir /tools
+WORKDIR /tools
+
+COPY tools/package.json .
+COPY tools/package-lock.json .
+RUN npm install
+COPY tools .
+
+WORKDIR /services
+COPY services/client ./client
 RUN cd client/dev && npm install
 RUN npm run client-build
 RUN npm run client-dist
 
-COPY . .
+COPY services .
 
 ARG PG_FARM_VERSION
 ENV PG_FARM_VERSION=${PG_FARM_VERSION}

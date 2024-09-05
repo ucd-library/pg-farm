@@ -5,7 +5,7 @@ let configs = require('@ucd-lib/cork-app-build').watch({
   root : __dirname,
   entry : 'dev/elements/pgfarm-app.js',
   preview : 'dev/js',
-  clientModules : 'dev/node_modules'
+  clientModules : ['dev/node_modules', '../../tools/node_modules'],
 });
 
 if( !Array.isArray(configs) ) configs = [configs];
@@ -14,6 +14,15 @@ if( !Array.isArray(configs) ) configs = [configs];
 configs.forEach((config, index) => {
   config.output.publicPath = '/js/'
   config.output.chunkFilename = '[name].'+config.output.filename;
+
+  config.resolve = {
+    fallback: {
+      fs : false,
+      path : false,
+      os : false,
+      events : require.resolve("events/")
+    }
+  }
 
   let cssModule = config.module.rules.find(rule => {
     if( !Array.isArray(rule.use) ) return false;

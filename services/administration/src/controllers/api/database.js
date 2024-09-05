@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {database, pgRest, database, instance, user, organization, admin} from '../../../../models/index.js';
+import {database, pgRest, instance, user, organization, admin} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 

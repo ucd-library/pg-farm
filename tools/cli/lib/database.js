@@ -1,7 +1,8 @@
 import fetch from 'node-fetch';
 import headers from './fetch-headers.js';
-import {config} from './config.js';
+// import {config} from './config.js';
 import {databaseModel, utils, config} from '../../lib/index.js'
+import print from './print.js';
 
 class Database {
 
@@ -20,15 +21,20 @@ class Database {
     };
   }
 
-  async get(name) {
-    let {org, name} = utils.getDbNameObj(name);
 
-    let metadata = await databaseModel.get(org, name);
-    if( metadata.error ) {
-      console.error(metadata.error);
-      return;
+
+  async get(name, opts) {
+    let {organization, database} = this.parseOrg(name);
+    let resp;
+
+    try {
+      resp = await databaseModel.get(organization, database);
+    } catch(e) {
+      resp = e;
     }
-    console.log(metadata);
+
+    print.display(resp, opts.output, print.database);
+    process.exit(0);
   }
 
   async list(opts) {
