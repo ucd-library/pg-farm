@@ -1,6 +1,6 @@
 import {Command} from 'commander';
 import auth from '../lib/auth.js';
-import {config} from '../lib/config.js';
+import {config, getParsedToken} from '../lib/config.js';
 const program = new Command();
 
 let stdin = '';
@@ -28,8 +28,31 @@ program.command('service-account-login <serviceAccountName>')
     auth.loginServiceAccount(name, options);
   });
 
+
+program.command('logout')
+  .description('Logout current user')
+  .action(() => {
+    auth.logout();
+  });
+
+program.command('status')
+  .description('Print login status')
+  .action(() => {
+    let token = getParsedToken();
+    if( !token ) {
+      console.log('Not logged in');
+      return;
+    }
+    if( token.expires.getTime() > Date.now() ) {
+      console.log('Logged in as', token.username || token.preferred_username);
+      console.log(`Password token expires: ${token.expires.toLocaleDateString()} ${token.expires.toLocaleTimeString()} (${token.expiresDays} days from now)`);
+    } else {
+      console.log('Token has expired');
+    }
+  });
+
 program.command('token')
-  .description('Print current user token')
+  .description('Print current users token')
   .option('-j, --jwt', 'Print full JWT token instead of the hash token')
   .action(opts => {
     if( opts.jwt ) {
@@ -39,16 +62,22 @@ program.command('token')
     console.log(config.tokenHash);
   });
 
-program.command('logout')
-  .description('Logout current user')
-  .action(() => {
-    auth.logout();
-  });
 
 program.command('update-service')
   .description('Update local .pg_service.conf file')
   .action(() => {
     auth.updateService();
+  });
+
+program.command('whoami')
+  .description('Print current user')
+  .action(() => {
+    let token = getParsedToken();
+    if( !token ) {
+      console.log('Not logged in');
+      return;
+    }
+    console.log(token.username || token.preferred_username);
   });
 
 if( process.stdin.isTTY ) {

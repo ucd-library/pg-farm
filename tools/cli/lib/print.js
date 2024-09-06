@@ -2,7 +2,6 @@ import yaml from 'js-yaml';
 
 class Print {
   display(payload, format, textPrint) {
-
     if( payload.error ) {
       let status = payload?.response?.status;
 
@@ -11,12 +10,15 @@ class Print {
       }
 
       if( format === 'json' ) {
-        this.json(payload);
+        this.json(payload, true);
       } else {
-        this.yaml(payload);
+        this.yaml(payload, true);
       }
       return;
+    }
 
+    if( format === 'quiet' ) {
+      return;
     }
     
     if( payload.payload ) {
@@ -32,17 +34,43 @@ class Print {
     }
   }
 
-  json(data) {
+  json(data, stderr=false) {
+    if( stderr ) {
+      console.error(JSON.stringify(data, null, 2));
+      return;
+    }
     console.log(JSON.stringify(data, null, 2));
   }
 
-  yaml(data) {
+  yaml(data, stderr=false) {
+    if( stderr ) {
+      console.error(yaml.dump(data));
+      return;
+    }
     console.log(yaml.dump(data));
   }
 
   database(db) {
     console.log(`Name: ${db.organization.name}/${db.name}`);
     console.log(`Title: ${db.title}`);
+  }
+
+  dbSearch(result) {
+    if( result.total === 0 ) {
+      console.log('No databases found');
+      return;
+    }
+
+    console.log(`Found ${result.total} database(s), showing ${result.query.offset+1} to ${result.query.offset+result.items.length}`);
+    console.log('----');
+    result.items.forEach(db => {
+      console.log(`Name: ${db?.organization?.name}/${db.name}`);
+      console.log(`Title: ${db.title}`);
+      if( db.description ) console.log(`Description: ${db.description}`);
+      if( db.url ) console.log(`URL: ${db.url}`);
+      if( db.tags ) console.log(`Tags: ${db.tags.join(', ')}`);
+      console.log('----');
+    });
   }
 }
 

@@ -37,25 +37,19 @@ class Database {
     process.exit(0);
   }
 
-  async list(opts) {
-    let resp = await databaseModel.search(opts);
+  async search(searchParams, opts) {
+    let resp;
 
-    if( resp.state === 'error' ) {
-      console.error('Unable to list databases', resp.error);
-      return;
+    try {
+      let {request, id} = databaseModel.search(searchParams);
+      await request
+      resp = databaseModel.getSearchResult(id);
+    } catch(e) {
+      resp = e;
     }
 
-    let body = resp.payload;
-
-    body.sort((a, b) => {
-      if( a.database < b.database ) return -1;
-      if( a.database > b.database ) return 1;
-      return 0;
-    });
-
-    body.forEach((db) => {
-      console.log(`${db.database}`);
-    });
+    print.display(resp.payload, opts.output, print.dbSearch);
+    process.exit(0);
   }
 
   async create(opts) {
@@ -83,25 +77,19 @@ class Database {
     }
   }
 
-  async setMetadata(name, metadata) {
+  async update(name, opts) {
     let {organization, database} = this.parseOrg(name);
     if( !organization ) organization = '_';
 
-    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/metadata`, {
-      method: 'PATCH',
-      headers: headers({
-        'Content-Type': 'application/json'
-      }),
-      body: JSON.stringify(metadata)
-    });
-
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to patch database metadata', await resp.text());
-      return;
+    let resp;
+    try {
+      resp = await databaseModel.update(organization, database, opts);
+    } catch(e) {
+      resp = e;
     }
 
-    let body = await resp.text();
-    console.log(`Patched database ${organization}/${database} metadata`);
+    print.display(resp.payload, opts.output);
+    process.exit(0);
   }
 
   async restartApi(name) {

@@ -57,9 +57,9 @@ class DatabaseService extends BaseService {
     let id = utils.getIdPath({org, db});
 
     await this.request({
-      method : 'PATCH',
       url: `${this.basePath}/${org}/${db}`,
       fetchOptions: {
+        method : 'PATCH',
         body: opts,
         headers: serviceUtils.authHeader()
       },
@@ -69,16 +69,18 @@ class DatabaseService extends BaseService {
       onError: error => this.store.onUpdateUpdate({org,db}, {error})
     });
 
-    return this.store.data.patch.get(id);
+    return this.store.data.update.get(id);
   }
 
-  async search(searchParams) {
+  search(searchParams) {
     let id = this.searchId++;
 
     let request = this.request({
+
       url: this.basePath,
       fetchOptions: {
-        body: opts,
+        method : 'POST',
+        body: searchParams,
         headers: serviceUtils.authHeader()
       },
       json: true,

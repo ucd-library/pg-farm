@@ -15,7 +15,7 @@ if( fs.existsSync(configFilePath) ) {
 }
 
 const config = {
-  host : env.PGFARM_HOST || localFile.host || 'http://localhost:3000',
+  host : env.PGFARM_HOST || localFile.host || 'https://pgfarm.library.ucdavis.edu',
   loginPath : env.PGFARM_LOGIN_PATH || localFile.loginPath || '/login',
   configFile : configFilePath,
   token : localFile.token || null,
@@ -23,13 +23,31 @@ const config = {
 }
 
 function save() {
+  let tmp = Object.assign({}, config);
+  delete tmp.configFile;
+
   fs.writeFileSync(
-    config.configFile, 
-    JSON.stringify(config, null, 2)
+    configFilePath, 
+    JSON.stringify(tmp, null, 2)
   );
+}
+
+function getParsedToken() {
+  let payload = config.token ? config.token.split('.')[1] : null;
+  if( !payload ) return null;
+  
+  try {
+    let token = JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+    token.expires = new Date(token.exp * 1000);
+    token.expiresDays = ((token.expires.getTime() - Date.now()) / (1000*60*60*24)).toFixed(1);
+    return token;
+  } catch(e) {}
+
+  return null;
 }
 
 export {
   save, 
-  config
+  config,
+  getParsedToken
 };

@@ -128,12 +128,12 @@ router.patch(
       organization = null;
     }
 
-    let resp = await database.setMetadata(
+    await database.setMetadata(
       req.params.database, 
       organization,
       req.body
     );
-    res.status(200).json(resp);
+    res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
   }

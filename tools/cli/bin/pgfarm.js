@@ -15,12 +15,13 @@ const pkg = JSON.parse(
 program
   .name('pgfarm')
   .version(pkg.version)
-  .command('database', 'view/manage your databases')
-  .command('instance', 'view/manage your postgres instances')
-  .command('organization', 'View/manage your organizations')
-  .command('admin', 'PG Farm administer commands')
-  .command('auth', 'log in/out of PG Farm')
-  .command('config', 'setup cli')
+  .command('auth', 'Log in/out of PG Farm')
+  .command('config', 'Setup cli')
+  .command('connect', 'Show various connection examples')
+  .command('database', 'View, find and manage databases')
+  .command('instance', 'View and manage postgres instances')
+  .command('organization', 'View and manage organizations')
+
   
 
   

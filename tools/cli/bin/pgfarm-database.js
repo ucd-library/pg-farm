@@ -9,7 +9,7 @@ function test() {
 
 program
   .configureHelp({ showGlobalOptions: true })
-  .option('-o, --output <format>', 'Output format (json, yaml, text). Default is json')
+  .option('-o, --output <format>', 'Output format (json, yaml, quiet). Default is custom text or yaml depending on the commad')
 
 program.command('get <org/database>')
   .description('Fetch database metadata')
@@ -17,26 +17,39 @@ program.command('get <org/database>')
     await database.get(name, cmd.optsWithGlobals());
   });
 
-program.command('set-metadata <org/database>')
-  .description('Set metadata for a database')
+program.command('create')
+  .description('Create a new instance PG Farm database (requires admin access)')
+  .option('-i, --instance <title>', 'Instance to use.  Will be created if it does not exist')
+  .requiredOption('-d, --database <title>', 'Database title')
+  .option('-o, --organization <title>', 'Organization title. Will be created if it does not exist')
+  .action(options => {
+    database.create(options);
+  });
+
+program.command('update <org/database>')
+  .description('Update metadata for a database')
   .option('-t, --title <title>', 'Title')
   .option('-d, --description <description>', 'Description')
   .option('-s, --short-description <shortDescription>', 'Short description')
   .option('-u, --url <url>', 'URL')
   .option('-l, --tags <tags>', 'Tags (comma separated)')
-  .action((dbName, opts) => {
+  .action((dbName, opts, cmd) => {
     if( opts.tags ) {
       opts.tags = opts.tags.split(',').map(t => t.trim());
     }
-    database.setMetadata(dbName, opts);
+    database.update(dbName, opts, cmd.optsWithGlobals());
   });
 
-program.command('list')
-  .description('List databases')
-  .option('-m, --mine', 'List only databases I have an account on')
-  .option('-j, --json', 'Raw json output')
-  .action(opts => {
-    database.list(opts);
+program.command('search')
+  .description('search databases')
+  .option('-t, --text <text>', 'Free text search')
+  .option('-a, --tags <tags>', 'Database tags, comma separated')
+  .option('-o, --organization <name>', 'Organization name')
+  .option('-l, --limit <limit>', 'Limit the number of results. Default is 10')
+  .option('-f, --offset <offset>', 'Offset the results. Default is 0')
+  .option('-m, --only-mine', 'Only show databases you are a member of')
+  .action((opts, cmd) => {
+    database.search(opts, cmd.optsWithGlobals());
   });
 
 program.command('restart-api <org/database>')
