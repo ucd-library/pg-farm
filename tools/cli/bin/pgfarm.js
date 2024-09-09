@@ -14,7 +14,22 @@ const pkg = JSON.parse(
 
 program
   .name('pgfarm')
-  .version(pkg.version)
+  // .option('-V, --version', 'show version')
+  .action(() => {
+    console.log(`
+██████╗  ██████╗ ███████╗ █████╗ ██████╗ ███╗   ███╗
+██╔══██╗██╔════╝ ██╔════╝██╔══██╗██╔══██╗████╗ ████║
+██████╔╝██║  ███╗█████╗  ███████║██████╔╝██╔████╔██║
+██╔═══╝ ██║   ██║██╔══╝  ██╔══██║██╔══██╗██║╚██╔╝██║
+██║     ╚██████╔╝██║     ██║  ██║██║  ██║██║ ╚═╝ ██║
+╚═╝      ╚═════╝ ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝
+                                                    
+Version: ${pkg.version}
+Commands: pgfarm --help
+Homepage: https://pgfarm.library.ucdavis.edu
+
+`);
+  })
   .command('auth', 'Log in/out of PG Farm')
   .command('config', 'Setup cli')
   .command('connect', 'Show various connection examples')

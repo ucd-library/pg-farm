@@ -132,6 +132,14 @@ class DatabaseModel extends BaseModel {
     return this.service.revokeAccess(org, db, schemaTable, user, access);
   }
 
+  restartApi(org, db) {
+    return this.service.restartApi(org, db);
+  }
+
+  init(org, db) {
+    return this.service.init(org, db);
+  }
+
 }
 
 const model = new DatabaseModel();

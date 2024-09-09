@@ -1,12 +1,26 @@
 import yaml from 'js-yaml';
 
 class Print {
+
+  constructor() {
+    this.schemaUserAccess = this.schemaUserAccess.bind(this);
+  }
+
+
   display(payload, format, textPrint) {
+    if( payload instanceof Error ) {
+      payload = {error: true, message: payload.message, stack: payload.stack};
+    }
+
     if( payload.error ) {
       let status = payload?.response?.status;
 
-      if( payload.message && status ) {
-        payload = {status, message: payload.payload.message};
+      if( payload?.payload?.message && status ) {
+        payload = {
+          status, 
+          message: payload.payload.message,
+          stack: payload.payload.stack
+        };
       }
 
       if( format === 'json' ) {
@@ -51,8 +65,14 @@ class Print {
   }
 
   database(db) {
-    console.log(`Name: ${db.organization.name}/${db.name}`);
-    console.log(`Title: ${db.title}`);
+    if( db.organization ) {
+      console.log(`Name: ${db.organization.name}/${db.name}`);
+    } else if( db.database_name ) {
+      console.log(`Name: ${db.organization_name || '_'}/${db.database_name}`);
+    } else {
+      console.log(`Name: ${db.name}`);
+    }
+    console.log(`Title: ${db.title || db.database_title}`);
   }
 
   dbSearch(result) {
@@ -72,6 +92,22 @@ class Print {
       console.log('----');
     });
   }
+
+  tables(result=[]) {
+    result.forEach(table => {
+      console.log(` - ${table.table_name} (${table.table_type})`);
+    });
+  }
+
+  schemaUserAccess(result) {  
+    if( result.tables ) {
+      for( let table in result.tables ) {
+        result.tables[table] = result.tables[table].join(', ');
+      }
+    }
+    this.yaml(result);
+  }
+
 }
 
 const print = new Print();

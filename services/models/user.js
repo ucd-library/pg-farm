@@ -86,8 +86,6 @@ class User {
 
     logger.info('Ensuring pg user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
     await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });
-
-
   }
 
   async delete(nameOrId, orgNameOrId=null, username) {

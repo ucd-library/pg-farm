@@ -134,6 +134,8 @@ server-port = ${config.pgRest.port}`
       value : config.appUrl
     });
 
+    modelUtils.cleanTemplateForLocalDev(k8sConfig);
+
     let pgrestResult = await kubectl.apply(k8sConfig, {
       stdin: true,
       isJson: true

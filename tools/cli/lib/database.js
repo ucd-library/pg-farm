@@ -1,13 +1,14 @@
 import fetch from 'node-fetch';
 import headers from './fetch-headers.js';
 // import {config} from './config.js';
-import {databaseModel, utils, config} from '../../lib/index.js'
+import { databaseModel, utils, config } from '../../lib/index.js'
 import print from './print.js';
+import exec from './model-exec-wrapper.js';
 
 class Database {
 
   parseOrg(dbName) {
-    if( dbName.match('/') ) {
+    if (dbName.match('/')) {
       let parts = dbName.split('/');
       return {
         organization: parts[0],
@@ -21,17 +22,9 @@ class Database {
     };
   }
 
-
-
   async get(name, opts) {
-    let {organization, database} = this.parseOrg(name);
-    let resp;
-
-    try {
-      resp = await databaseModel.get(organization, database);
-    } catch(e) {
-      resp = e;
-    }
+    let { organization, database } = this.parseOrg(name);
+    let resp = await exec(databaseModel.get(organization, database));
 
     print.display(resp, opts.output, print.database);
     process.exit(0);
@@ -41,10 +34,10 @@ class Database {
     let resp;
 
     try {
-      let {request, id} = databaseModel.search(searchParams);
+      let { request, id } = databaseModel.search(searchParams);
       await request
       resp = databaseModel.getSearchResult(id);
-    } catch(e) {
+    } catch (e) {
       resp = e;
     }
 
@@ -52,39 +45,30 @@ class Database {
     process.exit(0);
   }
 
-  async create(opts) {
-    if( opts.instance && !opts.instance.match(/^inst-/) ) {
-      opts.instance = 'inst-'+opts.instance;
-    }
- 
-    let resp = await fetch(`${config.host}/api/admin/database`, {
-      method: 'POST',
-      headers: headers({
-        'Content-Type': 'application/json'
-      }),
-      body: JSON.stringify(opts)
-    });
-
-    if( resp.status !== 201 ) {
-      console.error(resp.status, 'Unable to create database', await resp.text());
-      return;
+  async create(database, opts) {
+    let resp;
+    if (database.organization === '_') {
+      database.organization = null;
     }
 
-    let body = await resp.json();
-    console.log(`Created database ${body.database_name} with id ${body.database_id} on instance ${body.instance_name}`);
-    if( body.organization_name ) {
-      console.log(`  -> Organization: ${body.organization_name}`);
+    try {
+      resp = await databaseModel.create(database);
+    } catch (e) {
+      resp = e;
     }
+
+    print.display(resp, opts.output, print.database);
+    process.exit(0);
   }
 
   async update(name, opts) {
-    let {organization, database} = this.parseOrg(name);
-    if( !organization ) organization = '_';
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
 
     let resp;
     try {
       resp = await databaseModel.update(organization, database, opts);
-    } catch(e) {
+    } catch (e) {
       resp = e;
     }
 
@@ -92,51 +76,84 @@ class Database {
     process.exit(0);
   }
 
-  async restartApi(name) {
-    let {organization, database} = this.parseOrg(name);
-    if( !organization ) organization = '_';
+  async showUsers(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
 
-    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/restart/api`, {
-      headers: headers()
-    });
-
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to restart API', await resp.text());
-      return;
+    let resp = await exec(databaseModel.getUsers(organization, database));
+    try {
+      
+    } catch (e) {
+      resp = e;
     }
 
-    console.log(`Restarted API for database ${database}`);
+    print.display(resp.payload, opts.output);
+    process.exit(0);
   }
 
-  async init(name) {
-    let {organization, database} = this.parseOrg(name);
-    if( !organization ) organization = '_';
+  async showSchemas(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
 
-    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/init`, {
-      headers: headers()
-    });
+    let resp = await exec(databaseModel.getSchemas(organization, database));
 
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to re-init database', await resp.text());
-      return;
-    }
+    print.display(resp.payload, opts.output,);
+    process.exit(0);
+  }
 
-    console.log(`Re-ran init for database ${database}`);
+  async showTables(name, schema, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
+
+    let resp = await exec(databaseModel.restartApi(organization, database, schema));
+
+    print.display(resp.payload, opts.output, print.tables);
+    process.exit(0);
+  }
+
+  async showSchemaUserAccess(name, schema, user, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
+
+    let resp = await exec(databaseModel.restartApi(organization, database, schema, user));
+
+    print.display(resp.payload, opts.output, print.schemaUserAccess);
+    process.exit(0);
+  }
+
+  async restartApi(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
+
+    let resp = await exec(databaseModel.restartApi(organization, database));
+
+    print.display(resp.payload, opts.output, print.schemaUserAccess);
+    process.exit(0);
+  }
+
+  async init(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
+
+    let resp = await exec(databaseModel.init(organization, database));
+
+    print.display(resp.payload, opts.output);
+    process.exit(0);
   }
 
   async link(name, remoteName) {
     let local = this.parseOrg(name);
-    if( !local.organization ) local.organization = '_';
+    if (!local.organization) local.organization = '_';
 
     let remote = this.parseOrg(remoteName);
-    if( !remote.organization ) remote.organization = '_';
+    if (!remote.organization) remote.organization = '_';
 
     let resp = await fetch(`${config.host}/api/admin/database/${local.organization}/${local.database}/link/${remote.organization}/${remote.database}`, {
       headers: headers(),
       method: 'POST',
     });
 
-    if( resp.status !== 200 ) {
+    if (resp.status !== 200) {
       console.error(resp.status, 'Unable to link database', await resp.text());
       return;
     }
@@ -144,22 +161,13 @@ class Database {
     console.log(`Link for ${name} to ${remoteName}`);
   }
 
-  async grant(dbName, schemaTable, username, grantType, options) {
-    let {organization, database} = this.parseOrg(dbName);
-    if( !organization ) organization = '_';
+  async setSchemaUserAccess(name, schemaTable, username, access, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
 
-    let resp = await fetch(`${config.host}/api/admin/database/${organization}/${database}/grant/${schemaTable}/${username}/${grantType}`, {
-      headers: headers(),
-      method: 'PUT',
-      body: JSON.stringify(options)
-    });
+    let resp = await exec(databaseModel.setSchemaUserAccess(organization, database, schemaTable, username, access));
 
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to grant', await resp.text());
-      return;
-    }
-
-    console.log(`Granted ${grantType} on ${schemaTable} to ${username}`);
+    print.display(resp.payload, opts.output);
   }
 
 }

@@ -16,8 +16,7 @@ class DatabaseStore extends BaseStore {
       schemaTables : new LruStore({name: 'database.schemaTables'}),
       schemaUserAccess : new LruStore({name: 'database.schemaUserAccess'}),
       schemaTableAccess : new LruStore({name: 'database.schemaTableAccess'}),
-      grantAccess : new LruStore({name: 'database.grantAccess'}),
-      revokeAccess : new LruStore({name: 'database.revokeAccess'})
+      actions : new LruStore({name: 'database.actions'})
     };
 
     this.events = {
@@ -30,8 +29,10 @@ class DatabaseStore extends BaseStore {
       DATABASE_SCHEMA_TABLES_UPDATE : 'database-schema-tables-update',
       DATABASE_SCHEMA_USER_ACCESS_UPDATE : 'database-schema-user-access-update',
       DATABASE_SCHEMA_TABLE_ACCESS_UPDATE : 'database-schema-table-access-update',
-      DATABASE_GRANT_ACCESS : 'database-grant-access-update',
-      DATABASE_REVOKE_ACCESS : 'database-revoke-access-update'
+      DATABASE_GRANT_ACCESS_UPDATE : 'database-grant-access-update',
+      DATABASE_REVOKE_ACCESS_UPDATE : 'database-revoke-access-update',
+      DATABASE_RESTART_API_UPDATE : 'database-restart-api-update',
+      DATABASE_INIT_UPDATE : 'database-init-update'
     };
   }
 
@@ -110,16 +111,32 @@ class DatabaseStore extends BaseStore {
   onGrantAccessUpdate(ido, payload) {
     this._set(
       utils.getAppPayload(ido, payload),
-      this.data.grantAccess,
-      this.events.DATABASE_GRANT_ACCESS
+      this.data.actions,
+      this.events.DATABASE_GRANT_ACCESS_UPDATE
     );
   }
 
   onRevokeAccessUpdate(ido, payload) {
     this._set(
       utils.getAppPayload(ido, payload),
-      this.data.revokeAccess,
-      this.events.DATABASE_REVOKE_ACCESS
+      this.data.actions,
+      this.events.DATABASE_REVOKE_ACCESS_UPDATE
+    );
+  }
+
+  onRestartApiUpdate(ido, payload) {
+    this._set(
+      utils.getAppPayload(ido, payload),
+      this.data.actions,
+      this.events.DATABASE_RESTART_API_UPDATE
+    );
+  }
+
+  onInitUpdate(ido, payload) {
+    this._set(
+      utils.getAppPayload(ido, payload),
+      this.data.actions,
+      this.events.DATABASE_INIT_UPDATE
     );
   }
 

@@ -38,9 +38,9 @@ class DatabaseService extends BaseService {
     let id = utils.getIdPath({org, db});
 
     await this.request({
-      method : 'POST',
       url: this.basePath,
       fetchOptions: {
+        method : 'POST',
         body: opts,
         headers: serviceUtils.authHeader()
       },
@@ -76,8 +76,7 @@ class DatabaseService extends BaseService {
     let id = this.searchId++;
 
     let request = this.request({
-
-      url: this.basePath,
+      url: `${this.basePath}/search`,
       fetchOptions: {
         method : 'POST',
         body: searchParams,
@@ -96,7 +95,7 @@ class DatabaseService extends BaseService {
   }
 
   async getUsers(org, db) {
-    let id = utils.getIdPath({org, id});
+    let id = utils.getIdPath({org, db});
 
     await serviceUtils.checkRequesting(
       id, this.store.data.users,
@@ -111,11 +110,11 @@ class DatabaseService extends BaseService {
         })
     );
 
-    return this.store.data.metadata.get(id);
+    return this.store.data.users.get(id);
   }
 
   async getSchemas(org, db) {
-    let id = utils.getIdPath({org, id});
+    let id = utils.getIdPath({org, db});
 
     await serviceUtils.checkRequesting(
       id, this.store.data.schemas,
@@ -192,40 +191,84 @@ class DatabaseService extends BaseService {
   }
 
   async grantAccess(org, db, schemaTable, user, access) {
-    let id = utils.getIdPath({org, db, schemaTable, user, access});
+    let ido = {org, db, schemaTable, user, access, action: 'grantAccess'};
+    let id = utils.getIdPath(ido);
 
-    this.request({
-      method : 'PUT',
+    await this.request({
       url: `${this.basePath}/${org}/${db}/grant/${schemaTable}/${user}/${access}`,
       fetchOptions: {
+        method : 'PUT',
         body: {schemaTable, user, access},
         headers: serviceUtils.authHeader()
       },
       json: true,
-      onLoading: request => this.store.onGrantAccessUpdate({org, db, schemaTable, user, access}, {request}),
-      onLoad: payload => this.store.onGrantAccessUpdate({org, db, schemaTable, user, access}, {payload: payload.body}),
-      onError: error => this.store.onGrantAccessUpdate({org, db, schemaTable, user, access}, {error})
+      onLoading: request => this.store.onGrantAccessUpdate(ido, {request}),
+      onLoad: payload => this.store.onGrantAccessUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onGrantAccessUpdate(ido, {error})
     });
 
-    return this.store.data.grantAccess.get(id);
+    return this.store.data.actions.get(id);
   }
 
-  revokeAccess(org, db, schemaTable, user, access) {
-    let id = utils.getIdPath({org, db, schemaTable, user, access});
+  async revokeAccess(org, db, schemaTable, user, access) {
+    let ido = {org, db, schemaTable, user, access, action: 'revokeAccess'};
+    let id = utils.getIdPath(ido);
 
-    this.request({
-      method : 'DELETE',
+    await this.request({
       url: `${this.basePath}/${org}/${db}/revoke/${schemaTable}/${user}/${access}`,
       fetchOptions: {
+        method : 'DELETE',
         headers: serviceUtils.authHeader()
       },
       json: true,
-      onLoading: request => this.store.onRevokeAccessUpdate({org, db, schemaTable, user, access}, {request}),
-      onLoad: payload => this.store.onRevokeAccessUpdate({org, db, schemaTable, user, access}, {payload: payload.body}),
-      onError: error => this.store.onRevokeAccessUpdate({org, db, schemaTable, user, access}, {error})
+      onLoading: request => this.store.onRevokeAccessUpdate(ido, {request}),
+      onLoad: payload => this.store.onRevokeAccessUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onRevokeAccessUpdate(ido, {error})
     });
 
-    return this.store.data.revokeAccess.get(id);
+    return this.store.data.actions.get(id);
+  }
+
+  async restartApi(org, db) {
+    let ido = {org, db, action: 'restartApi'};
+    let id = utils.getIdPath(ido);
+
+    await serviceUtils.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/restart/api`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onRestartApiUpdate(ido, {request}),
+          onLoad: payload => this.store.onRestartApiUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onRestartApiUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.restartApi.get(id);
+  }
+
+  async init(org, db) {
+    let ido = {org, db, action: 'init'};
+    let id = utils.getIdPath(ido);
+
+    await serviceUtils.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/init`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onInitUpdate(ido, {request}),
+          onLoad: payload => this.store.onInitUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onInitUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
   }
 
 

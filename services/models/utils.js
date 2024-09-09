@@ -25,6 +25,31 @@ class ModelUtils {
     return kubectl.renderKustomizeTemplate(template, config.k8s.platform);
   }
 
+    /**
+   * @method cleanTemplateForLocalDev
+   * @description Clean the k8s template for local development.  This will remove things
+   * like always pull images and resource limits.  Only runs if config.k8s.platform is docker-desktop
+   * 
+   * @param {Object} template 
+   */
+  cleanTemplateForLocalDev(template) {
+    if( config.k8s.platform !== 'docker-desktop' ) return;
+
+    if( template?.spec?.template?.spec?.containers ) {
+      let containers = template.spec.template.spec.containers;
+      containers.forEach(container => {
+        container.imagePullPolicy = 'Never';
+        if( container.resources ) {
+          delete container.resources;
+        }
+        if( container?.image?.match('/pgfarm-') ) {
+          container.image = 'localhost/local-dev/'+container.image.split('/').pop();
+        }
+      });
+    }
+
+  }
+
   /**
    * @method isUUID
    * @description Returns true if the string is a UUID

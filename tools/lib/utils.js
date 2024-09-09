@@ -1,4 +1,4 @@
-const ID_ORDER = ['org', 'instance', 'db', 'schema', 'table', 'user'];
+const ID_ORDER = ['org', 'instance', 'db', 'schema', 'schemaTable', 'table', 'user', 'action', 'access'];
 
 class Utils {
   getIdPath(ido={}) {

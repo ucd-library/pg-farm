@@ -1,29 +1,25 @@
 import {Command} from 'commander';
 import database from '../lib/database.js';
+import globalOpts from '../lib/global-opts.js';
 
 const program = new Command();
 
-function test() {
-  console.log('test');
-}
-
-program
-  .configureHelp({ showGlobalOptions: true })
-  .option('-o, --output <format>', 'Output format (json, yaml, quiet). Default is custom text or yaml depending on the commad')
+globalOpts(program);
+program.passThroughOptions()
 
 program.command('get <org/database>')
   .description('Fetch database metadata')
   .action(async (name, opts, cmd) => {
-    await database.get(name, cmd.optsWithGlobals());
+    database.get(name, cmd.optsWithGlobals());
   });
 
 program.command('create')
   .description('Create a new instance PG Farm database (requires admin access)')
-  .option('-i, --instance <title>', 'Instance to use.  Will be created if it does not exist')
   .requiredOption('-d, --database <title>', 'Database title')
-  .option('-o, --organization <title>', 'Organization title. Will be created if it does not exist')
-  .action(options => {
-    database.create(options);
+  .requiredOption('-g, --organization <title>', 'Organization title. Will be created if it does not exist.  Set to _ for no organization')
+  .option('-i, --instance <title>', 'Instance to use.  Will be created if it does not exist. Will default to database name')
+  .action((opts, cmd) => {
+    database.create(opts, cmd.optsWithGlobals());
   });
 
 program.command('update <org/database>')
@@ -54,14 +50,14 @@ program.command('search')
 
 program.command('restart-api <org/database>')
   .description('Restart the PostgREST API for an instance (requires admin access)')
-  .action(dbName => {
-    database.restartApi(dbName);
+  .action((dbName, opts, cmd) => {
+    database.restartApi(dbName, cmd.optsWithGlobals());
   });
 
 program.command('init <org/database>')
   .description('Rerun the pgfarm init scripts for database (requires admin access)')
-  .action(dbName => {
-    database.init(dbName);
+  .action((dbName, opts, cmd) => {
+    database.init(dbName, cmd.optsWithGlobals());
   });
 
 program.command('link <org/database> <remoteOrg/remoteDatabase>')
@@ -70,6 +66,8 @@ program.command('link <org/database> <remoteOrg/remoteDatabase>')
     database.link(dbName, remoteDbName);
   });
 
-program.command('grant', 'Helper methods for granting user access to a schema or table');
+program.command('show', 'Helper methods viewings users, schemas, and tables in a database');
+
+program.command('set-access', 'Helper methods for granting or removing user access to a schema or table');
 
 program.parse();

@@ -1,8 +1,14 @@
 import {Command} from 'commander';
 import instance from '../lib/instance.js';
+import globalOpts from '../lib/global-opts.js';
 
 const program = new Command();
 
+globalOpts(program);
+
+program
+  .configureHelp({ showGlobalOptions: true })
+  .option('-o, --output <format>', 'Output format (json, yaml, quiet). Default is custom text or yaml depending on the commad')
 
 program.command('create')
   .description('Create a new instance PG Farm postgres instance (admin only)')
@@ -25,8 +31,8 @@ program.command('add-user <org/instance> <user>')
 program.command('start <org/instance>')
   .description('Manually start an postgres instance (admin only)')
   .option('-f, --force', 'Force start the instance. This will reapply k8s config.')
-  .action((instanceName, opts) => {
-    instance.start(instanceName, opts);
+  .action((instanceName, opts, cmd) => {
+    instance.start(instanceName, cmd.optsWithGlobals());
   });
 
 program.command('restart <org/instance>')

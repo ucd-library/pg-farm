@@ -32,8 +32,8 @@ router.put('/:organization/:instance/:user',
       throw new Error('Invalid type: '+type);
     }
 
-    let id = await model.createUser(instance, organization, user, type, {parent});
-    res.status(204).json({id});
+    await model.createUser(instance, organization, user, type, {parent});
+    res.json({success: true});
   } catch(e) {
     handleError(res, e);
   }

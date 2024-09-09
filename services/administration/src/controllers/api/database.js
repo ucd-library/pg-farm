@@ -14,8 +14,8 @@ const GET_DB_COLUMNS = ["organization_name", "organization_title","organization_
 const USER_COLUMNS = ["username","type"];
 
 /** Search */
-router.get('/', search);
-router.post('/', search);
+router.get('/search', search);
+router.post('/search', search);
 
 async function search(req, res) {
   try {
@@ -90,16 +90,6 @@ router.get('/:organization/:database', async (req, res) => {
       }
     };
 
-    if( req.user && resp.instance.id ) {
-      let users = await pgAdminClient.getInstanceUsers(resp.instance.id, USER_COLUMNS);
-
-      let user = users.find(user => user.username === req.user.username);
-      if( user ) {
-        resp.isAdmin = user.type === 'ADMIN';
-        resp.users = users;
-      }
-    }
-
     res.json(resp);
   } catch(e) {
     handleError(res, e);
@@ -140,7 +130,7 @@ router.patch(
 });
 
 /** Restart db pgrest instance **/
-router.get('/:organization/:database/restart/api', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:database/restart/api', keycloak.protect('admin'), async (req, res) => {
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -148,8 +138,8 @@ router.get('/:organization/:database/restart/api', keycloak.protect('admin'), as
     }
 
     let database = req.params.database;
-    let resp = await pgRest.restart(database, organization);
-    res.status(200).json(resp);
+    await pgRest.restart(database, organization);
+    res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
   }

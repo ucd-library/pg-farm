@@ -1,6 +1,8 @@
 import {BaseService} from '@ucd-lib/cork-app-utils';
 import InstanceStore from '../stores/InstanceStore.js';
+import {config} from '../config.js'
 import utils from '../utils.js';
+import serviceUtils from './utils.js';
 
 class InstanceService extends BaseService {
 
@@ -16,9 +18,9 @@ class InstanceService extends BaseService {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}`,
       fetchOptions: {
+        method : 'POST',
         body: opts,
         headers: serviceUtils.authHeader()
       },
@@ -32,7 +34,8 @@ class InstanceService extends BaseService {
   }
 
   async addUser(org, instance, user, opts) {
-    let id = utils.getIdPath({org, instance, user});
+    let ido = {org, instance, user};
+    let id = utils.getIdPath(ido);
 
     let flags = {};
     if( opts.admin ) flags.type = 'ADMIN';
@@ -40,19 +43,19 @@ class InstanceService extends BaseService {
     if( opts.parent ) flags.parent = opts.parent;
 
     await this.request({
-      method : 'PUT',
       url: `${this.basePath}/${org}/${instance}/${user}`,
       qs: flags,
       fetchOptions: {
+        method : 'PUT',
         headers: serviceUtils.authHeader()
       },
       json: true,
-      onLoading: request => this.store.onUserAddUpdate({org, instance, user}, {request}),
-      onLoad: payload => this.store.onUserAddUpdate({org, instance, user}, {payload: payload.body}),
-      onError: error => this.store.onUserAddUpdate({org, instance, user}, {error})
+      onLoading: request => this.store.onUserAddUpdate(ido, {request}),
+      onLoad: payload => this.store.onUserAddUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onUserAddUpdate(ido, {error})
     });
 
-    return this.store.data.userAdd.get(id);
+    return this.store.data.addUser.get(id);
   }
 
   async start(org, instance, opts) {
@@ -62,10 +65,10 @@ class InstanceService extends BaseService {
     if( opts.force ) flags.force = true;
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/start`,
       qs: flags,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -84,10 +87,10 @@ class InstanceService extends BaseService {
     if( opts.force ) flags.force = true;
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/stop`,
       qs: flags,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -103,9 +106,9 @@ class InstanceService extends BaseService {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/restart`,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -121,9 +124,9 @@ class InstanceService extends BaseService {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/backup`,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -139,9 +142,9 @@ class InstanceService extends BaseService {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/archive`,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -157,9 +160,9 @@ class InstanceService extends BaseService {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/restore`,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -175,9 +178,9 @@ class InstanceService extends BaseService {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/resize`,
       fetchOptions: {
+        method : 'POST',
         body: {size},
         headers: serviceUtils.authHeader()
       },
@@ -190,13 +193,13 @@ class InstanceService extends BaseService {
     return this.store.data.resize.get(id);
   }
 
-  async resize(org, instance) {
+  async syncUsers(org, instance) {
     let id = utils.getIdPath({org, instance});
 
     await this.request({
-      method : 'POST',
       url: `${this.basePath}/${org}/${instance}/sync-users`,
       fetchOptions: {
+        method : 'POST',
         headers: serviceUtils.authHeader()
       },
       json: true,

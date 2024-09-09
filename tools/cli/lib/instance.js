@@ -1,8 +1,25 @@
 import fetch from 'node-fetch';
 import headers from './fetch-headers.js';
-import {config} from './config.js';
+import { instanceModel, utils, config } from '../../lib/index.js'
+import print from './print.js';
+import exec from './model-exec-wrapper.js';
 
 class Instances {
+
+  parseOrg(instName) {
+    if (instName.match('/')) {
+      let parts = instName.split('/');
+      return {
+        organization: parts[0],
+        instance: parts[1]
+      };
+    }
+
+    return {
+      organization: null,
+      instance: instName
+    };
+  }
 
   async create(opts) {
     // instance = formatInstName(instance);
@@ -24,31 +41,13 @@ class Instances {
     console.log(`Created instance ${opts.name} with id ${body.id}`);
   }
 
-  async addUser(instance, user, opts={}) {
-    instance = formatInstName(instance);
+  async addUser(name, user, opts={}) {
+    let { organization, instance } = this.parseOrg(name);
 
-    let flags = [];
-    if( opts.admin ) {
-      flags.push('type=ADMIN');
-    } else if( opts.serviceAccount ) {
-      flags.push('type=SERVICE_ACCOUNT');
-    }
-    if( opts.parent ) {
-      flags.push(`parent=${opts.parent}`);
-    }
-    flags = flags.length > 0 ? '?'+flags.join('&') : '';
+    let resp = await exec(instanceModel.addUser(organization, instance, user, opts));
 
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/${user}${flags}`, {
-      method: 'PUT',
-      headers: headers()
-    });
-
-    if( resp.status !== 204 ) {
-      console.error(resp.status, 'Unable to add user', await resp.text());
-      return;
-    }
-
-    console.log(`Added user ${user} to instance ${instance}`);
+    print.display(resp.payload, opts.output);
+    process.exit(0);
   }
 
   async stop(instance) {
@@ -66,25 +65,18 @@ class Instances {
     console.log(`Stopped instance ${instance}`);
   }
 
-  async start(instance, opts={}) {
-    instance = formatInstName(instance);
+  async start(name, opts={}) {
+    let { organization, instance } = this.parseOrg(name);
+    let resp;
 
-    let params = new URLSearchParams(opts);
-    if( opts.force ) {
-      params.set('force', true);
-    }
-    params = params.size > 0 ? '?'+params.toString() : '';
-
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/start${params}`, {
-      headers: headers()
-    });
-
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to start instance', await resp.text());
-      return;
+    try {
+      resp = await instanceModel.start(organization, instance, opts);
+    } catch (e) {
+      resp = e;
     }
 
-    console.log(`Started instance ${instance}`);
+    print.display(resp, opts.output);
+    process.exit(0);
   }
 
   async restart(instance) {

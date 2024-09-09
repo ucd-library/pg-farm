@@ -324,6 +324,8 @@ class Instance {
 
     spec.volumeClaimTemplates[0].metadata.name = hostname+'-ps';
 
+    modelUtils.cleanTemplateForLocalDev(k8sConfig);
+
     let pgResult = await kubectl.apply(k8sConfig, {
       stdin:true,
       isJson: true
@@ -334,6 +336,8 @@ class Instance {
     k8sConfig = templates.find(t => t.kind === 'Service');
     k8sConfig.metadata.name = hostname;
     k8sConfig.spec.selector.app = hostname;
+
+    modelUtils.cleanTemplateForLocalDev(k8sConfig);
 
     let pgServiceResult = await kubectl.apply(k8sConfig, {
       stdin:true,

@@ -6,9 +6,9 @@ class StoreUtils {
     let id = utils.getIdPath(ido);
 
     if( !state ) {
-      if( args.error ) state = 'ERROR';
-      else if( args.request ) state = 'LOADING';
-      else if( args.payload ) state = 'LOADED';
+      if( args.error !== undefined ) state = 'ERROR';
+      else if( args.request !== undefined ) state = 'LOADING';
+      else if( args.payload !== undefined ) state = 'LOADED';
       else throw new Error('No state provided');
     }
 
@@ -20,6 +20,7 @@ class StoreUtils {
       schema : ido.schema,
       table : ido.table,
       user : ido.user,
+      action : ido.action,
       state,
       request: args.request,
       payload: args.payload,
