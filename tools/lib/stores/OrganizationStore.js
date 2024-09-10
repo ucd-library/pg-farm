@@ -9,13 +9,15 @@ class OrganizationStore extends BaseStore {
 
     this.data = {
       create : new LruStore({name: 'organization.create'}),
-      addUser : new LruStore({name: 'organization.addUser'}),
+      metadata : new LruStore({name: 'organization.metadata'}),
       update : new LruStore({name: 'organization.update'}),
+      users : new LruStore({name: 'organization.users'}),
     };
     this.events = {
       ORGANIZATION_CREATE_UPDATE : 'organization-create-update',
-      ORGANIZATION_ADD_USER_UPDATE : 'organization-add-user-update',
-      ORGANIZATION_UPDATE_UPDATE : 'organization-update-update'
+      ORGANIZATION_METADATA_UPDATE : 'organization-metadata-update',
+      ORGANIZATION_UPDATE_UPDATE : 'organization-update-update',
+      ORGANIZATION_USERS_UPDATE : 'organization-users-update'
     };
   }
 
@@ -27,11 +29,11 @@ class OrganizationStore extends BaseStore {
     );
   }
 
-  onUserAddUpdate(ido, payload) {
+  onMetadataUpdate(ido, payload) {
     this._set(
       utils.getAppPayload(ido, payload),
-      this.data.addUser,
-      this.events.ORGANIZATION_ADD_USER_UPDATE
+      this.data.metadata,
+      this.events.ORGANIZATION_METADATA_UPDATE
     );
   }
 
@@ -40,6 +42,14 @@ class OrganizationStore extends BaseStore {
       utils.getAppPayload(ido, payload),
       this.data.update,
       this.events.ORGANIZATION_UPDATE_UPDATE
+    );
+  }
+
+  onUsersUpdate(ido, payload) {
+    this._set(
+      utils.getAppPayload(ido, payload),
+      this.data.users,
+      this.events.ORGANIZATION_USERS_UPDATE
     );
   }
 

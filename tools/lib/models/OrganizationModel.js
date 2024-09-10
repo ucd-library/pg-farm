@@ -13,17 +13,20 @@ class OrganizationModel extends BaseModel {
     this.register('OrganizationModel');
   }
 
+  get(org) {
+    return this.service.get(org);
+  }
+
+  getUsers(org) {
+    return this.service.getUsers(org);
+  }
+
   create(opts) {
     return this.service.create(opts);
   }
 
   update(org, opts) {
     return this.service.update(org, opts);
-  }
-
-  addUser(org, user, role) {
-    instance = this.formatName(instance);
-    return this.service.addUser(org, user, role);
   }
 
 }

@@ -1,13 +1,13 @@
 import {Command} from 'commander';
 import database from '../lib/database.js';
-import globalOpts from '../lib/global-opts.js';
+import {wrapAllCmds} from '../lib/global-opts.js';
+import print from '../lib/print.js';
 
 const program = new Command();
 
 program.name('pgfarm database set-access')
-  .description('Helper methods for granting or removing user access to a schema or table');
+  .description('Helper methods for granting or removing user access to a schema or table '+print.dbAdminOnlyMsg());
 
-globalOpts(program);
 
 program.command('schema <org/database> <schema> <username> <grant-type>')
   .description('Set access for all tables in schema for a user.  Grant type is one of: READ, WRITE, or NONE. NONE will remove access.')
@@ -36,4 +36,5 @@ sure what the instance name of your database is.
 `);
   });
 
+wrapAllCmds(program);
 program.parse(process.argv);

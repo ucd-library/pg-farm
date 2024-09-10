@@ -1,8 +1,8 @@
 import fetch from 'node-fetch';
 import headers from './fetch-headers.js';
-import { instanceModel, utils, config } from '../../lib/index.js'
+import { instanceModel, config } from '../../lib/index.js'
 import print from './print.js';
-import exec from './model-exec-wrapper.js';
+import organization from './organization.js';
 
 class Instances {
 
@@ -22,31 +22,38 @@ class Instances {
   }
 
   async create(opts) {
-    // instance = formatInstName(instance);
+    let resp = await instanceModel.create(opts);
 
-    let resp = await fetch(`${config.host}/api/admin/instance`, {
-      method: 'POST',
-      headers: headers({
-        'Content-Type': 'application/json'
-      }),
-      body: JSON.stringify(opts)
-    });
+    print.display(resp, opts.output);
+    process.exit(0);
+  }
 
-    if( resp.status !== 201 ) {
-      console.error(resp.status, 'Unable to create instance', await resp.text());
-      return;
+  async list(opts={}) {
+    let query = {}
+    if( opts.organization ) {
+      query.organization = opts.organization;
+    }
+    if( opts.state ) {
+      query.state = opts.state;
+    }
+    if( opts.limit ) {
+      query.limit = opts.limit;
+    }
+    if( opts.offset ) {
+      query.offset = opts.offset;
     }
 
-    let body = await resp.json();
-    console.log(`Created instance ${opts.name} with id ${body.id}`);
+    let resp = await instanceModel.list(query);
+    print.display(resp, opts.output);
+    process.exit(0);
   }
 
   async addUser(name, user, opts={}) {
     let { organization, instance } = this.parseOrg(name);
 
-    let resp = await exec(instanceModel.addUser(organization, instance, user, opts));
+    let resp = await instanceModel.addUser(organization, instance, user, opts);
 
-    print.display(resp.payload, opts.output);
+    print.display(resp, opts.output);
     process.exit(0);
   }
 

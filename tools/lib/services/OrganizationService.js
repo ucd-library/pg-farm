@@ -1,6 +1,8 @@
 import {BaseService} from '@ucd-lib/cork-app-utils';
 import OrganizationStore from '../stores/OrganizationStore.js';
+import serviceUtils from './utils.js';
 import utils from '../utils.js';
+import {config} from '../config.js'
 
 class OrganizationService extends BaseService {
 
@@ -15,9 +17,9 @@ class OrganizationService extends BaseService {
     let id = utils.getIdPath({org});
 
     await this.request({
-      method : 'POST',
       url: this.basePath,
       fetchOptions: {
+        method : 'POST',
         body: opts,
         headers: serviceUtils.authHeader()
       },
@@ -30,41 +32,61 @@ class OrganizationService extends BaseService {
     return this.store.data.create.get(id);
   }
 
+  async get(org) {
+    let id = utils.getIdPath({org});
+
+    await serviceUtils.checkRequesting(
+      id, this.store.data.metadata,
+      () => this.request({
+          url: `${this.basePath}/${org}`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onMetadataUpdate({org}, {request}),
+          onLoad: payload => this.store.onMetadataUpdate({org}, {payload: payload.body}),
+          onError: error => this.store.onMetadataUpdate({org}, {error})
+        })
+    );
+
+    return this.store.data.metadata.get(id);
+  }
+
+  async getUsers(org) {
+    let id = utils.getIdPath({org});
+
+    await serviceUtils.checkRequesting(
+      id, this.store.data.users,
+      () => this.request({
+          url: `${this.basePath}/${org}/users`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onUsersUpdate({org}, {request}),
+          onLoad: payload => this.store.onUsersUpdate({org}, {payload: payload.body}),
+          onError: error => this.store.onUsersUpdate({org}, {error})
+        })
+    );
+
+    return this.store.data.users.get(id);
+  }
+
   async update(org, opts) {
     let id = utils.getIdPath({org});
 
     await this.request({
-      method : 'PATCH',
       url: `${this.basePath}/${org}`,
       fetchOptions: {
+        method : 'PATCH',
         body: opts,
         headers: serviceUtils.authHeader()
       },
       json: true,
-      onLoading: request => this.store.onUpdate({org}, {request}),
-      onLoad: payload => this.store.onUpdate({org}, {payload: payload.body}),
-      onError: error => this.store.onUpdate({org}, {error})
+      onLoading: request => this.store.onUpdateUpdate({org}, {request}),
+      onLoad: payload => this.store.onUpdateUpdate({org}, {payload: payload.body}),
+      onError: error => this.store.onUpdateUpdate({org}, {error})
     });
 
     return this.store.data.update.get(id);
-  }
-
-  async addUser(org, user, role) {
-    let id = utils.getIdPath({org, user});
-
-    await this.request({
-      method : 'PUT',
-      url: `${this.basePath}/${org}/${user}/${role}`,
-      fetchOptions: {
-        headers: serviceUtils.authHeader()
-      },
-      json: true,
-      onLoading: request => this.store.onUserAddUpdate({org, user}, {request}),
-      onLoad: payload => this.store.onUserAddUpdate({org, user}, {payload: payload.body}),
-      onError: error => this.store.onUserAddUpdate({org, user}, {error})
-    });
-
-    return this.store.data.userAdd.get(id);
   }
 
 }

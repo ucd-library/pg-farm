@@ -89,6 +89,55 @@ class PgFarmAdminClient {
   }
 
   /**
+   * @method isOrganizationAdmin
+   * @description check if a user is an admin for an organization
+   * 
+   * @param {String} username 
+   * @param {String} orgName 
+   * @returns {Promise<Boolean>}
+   */
+  async isOrganizationAdmin(username, orgName) {
+    let resp = await client.query(`
+      SELECT * FROM ${this.schema}.is_org_admin($1, $2)
+    `, [username, orgName]);
+
+    return resp.rows[0].is_org_admin;
+  }
+
+  /**
+   * @method getOrganizationUsers
+   * @description get all users for an organization
+   * 
+   * @param {String} nameOrId organization name or ID
+   * @returns {Promise<Array>}
+   **/
+  async getOrganizationUsers(nameOrId) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.views.ORGANIZATION_USER}
+      WHERE organization_id = ${this.schema}.get_organization_id($1)
+    `, [nameOrId]);
+
+    return resp.rows;
+  }
+
+  /**
+   * @method getOrganizationUser
+   * @description get all users for an organization
+   * 
+   * @param {String} nameOrId organization name or ID
+   * @returns {Promise<Array>}
+   **/
+  async getOrganizationUser(username, nameOrId) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.views.ORGANIZATION_USER}
+      WHERE organization_id = ${this.schema}.get_organization_id($1) AND
+            username = $2
+    `, [nameOrId, username]);
+
+    return resp.rows;
+  }
+
+  /**
    * @method createOrganization
    * @description create a new organization
    * 
@@ -159,14 +208,30 @@ class PgFarmAdminClient {
    * 
    * @returns {Promise<Array>}
    */
-  async getInstances(state=null) {
-    let where = '', params = [];
-    if( state ) {
-      params.push(state);
-      where = `WHERE state = $${params.length}`;
+  async getInstances(opts={}) {
+    if( !opts.limit ) opts.limit = 10;
+    if( !opts.offset ) opts.offset = 0;
+
+    let where = [], params = [], paging='';
+    if( opts.state ) {
+      params.push(opts.state);
+      where.push(`state = $${params.length}`);
     }
+    if( opts.organization ) {
+      params.push(opts.organization);
+      where.push(`organization_id = ${this.schema}.get_organization_id($${params.length})`);
+    }
+    
+    params.push(opts.limit);
+    paging = `LIMIT $${params.length}`;
+    
+    params.push(opts.offset);
+    paging += ` OFFSET $${params.length}`;
+
+    where = where.length > 0 ? 'WHERE '+where.join(' AND ') : '';
+
     let res = await client.query(
-      `SELECT * FROM ${config.adminDb.tables.INSTANCE} ${where}`,
+      `SELECT * FROM ${config.adminDb.tables.INSTANCE} ${where} ORDER BY name DESC ${paging} `,
       params
     );
     return res.rows;

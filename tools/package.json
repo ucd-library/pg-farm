@@ -1,5 +1,5 @@
 {
-  "name": "@ucd-lib/pg-farm",
+  "name": "@ucd-lib/pgfarm",
   "version": "0.0.5",
   "description": "PG Farm client; library, cli and desktop applicaiton",
   "main": "index.js",
@@ -14,8 +14,9 @@
   "license": "MIT",
   "dependencies": {
     "@ucd-lib/cork-app-state": "^3.0.1",
-    "@ucd-lib/cork-app-utils": "^6.0.5",
+    "@ucd-lib/cork-app-utils": "^6.0.7",
     "clone": "^2.1.2",
+    "colors": "^1.4.0",
     "commander": "^11.1.0",
     "js-yaml": "^4.1.0",
     "multi-ini": "^2.3.2",

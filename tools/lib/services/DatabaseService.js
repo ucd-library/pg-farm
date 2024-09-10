@@ -247,7 +247,7 @@ class DatabaseService extends BaseService {
         })
     );
 
-    return this.store.data.restartApi.get(id);
+    return this.store.data.actions.get(id);
   }
 
   async init(org, db) {

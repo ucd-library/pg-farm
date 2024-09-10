@@ -1,9 +1,7 @@
 import fetch from 'node-fetch';
 import headers from './fetch-headers.js';
-// import {config} from './config.js';
-import { databaseModel, utils, config } from '../../lib/index.js'
+import { databaseModel, config } from '../../lib/index.js'
 import print from './print.js';
-import exec from './model-exec-wrapper.js';
 
 class Database {
 
@@ -24,7 +22,7 @@ class Database {
 
   async get(name, opts) {
     let { organization, database } = this.parseOrg(name);
-    let resp = await exec(databaseModel.get(organization, database));
+    let resp = await databaseModel.get(organization, database);
 
     print.display(resp, opts.output, print.database);
     process.exit(0);
@@ -41,7 +39,7 @@ class Database {
       resp = e;
     }
 
-    print.display(resp.payload, opts.output, print.dbSearch);
+    print.display(resp, opts.output, print.dbSearch);
     process.exit(0);
   }
 
@@ -72,7 +70,7 @@ class Database {
       resp = e;
     }
 
-    print.display(resp.payload, opts.output);
+    print.display(resp, opts.output);
     process.exit(0);
   }
 
@@ -80,14 +78,9 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.getUsers(organization, database));
-    try {
-      
-    } catch (e) {
-      resp = e;
-    }
+    let resp = await databaseModel.getUsers(organization, database);
 
-    print.display(resp.payload, opts.output);
+    print.display(resp, opts.output, print.dbUsers);
     process.exit(0);
   }
 
@@ -95,9 +88,9 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.getSchemas(organization, database));
+    let resp = await databaseModel.getSchemas(organization, database);
 
-    print.display(resp.payload, opts.output,);
+    print.display(resp, opts.output,);
     process.exit(0);
   }
 
@@ -105,9 +98,9 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.restartApi(organization, database, schema));
+    let resp = await databaseModel.getSchemaTables(organization, database, schema);
 
-    print.display(resp.payload, opts.output, print.tables);
+    print.display(resp, opts.output, print.tables);
     process.exit(0);
   }
 
@@ -115,9 +108,9 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.restartApi(organization, database, schema, user));
+    let resp = await databaseModel.getSchemaUserAccess(organization, database, schema, user);
 
-    print.display(resp.payload, opts.output, print.schemaUserAccess);
+    print.display(resp, opts.output, print.schemaUserAccess);
     process.exit(0);
   }
 
@@ -125,9 +118,9 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.restartApi(organization, database));
+    let resp = await databaseModel.restartApi(organization, database);
 
-    print.display(resp.payload, opts.output, print.schemaUserAccess);
+    print.display(resp, opts.output, print.schemaUserAccess);
     process.exit(0);
   }
 
@@ -135,9 +128,9 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.init(organization, database));
+    let resp = await databaseModel.init(organization, database);
 
-    print.display(resp.payload, opts.output);
+    print.display(resp, opts.output);
     process.exit(0);
   }
 
@@ -165,9 +158,16 @@ class Database {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';
 
-    let resp = await exec(databaseModel.setSchemaUserAccess(organization, database, schemaTable, username, access));
+    let resp = await databaseModel.setSchemaUserAccess(organization, database, schemaTable, username, access);
 
-    print.display(resp.payload, opts.output);
+    if( Array.isArray(resp) ) {
+      resp = {
+        payload: resp.map(r => r.payload)
+      }
+    }
+
+    print.display(resp, opts.output);
+    process.exit(0);
   }
 
 }

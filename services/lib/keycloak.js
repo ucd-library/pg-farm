@@ -275,6 +275,10 @@ class KeycloakUtils {
           return this._protectInstance(req, res, next, ['ADMIN']);
         }
 
+        if( roles.includes('organization-admin') ) {
+          return this._protectOrganization(req, res, next, ['ADMIN']);
+        }
+
         if( roles.includes('admin') ) {
           return this._protectInstance(req, res, next, reqRoles);
         }
@@ -298,6 +302,27 @@ class KeycloakUtils {
 
     if( req.user.roles.includes('admin') ) {
       return next();
+    }
+
+    return res.status(403).send('Unauthorized');
+  }
+
+  _protectOrganization(req, res, next, types=['ADMIN']) {  
+    if( !req.user ) return res.status(403).send('Unauthorized');
+
+    if( req.user.roles.includes('admin') ) {
+      return next();
+    }
+
+    let organization = req.params.organization;
+
+    try {
+      let orgUser = adminClient.getOrganizationUser(req.user.username, organization);
+      if( types.includes(orgUser?.user_type))  {
+        return next();
+      }
+    } catch(e) {
+      // todo; silence is golden?
     }
 
     return res.status(403).send('Unauthorized');

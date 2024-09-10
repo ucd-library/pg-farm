@@ -61,8 +61,8 @@ class Instance {
    * 
    * @returns {Promise<Array>}
    **/
-  list(state=null) {
-    return client.getInstances(state);
+  list(opts={}) {
+    return client.getInstances(opts);
   }
 
   /**

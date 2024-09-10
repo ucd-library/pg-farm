@@ -1,13 +1,13 @@
 import {Command} from 'commander';
 import database from '../lib/database.js';
-import globalOpts from '../lib/global-opts.js';
+import {wrapAllCmds} from '../lib/global-opts.js';
+import print from '../lib/print.js';
 
 const program = new Command();
 
-program.name('pgfarm database show')
+program.name('pgfarm database show '+print.dbAdminOnlyMsg())
   .description('Helper methods viewings users, schemas, and tables in a database')
 
-globalOpts(program);
 
 program.command('users <org/database>')
   .description('Show users with access to a database')
@@ -33,4 +33,5 @@ program.command('user-access <org/database> <schema> <user>')
     database.showSchemaUserAccess(dbName, schemaName, username, cmd.optsWithGlobals());
   });
 
+wrapAllCmds(program);
 program.parse(process.argv);

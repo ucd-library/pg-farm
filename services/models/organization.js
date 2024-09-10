@@ -65,10 +65,10 @@ class OrganizationModel {
     await client.setOrganizationMetadata(org.organization_id, metadata);
   }
 
-  setUserRole(nameOrId, username, role='') {
-    role = role.toUpperCase();
-    return client.setOrganizationRole(nameOrId, username, role);
+  async getUsers(nameOrId) {
+    return client.getOrganizationUsers(nameOrId);
   }
+
 
 }
 

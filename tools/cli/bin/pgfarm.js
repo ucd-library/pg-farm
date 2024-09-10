@@ -30,11 +30,11 @@ Homepage: https://pgfarm.library.ucdavis.edu
 
 `);
   })
-  .command('auth', 'Log in/out of PG Farm')
+  .command('auth', 'Log in/out of PG Farm.  Show login token')
   .command('config', 'Setup cli')
   .command('connect', 'Show various connection examples')
   .command('database', 'View, find and manage databases')
-  .command('instance', 'View and manage postgres instances')
+  .command('instance', 'View and manage postgres instances.  An instance is a running postgres server, can have multiple databases')
   .command('organization', 'View and manage organizations')
 
   

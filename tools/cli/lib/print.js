@@ -1,32 +1,35 @@
 import yaml from 'js-yaml';
+import colors from 'colors';
 
 class Print {
 
   constructor() {
     this.schemaUserAccess = this.schemaUserAccess.bind(this);
+    this.orgUsers = this.orgUsers.bind(this);
   }
 
 
   display(payload, format, textPrint) {
     if( payload instanceof Error ) {
-      payload = {error: true, message: payload.message, stack: payload.stack};
+      payload = {error: {message: payload.message, stack: payload.stack}};
     }
 
     if( payload.error ) {
-      let status = payload?.response?.status;
-
-      if( payload?.payload?.message && status ) {
-        payload = {
-          status, 
-          message: payload.payload.message,
-          stack: payload.payload.stack
+      if( payload.error.response ) {
+        payload.error.statusHttpCode = payload.error.response.status;
+        delete payload.error.response;
+      }
+      if( payload.error.details instanceof Error ) {
+        payload.error.details = {
+          message: payload.error.details.message, 
+          stack: payload.error.details.stack
         };
       }
 
       if( format === 'json' ) {
-        this.json(payload, true);
+        this.json(payload.error, true);
       } else {
-        this.yaml(payload, true);
+        this.yaml(payload.error, true);
       }
       return;
     }
@@ -99,13 +102,42 @@ class Print {
     });
   }
 
-  schemaUserAccess(result) {  
+  schemaUserAccess(result) {
+    result.schema = result.schema.join(', ');
     if( result.tables ) {
       for( let table in result.tables ) {
         result.tables[table] = result.tables[table].join(', ');
       }
     }
     this.yaml(result);
+  }
+
+  dbUsers(users) {
+    users.forEach(user => {
+      console.log(`${user.name}: ${user.access.join(', ')}`);
+    });
+  }
+
+  dbAdminOnlyMsg() {
+    return colors.green('(Database Admins Only)');
+  }
+
+  pgFarmAdminOnlyMsg() {
+    return colors.yellow('(PG Farm Admins Only)');
+  }
+
+  orgUsers(users) {
+    // let obj = {};
+    users = users.map(u => {
+      let obj = {};
+      obj[u.username] = u.isAdmin ? 'Admin' : 'User';
+      obj.instances = u.instances.map(i => {
+        return `${i.name} (${i.databases.join(', ')}): ${i.role}`;
+      })
+      return obj;
+    });
+
+    this.yaml(users);
   }
 
 }

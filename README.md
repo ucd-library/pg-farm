@@ -8,18 +8,18 @@ First make sure you have the PG Farm CLI installed (requires NodeJS).  Additiona
 
 First install NodeJS:
 
- - https://nodejs.org/en/download/package-manager
+ - https://nodejs.org/en/download/prebuilt-installer
 
 Then install the PG Farm CLI:
 
 ```bash
-npm install -g @pgfarm/cli
+npm install -g @ucd-lib/pgfarm
 ```
 
 You may be need to install as root:
 
 ```bash
-sudo npm install -g @pgfarm/cli
+sudo npm install -g @ucd-lib/pgfarm
 ```
 
 
@@ -27,10 +27,9 @@ Then login and connect to database
 
 ```bash
 pgfarm auth login
-export PGSERVICE=pgfarm
-psql [database-name]
+PGSERVICE=pgfarm psql [database-name]
 ```
 
 `pgfarm connect --help` will show you helper scripts for connecting from various sources/programming languages.
 
-`pgfarm auth --help` will show you more options for authentication and accessing your current athentication token.
+`pgfarm auth --help` will show you more options for authentication and accessing your current authentication token.

@@ -33,6 +33,24 @@ class InstanceService extends BaseService {
     return this.store.data.create.get(id);
   }
 
+  async list(opts={}) {
+    let id = JSON.stringify(opts);
+
+    await this.request({
+      url: `${this.basePath}`,
+      qs: opts,
+      fetchOptions: {
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onListUpdate({id, request}),
+      onLoad: payload => this.store.onListUpdate({id, payload: payload.body}),
+      onError: error => this.store.onListUpdate({id, error})
+    });
+
+    return this.store.data.list.get(id);
+  }
+
   async addUser(org, instance, user, opts) {
     let ido = {org, instance, user};
     let id = utils.getIdPath(ido);
