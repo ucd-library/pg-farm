@@ -6,6 +6,7 @@ class Print {
   constructor() {
     this.schemaUserAccess = this.schemaUserAccess.bind(this);
     this.orgUsers = this.orgUsers.bind(this);
+    this.instances = this.instances.bind(this);
   }
 
 
@@ -138,6 +139,17 @@ class Print {
     });
 
     this.yaml(users);
+  }
+
+  instances(instances) {
+    instances.forEach(i => this.instance(i));
+  }
+
+  instance(i) {
+    console.log(`${i.name}:`);
+    console.log(`  - Organization: ${i.organization_name}`);
+    console.log(`  - Databases: ${(i.databases || []).join(', ')}`);
+    console.log(`  - State: ${i.state}`);
   }
 
 }

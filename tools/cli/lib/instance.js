@@ -44,7 +44,15 @@ class Instances {
     }
 
     let resp = await instanceModel.list(query);
-    print.display(resp, opts.output);
+    print.display(resp, opts.output, print.instances);
+    process.exit(0);
+  }
+
+  async get(name, opts={}) {
+    let { organization, instance } = this.parseOrg(name);
+    let resp = await instanceModel.get(organization, instance);
+
+    print.display(resp, opts.output, print.instance);
     process.exit(0);
   }
 
@@ -57,48 +65,29 @@ class Instances {
     process.exit(0);
   }
 
-  async stop(instance) {
-    instance = formatInstName(instance);
+  async stop(name, opts={}) {
+    let { organization, instance } = this.parseOrg(name);
 
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/stop`, {
-      headers: headers()
-    });
-
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to stop instance', await resp.text());
-      return;
-    }
-
-    console.log(`Stopped instance ${instance}`);
+    let resp = await instanceModel.stop(organization, instance);
+    print.display(resp, opts.output);
+    process.exit(0);
   }
 
   async start(name, opts={}) {
     let { organization, instance } = this.parseOrg(name);
-    let resp;
 
-    try {
-      resp = await instanceModel.start(organization, instance, opts);
-    } catch (e) {
-      resp = e;
-    }
+    let resp = await instanceModel.start(organization, instance, opts);
 
     print.display(resp, opts.output);
     process.exit(0);
   }
 
-  async restart(instance) {
-    instance = formatInstName(instance);
+  async restart(name, opts) {
+    let { organization, instance } = this.parseOrg(name);
+    let resp = await instanceModel.restart(organization, instance);
 
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/restart`, {
-      headers: headers()
-    });
-
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to restart instance', await resp.text());
-      return;
-    }
-
-    console.log(`Restarted instance ${instance}`);
+    print.display(resp, opts.output);
+    process.exit(0);
   }
 
 

@@ -9,6 +9,7 @@ class InstanceStore extends BaseStore {
     this.data = {
       create : new LruStore({name: 'instance.create'}),
       list : new LruStore({name: 'instance.list'}),
+      get : new LruStore({name: 'instance.get'}),
       addUser : new LruStore({name: 'instance.addUser'}),
       start : new LruStore({name: 'instance.start'}),
       stop : new LruStore({name: 'instance.stop'}),
@@ -23,6 +24,7 @@ class InstanceStore extends BaseStore {
     this.events = {
       INSTANCE_CREATE_UPDATE : 'instance-create-update',
       INSTANCE_LIST_UPDATE : 'instance-list-update',
+      INSTANCE_GET_UPDATE : 'instance-get-update',
       INSTANCE_ADD_USER_UPDATE : 'instance-add-user-update',
       INSTANCE_START_UPDATE : 'instance-start-update',
       INSTANCE_STOP_UPDATE : 'instance-stop-update',
@@ -48,6 +50,14 @@ class InstanceStore extends BaseStore {
       payload,
       this.data.list,
       this.events.INSTANCE_LIST_UPDATE
+    );
+  }
+
+  onGetUpdate(ido, payload) {
+    this._set(
+      utils.getAppPayload(ido, payload),
+      this.data.get,
+      this.events.INSTANCE_GET_UPDATE
     );
   }
 

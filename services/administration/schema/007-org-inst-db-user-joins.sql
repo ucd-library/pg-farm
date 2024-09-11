@@ -42,3 +42,20 @@ CREATE OR REPLACE FUNCTION pgfarm.is_org_admin(username_in text, org_name text)
     RETURN TRUE;
   END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE VIEW pgfarm.instance_view AS
+  WITH dbs AS (
+    SELECT 
+      instance_id,
+      ARRAY_AGG(name) as databases
+    FROM pgfarm.database
+    GROUP BY instance_id
+  )
+  SELECT 
+      i.*,
+      dbs.databases as databases,
+      o.name as organization_name,
+      o.title as organization_title
+    FROM pgfarm.instance i 
+    LEFT JOIN pgfarm.organization o ON i.organization_id = o.organization_id
+    LEFT JOIN dbs ON dbs.instance_id = i.instance_id;

@@ -167,9 +167,11 @@ class PgFarmAdminClient {
    * @param {String} orgNameOrId organization name or ID, can be null
    * @returns 
    */
-  async getInstance(nameOrId='', orgNameOrId=null) {
+  async getInstance(nameOrId='', orgNameOrId=null, useView=false) {
+    let table = useView ? config.adminDb.views.INSTANCE : config.adminDb.tables.INSTANCE;
+
     let res = await client.query(
-      `SELECT * FROM ${config.adminDb.tables.INSTANCE} 
+      `SELECT * FROM ${table} 
        WHERE instance_id = ${this.schema}.get_instance_id($1, $2)`, 
       [nameOrId, orgNameOrId]
     );
@@ -231,7 +233,7 @@ class PgFarmAdminClient {
     where = where.length > 0 ? 'WHERE '+where.join(' AND ') : '';
 
     let res = await client.query(
-      `SELECT * FROM ${config.adminDb.tables.INSTANCE} ${where} ORDER BY name DESC ${paging} `,
+      `SELECT * FROM ${config.adminDb.views.INSTANCE} ${where} ORDER BY name ASC ${paging} `,
       params
     );
     return res.rows;

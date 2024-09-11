@@ -157,6 +157,7 @@ const config = {
       get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' }
     },
     views : {
+      get INSTANCE() { return config.adminDb.schema+'.instance_view' },
       get INSTANCE_DATABASE() { return config.adminDb.schema+'.instance_database' },
       get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' },
       get DATABASE_EVENT() { return config.adminDb.schema+'.database_last_event_view' },

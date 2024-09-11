@@ -51,6 +51,27 @@ class InstanceService extends BaseService {
     return this.store.data.list.get(id);
   }
 
+  async get(org, instance) {
+    let ido = {org, instance};
+    let id = utils.getIdPath(ido);
+
+    await serviceUtils.checkRequesting(
+      id, this.store.data.get,
+      () => this.request({
+        url: `${this.basePath}/${org}/${instance}`,
+        fetchOptions: {
+          headers: serviceUtils.authHeader()
+        },
+        json: true,
+        onLoading: request => this.store.onGetUpdate(ido, {request}),
+        onLoad: payload => this.store.onGetUpdate(ido, {payload: payload.body}),
+        onError: error => this.store.onGetUpdate(ido, {error})
+      })
+    );
+
+    return this.store.data.get.get(id);
+  }
+
   async addUser(org, instance, user, opts) {
     let ido = {org, instance, user};
     let id = utils.getIdPath(ido);
@@ -98,15 +119,12 @@ class InstanceService extends BaseService {
     return this.store.data.start.get(id);
   }
 
-  async stop(org, instance, opts) {
+  async stop(org, instance) {
     let id = utils.getIdPath({org, instance});
 
-    let flags = {};
-    if( opts.force ) flags.force = true;
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/stop`,
-      qs: flags,
       fetchOptions: {
         method : 'POST',
         headers: serviceUtils.authHeader()

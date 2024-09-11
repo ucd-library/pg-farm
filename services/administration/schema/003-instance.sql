@@ -67,6 +67,9 @@ CREATE OR REPLACE FUNCTION update_instance_state_history()
       INSERT INTO pgfarm.instance_state_history(instance_id, state)
       VALUES (OLD.instance_id, OLD.state);
     END IF;
+
+    -- UPDATE pgfarm.instance SET updated_at = now() WHERE instance_id = NEW.instance_id;
+
     RETURN NEW;
   END;
 $$ LANGUAGE plpgsql;

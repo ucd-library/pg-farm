@@ -6,10 +6,18 @@ import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
 
 const router = Router();
 
-
-router.get('/', keycloak.protect('admin'), async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     let resp = await instanceModel.list(req.query);
+    res.json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:instance', async (req, res) => {
+  try {
+    let resp = await instanceModel.get(req.params.instance);
     res.json(resp);
   } catch(e) {
     handleError(res, e);

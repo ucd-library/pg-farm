@@ -38,6 +38,11 @@ class InstanceModel extends BaseModel {
     return this.service.list(opts);
   }
 
+  get(org, instance) {
+    instance = this.formatName(instance);
+    return this.service.get(org, instance);
+  }
+
   addUser(org, instance, user, opts) {
     instance = this.formatName(instance);
     return this.service.addUser(org, instance, user, opts);

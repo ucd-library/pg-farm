@@ -4,7 +4,7 @@ class ServiceUtils {
   async checkRequesting(id, store, request) {
     let item = store.get(id);
     
-    if( item && item.state === this.store.STATE.LOADING ) {
+    if( item && item.state === 'LOADING' ) {
       await item.request;
     } else {
       await request();

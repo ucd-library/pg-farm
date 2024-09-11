@@ -79,7 +79,7 @@ class Instance {
     if( !modelUtils.isUUID(nameOrId) && !nameOrId.match(/^inst-/) ) {
       nameOrId = 'inst-'+nameOrId;
     }
-    return client.getInstance(nameOrId, orgNameOrId);
+    return client.getInstance(nameOrId, orgNameOrId, true);
   }
 
   /**
