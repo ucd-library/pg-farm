@@ -46,7 +46,8 @@ function run(orgDatabase, type) {
   } else if( type === 'yaml' ) {
     console.log(yaml.dump(obj));
   } else if( type === 'nodejs' ) {
-    console.log(`/* https://node-postgres.com/features/connecting */
+    console.log(`
+/* https://node-postgres.com/features/connecting */
 const {Pool} = require('pg');
 const client = new Pool({
   user: '${obj.user}',
@@ -63,7 +64,8 @@ await client.query('SELECT NOW()', (err, res) => {
 });
 `);
   } else if( type === 'python' ) {
-    console.log(`# https://www.psycopg.org/docs/usage.html
+    console.log(`
+# https://www.psycopg.org/docs/usage.html
 import psycopg2
 conn = psycopg2.connect(
   user='${obj.user}',
@@ -80,7 +82,8 @@ print(cur.fetchone())
 cur.close()
 `);
     } else if( type === 'r' ) {
-    console.log(`# https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
+    console.log(`
+# https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
 library(DBI)
 con <- dbConnect(
   RPostgres::Postgres(),

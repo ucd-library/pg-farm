@@ -1,6 +1,6 @@
 {
   "name": "@ucd-lib/pgfarm",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "PG Farm client; library, cli and desktop applicaiton",
   "main": "index.js",
   "type": "module",
@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "pgfarm": "bin/pgfarm.js"
+    "pgfarm": "cli/bin/pgfarm.js"
   },
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",

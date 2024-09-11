@@ -20,7 +20,6 @@ program.command('search')
   .option('-f, --offset <offset>', 'Offset the results. Default is 0')
   .option('-m, --only-mine', 'Only show databases you are a member of')
   .action((opts, cmd) => {
-    console.log(opts, cmd.optsWithGlobals())
     database.search(opts, cmd.optsWithGlobals());
   });
 

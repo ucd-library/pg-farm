@@ -1,6 +1,9 @@
 import {Command} from 'commander';
 import {config, save, getParsedToken} from '../lib/config.js';
+import colors from 'colors';
 const program = new Command();
+
+const SKIP_CONFIG = ['configFile', 'token', 'loginPath'];
 
 program.command('set <key> <value>')
   .description('set a config value')
@@ -32,9 +35,11 @@ program.command('show')
 
     console.log('Current Config:\n');
     for(let key in config) {
-      if( key === 'token' ) continue;
+      if( SKIP_CONFIG.includes(key) ) continue;
       if( key === 'tokenHash' ) {
-        console.log(`token (temporary password) : ${config[key]}`);
+        if( parseFloat(payload.expiresDays) > 0 ) {
+          console.log(`token (temporary password) : ${config[key]}`);
+        }
         continue;
       }
       let keySpaced = key;
@@ -42,14 +47,14 @@ program.command('show')
       console.log(`${keySpaced}: ${config[key]}`);
     }
 
-    if( payload ) {
+    if( payload && parseFloat(payload.expiresDays) > 0) {
       let username = payload.username || payload.preferred_username;
 
       console.log('username                   : '+(username));
-      console.log(`Password Token Expires           : ${payload.expires.toLocaleDateString()} ${payload.toLocaleTimeString()} (${payload.expiresDays} days from now)`);
+      console.log(`Password Token Expires     : ${payload.expires.toLocaleDateString()} ${payload.expires.toLocaleTimeString()} (${payload.expiresDays} days from now)`);
 
-      if( expires.getTime() < Date.now() ) {
-        console.log('\n *** Token has expired! ***\n');
+      if( payload.expires.getTime() < Date.now() ) {
+        console.log(colors.red('\n *** Token has expired! ***\n'));
         console.log('You can login again using:\n');
         console.log('pgfarm auth login');
       } else {
@@ -57,7 +62,7 @@ program.command('show')
 pgfarm connect --help`);
       }
     } else {
-      console.log('You are not logged in.  You can login using:\n');
+      console.log(colors.yellow('You are not logged in.')+'  You can login using:\n');
       console.log('pgfarm auth login');
     }
 
