@@ -1,7 +1,7 @@
 import {BaseService} from '@ucd-lib/cork-app-utils';
 import InstanceStore from '../stores/InstanceStore.js';
 import {config} from '../config.js'
-import utils from '../utils.js';
+import payload from '../payload.js';
 import serviceUtils from './utils.js';
 
 class InstanceService extends BaseService {
@@ -15,7 +15,7 @@ class InstanceService extends BaseService {
   async create(opts) {
     let instance = opts.name;
     let org = opts.organization;
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}`,
@@ -53,9 +53,9 @@ class InstanceService extends BaseService {
 
   async get(org, instance) {
     let ido = {org, instance};
-    let id = utils.getIdPath(ido);
+    let id = payload.getKey(ido);
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.get,
       () => this.request({
         url: `${this.basePath}/${org}/${instance}`,
@@ -74,7 +74,7 @@ class InstanceService extends BaseService {
 
   async addUser(org, instance, user, opts) {
     let ido = {org, instance, user};
-    let id = utils.getIdPath(ido);
+    let id = payload.getKey(ido);
 
     let flags = {};
     if( opts.admin ) flags.type = 'ADMIN';
@@ -98,7 +98,7 @@ class InstanceService extends BaseService {
   }
 
   async start(org, instance, opts) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     let flags = {};
     if( opts.force ) flags.force = true;
@@ -120,7 +120,7 @@ class InstanceService extends BaseService {
   }
 
   async stop(org, instance) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
 
     await this.request({
@@ -139,7 +139,7 @@ class InstanceService extends BaseService {
   }
 
   async restart(org, instance) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/restart`,
@@ -157,7 +157,7 @@ class InstanceService extends BaseService {
   }
 
   async backup(org, instance) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/backup`,
@@ -175,7 +175,7 @@ class InstanceService extends BaseService {
   }
 
   async archive(org, instance) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/archive`,
@@ -193,7 +193,7 @@ class InstanceService extends BaseService {
   }
 
   async restore(org, instance) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/restore`,
@@ -211,7 +211,7 @@ class InstanceService extends BaseService {
   }
 
   async resize(org, instance, size) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/resize`,
@@ -230,7 +230,7 @@ class InstanceService extends BaseService {
   }
 
   async syncUsers(org, instance) {
-    let id = utils.getIdPath({org, instance});
+    let id = payload.getKey({org, instance});
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/sync-users`,

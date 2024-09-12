@@ -1,4 +1,5 @@
 import {Command} from 'commander';
+import colors from 'colors';
 import database from '../lib/database.js';
 import {wrapAllCmds} from '../lib/global-opts.js';
 import print from '../lib/print.js';
@@ -25,14 +26,15 @@ program.command('add-user')
   .description('Add users via "pgfarm instance add-user"')
   .action(() => {
     console.log(`
-***
+${colors.yellow(`***
 * Use "pgfarm instance add-user" to add users to a database.
-***
+***`)}
       
-Postgres users are created at the instance level and then granted access to 
-databases.  Thus it's important you are aware of the instance you are adding 
-users to.  You CAN use a database name as the instance name, if you are not 
-sure what the instance name of your database is.      
+Postgres users are created at the server instance level and have connect access 
+to all databases on that instance.  Thus it's important you are aware of the 
+instance you are adding users to.  You CAN use a database name as the instance 
+name when adding a user, if you are not sure what the instance name of your 
+database is.      
 `);
   });
 

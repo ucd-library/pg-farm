@@ -1,8 +1,8 @@
 import {BaseService} from '@ucd-lib/cork-app-utils';
 import DatabaseStore from '../stores/DatabaseStore.js';
-import serviceUtils from './utils.js';
-import utils from '../utils.js';
+import payload from '../payload.js';
 import {config} from '../config.js'
+import serviceUtils from './utils.js';
 
 class DatabaseService extends BaseService {
 
@@ -14,18 +14,19 @@ class DatabaseService extends BaseService {
   }
 
   async get(org, db) {
-    let id = utils.getIdPath({org, db});
+    let ido = {org, db};
+    let id = payload.getKey(ido);
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.metadata,
       () => this.request({
           url: `${this.basePath}/${org}/${db}`,
           fetchOptions: {
             headers: serviceUtils.authHeader()
           },
-          onLoading: request => this.store.onMetadataUpdate({org, db}, {request}),
-          onLoad: payload => this.store.onMetadataUpdate({org, db}, {payload: payload.body}),
-          onError: error => this.store.onMetadataUpdate({org, db}, {error})
+          onLoading: request => this.store.onMetadataUpdate(ido, {request}),
+          onLoad: payload => this.store.onMetadataUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onMetadataUpdate(ido, {error})
         })
     );
 
@@ -35,7 +36,7 @@ class DatabaseService extends BaseService {
   async create(opts) {
     let db = opts.name;
     let org = opts.organization;
-    let id = utils.getIdPath({org, db});
+    let id = payload.getKey({org, db});
 
     await this.request({
       url: this.basePath,
@@ -54,7 +55,7 @@ class DatabaseService extends BaseService {
   }
 
   async update(org, db, opts) {
-    let id = utils.getIdPath({org, db});
+    let id = payload.getKey({org, db});
 
     await this.request({
       url: `${this.basePath}/${org}/${db}`,
@@ -95,9 +96,9 @@ class DatabaseService extends BaseService {
   }
 
   async getUsers(org, db) {
-    let id = utils.getIdPath({org, db});
+    let id = payload.getKey({org, db});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.users,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/users`,
@@ -114,9 +115,9 @@ class DatabaseService extends BaseService {
   }
 
   async getSchemas(org, db) {
-    let id = utils.getIdPath({org, db});
+    let id = payload.getKey({org, db});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.schemas,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/schemas`,
@@ -133,9 +134,9 @@ class DatabaseService extends BaseService {
   }
 
   async getSchemaTables(org, db, schema) {
-    let id = utils.getIdPath({org, db, schema});
+    let id = payload.getKey({org, db, schema});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.schemaTables,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/schema/${schema}/tables`,
@@ -152,9 +153,9 @@ class DatabaseService extends BaseService {
   }
 
   async getSchemaUserAccess(org, db, schema, user) {
-    let id = utils.getIdPath({org, db, schema, user});
+    let id = payload.getKey({org, db, schema, user});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.schemaUserAccess,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/schema/${schema}/access/${user}`,
@@ -172,9 +173,9 @@ class DatabaseService extends BaseService {
 
 
   async getSchemaTableAccess(org, db, schema, table) {
-    let id = utils.getIdPath({org, db, schema, table});
+    let id = payload.getKey({org, db, schema, table});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.schemaTableAccess,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/schema/${schema}/table/${table}/access`,
@@ -192,7 +193,7 @@ class DatabaseService extends BaseService {
 
   async grantAccess(org, db, schemaTable, user, access) {
     let ido = {org, db, schemaTable, user, access, action: 'grantAccess'};
-    let id = utils.getIdPath(ido);
+    let id = payload.getKey(ido);
 
     await this.request({
       url: `${this.basePath}/${org}/${db}/grant/${schemaTable}/${user}/${access}`,
@@ -212,7 +213,7 @@ class DatabaseService extends BaseService {
 
   async revokeAccess(org, db, schemaTable, user, access) {
     let ido = {org, db, schemaTable, user, access, action: 'revokeAccess'};
-    let id = utils.getIdPath(ido);
+    let id = payload.getKey(ido);
 
     await this.request({
       url: `${this.basePath}/${org}/${db}/revoke/${schemaTable}/${user}/${access}`,
@@ -231,9 +232,9 @@ class DatabaseService extends BaseService {
 
   async restartApi(org, db) {
     let ido = {org, db, action: 'restartApi'};
-    let id = utils.getIdPath(ido);
+    let id = payload.getKey(ido);
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.actions,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/restart/api`,
@@ -252,9 +253,9 @@ class DatabaseService extends BaseService {
 
   async init(org, db) {
     let ido = {org, db, action: 'init'};
-    let id = utils.getIdPath(ido);
+    let id = payload.getKey(ido);
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.actions,
       () => this.request({
           url: `${this.basePath}/${org}/${db}/init`,
@@ -267,6 +268,30 @@ class DatabaseService extends BaseService {
           onError: error => this.store.onInitUpdate(ido, {error})
         })
     );
+
+    return this.store.data.actions.get(id);
+  }
+
+  async link(local, remote, flags={}) {
+    let ido = {
+      org: local.org, 
+      db: local.db, 
+      action: 'link-'+remote.org+'/'+remote.db
+    };
+    let id = payload.getKey(ido);
+
+    await this.request({
+      url: `${this.basePath}/${local.org}/${local.db}/link/${remote.org}/${remote.db}`,
+      fetchOptions: {
+        method : 'POST',
+        body: flags,
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onLinkUpdate(ido, {request}),
+      onLoad: payload => this.store.onLinkUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onLinkUpdate(ido, {error})
+    });
 
     return this.store.data.actions.get(id);
   }

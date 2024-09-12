@@ -1,6 +1,4 @@
-import fetch from 'node-fetch';
-import headers from './fetch-headers.js';
-import { databaseModel, config } from '../../lib/index.js'
+import { databaseModel } from '../../lib/index.js'
 import print from './print.js';
 
 class Database {
@@ -134,24 +132,21 @@ class Database {
     process.exit(0);
   }
 
-  async link(name, remoteName) {
+  async link(name, remoteName, opts) {
     let local = this.parseOrg(name);
     if (!local.organization) local.organization = '_';
 
     let remote = this.parseOrg(remoteName);
     if (!remote.organization) remote.organization = '_';
 
-    let resp = await fetch(`${config.host}/api/admin/database/${local.organization}/${local.database}/link/${remote.organization}/${remote.database}`, {
-      headers: headers(),
-      method: 'POST',
-    });
+    let flags = {
+      localSchema: opts.localSchema,
+      remoteSchema: opts.remoteSchema
+    };
 
-    if (resp.status !== 200) {
-      console.error(resp.status, 'Unable to link database', await resp.text());
-      return;
-    }
+    let resp = await databaseModel.link(local, remote, flags);
 
-    console.log(`Link for ${name} to ${remoteName}`);
+    print.display(resp, opts.output);
   }
 
   async setSchemaUserAccess(name, schemaTable, username, access, opts) {

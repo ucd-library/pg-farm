@@ -1,15 +1,6 @@
 import {config} from '../config.js';
 
 class ServiceUtils {
-  async checkRequesting(id, store, request) {
-    let item = store.get(id);
-    
-    if( item && item.state === 'LOADING' ) {
-      await item.request;
-    } else {
-      await request();
-    }
-  }
 
   authHeader(headers={}) {
     if( config.tokenHash ) {

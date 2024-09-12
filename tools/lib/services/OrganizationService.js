@@ -1,7 +1,7 @@
 import {BaseService} from '@ucd-lib/cork-app-utils';
 import OrganizationStore from '../stores/OrganizationStore.js';
 import serviceUtils from './utils.js';
-import utils from '../utils.js';
+import payload from '../payload.js';
 import {config} from '../config.js'
 
 class OrganizationService extends BaseService {
@@ -14,7 +14,7 @@ class OrganizationService extends BaseService {
 
   async create(opts) {
     let org = opts.name;
-    let id = utils.getIdPath({org});
+    let id = payload.getKey({org});
 
     await this.request({
       url: this.basePath,
@@ -33,9 +33,9 @@ class OrganizationService extends BaseService {
   }
 
   async get(org) {
-    let id = utils.getIdPath({org});
+    let id = payload.getKey({org});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.metadata,
       () => this.request({
           url: `${this.basePath}/${org}`,
@@ -52,9 +52,9 @@ class OrganizationService extends BaseService {
   }
 
   async getUsers(org) {
-    let id = utils.getIdPath({org});
+    let id = payload.getKey({org});
 
-    await serviceUtils.checkRequesting(
+    await this.checkRequesting(
       id, this.store.data.users,
       () => this.request({
           url: `${this.basePath}/${org}/users`,
@@ -71,7 +71,7 @@ class OrganizationService extends BaseService {
   }
 
   async update(org, opts) {
-    let id = utils.getIdPath({org});
+    let id = payload.getKey({org});
 
     await this.request({
       url: `${this.basePath}/${org}`,

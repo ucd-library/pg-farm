@@ -1,5 +1,5 @@
 import {BaseStore, LruStore} from '@ucd-lib/cork-app-utils';
-import utils from './utils.js';
+import payloadUtils from '../payload.js';
 
 
 class OrganizationStore extends BaseStore {
@@ -23,7 +23,7 @@ class OrganizationStore extends BaseStore {
 
   onCreateUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.create,
       this.events.ORGANIZATION_CREATE_UPDATE
     );
@@ -31,7 +31,7 @@ class OrganizationStore extends BaseStore {
 
   onMetadataUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.metadata,
       this.events.ORGANIZATION_METADATA_UPDATE
     );
@@ -39,7 +39,7 @@ class OrganizationStore extends BaseStore {
 
   onUpdateUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.update,
       this.events.ORGANIZATION_UPDATE_UPDATE
     );
@@ -47,7 +47,7 @@ class OrganizationStore extends BaseStore {
 
   onUsersUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.users,
       this.events.ORGANIZATION_USERS_UPDATE
     );

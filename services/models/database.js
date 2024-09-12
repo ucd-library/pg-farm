@@ -191,22 +191,27 @@ class Database {
    * api schema to the local database with a schema of the name
    * of the remote database. Eg: "library/ca-base-layer".api -> "ca-base-layer"
    * 
-   * @param {*} dbNameOrId 
-   * @param {*} orgNameOrId 
-   * @param {*} opts 
+   * @param {String} localOrg 
+   * @param {String} localDb 
+   * @param {String} remoteDb
+   * @param {String} remoteOrg
+   * @param {Object} opts 
+   * @param {String} opts.localSchema optional.  The schema to link to.  Defaults to the remote database name
+   * @param {String} opts.remoteSchema optional.  The schema to link from on the remote server.  Default is: api
    */
-  async link(localDb, remoteDb, remoteOrg, opts={}) {
-    localDb = await this.get(localDb, config.pgInstance.organization);
-    remoteDb = await this.models.database.get(remoteDb, remoteOrg);
+  async link(localOrg, localDb, remoteDb, remoteOrg, opts={}) {
+    localDb = await this.get(localDb, localOrg);
+    remoteDb = await this.get(remoteDb, remoteOrg);
 
     // logger.info('Linking database', db.database_name, 'to organization', org.name);
     let con = await this.models.database.getConnection(
       localDb.database_name,
-      localDb.organization_name,
-      {useSocket: true}
+      localDb.organization_name
     );
 
     let dbName = remoteDb.organization_name+'/'+remoteDb.database_name;
+    let localSchema = opts.localSchema || remoteDb.database_name;
+    let remoteSchema = opts.remoteSchema || 'api';
 
     await pgInstClient.ensurePgSchema(con, remoteDb.database_name);
     await pgInstClient.enableExtension(con, 'postgres_fdw');
@@ -216,24 +221,7 @@ class Database {
     } catch(e) {
       logger.warn('Failed to create user mapping', e.message);
     }
-    await pgInstClient.importForeignSchema(con, dbName, opts);
-  }
-
-  async remoteLink(localDb, localOrg, remoteDb, remoteOrg=null, opts={}) {
-    localDb = await client.getDatabase(localDb, localOrg);
-    remoteDb = await client.getDatabase(remoteDb, remoteOrg);
-
-    logger.info(`Rpc request to link database ${localDb.instance_hostname}`);
-    return remoteExec(
-      localDb.instance_hostname, 
-      `${localDb.database_name}/link/${remoteDb.organization_name}/${remoteDb.database_name}`, 
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(opts)
-      }
-    );
+    await pgInstClient.importForeignSchema(con, dbName, {localSchema, remoteSchema});
   }
 
   async search(opts) {

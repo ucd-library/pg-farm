@@ -1,5 +1,5 @@
 import {BaseStore, LruStore} from '@ucd-lib/cork-app-utils';
-import utils from './utils.js';
+import payloadUtils from '../payload.js';
 
 class InstanceStore extends BaseStore {
 
@@ -39,7 +39,7 @@ class InstanceStore extends BaseStore {
 
   onCreateUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.create,
       this.events.INSTANCE_CREATE_UPDATE
     );
@@ -55,7 +55,7 @@ class InstanceStore extends BaseStore {
 
   onGetUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.get,
       this.events.INSTANCE_GET_UPDATE
     );
@@ -63,7 +63,7 @@ class InstanceStore extends BaseStore {
 
   onUserAddUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.addUser,
       this.events.INSTANCE_ADD_USER_UPDATE
     );
@@ -71,7 +71,7 @@ class InstanceStore extends BaseStore {
 
   onStartUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.start,
       this.events.INSTANCE_START_UPDATE
     );
@@ -79,7 +79,7 @@ class InstanceStore extends BaseStore {
 
   onStopUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.stop,
       this.events.INSTANCE_STOP_UPDATE
     );
@@ -87,7 +87,7 @@ class InstanceStore extends BaseStore {
 
   onRestartUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.restart,
       this.events.INSTANCE_RESTART_UPDATE
     );
@@ -95,7 +95,7 @@ class InstanceStore extends BaseStore {
 
   onBackupUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.backup,
       this.events.INSTANCE_BACKUP_UPDATE
     );
@@ -103,7 +103,7 @@ class InstanceStore extends BaseStore {
 
   onArchiveUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.archive,
       this.events.INSTANCE_ARCHIVE_UPDATE
     );
@@ -111,7 +111,7 @@ class InstanceStore extends BaseStore {
 
   onRestoreUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.restore,
       this.events.INSTANCE_RESTORE_UPDATE
     );
@@ -119,7 +119,7 @@ class InstanceStore extends BaseStore {
 
   onResizeUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.resize,
       this.events.INSTANCE_RESIZE_UPDATE
     );
@@ -127,7 +127,7 @@ class InstanceStore extends BaseStore {
 
   onSyncUsersUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.syncUsers,
       this.events.INSTANCE_SYNC_USERS_UPDATE
     );

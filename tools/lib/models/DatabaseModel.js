@@ -140,6 +140,10 @@ class DatabaseModel extends BaseModel {
     return this.service.init(org, db);
   }
 
+  link(local, remote, opts) {
+    return this.service.link(local, remote, opts);
+  }
+
 }
 
 const model = new DatabaseModel();

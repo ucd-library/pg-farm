@@ -1,5 +1,5 @@
 import {BaseStore, LruStore} from '@ucd-lib/cork-app-utils';
-import utils from './utils.js';
+import payloadUtils from '../payload.js';
 
 class DatabaseStore extends BaseStore {
 
@@ -32,13 +32,14 @@ class DatabaseStore extends BaseStore {
       DATABASE_GRANT_ACCESS_UPDATE : 'database-grant-access-update',
       DATABASE_REVOKE_ACCESS_UPDATE : 'database-revoke-access-update',
       DATABASE_RESTART_API_UPDATE : 'database-restart-api-update',
-      DATABASE_INIT_UPDATE : 'database-init-update'
+      DATABASE_INIT_UPDATE : 'database-init-update',
+      DATABASE_LINK_UPDATE : 'database-link-update'
     };
   }
 
   onMetadataUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.metadata,
       this.events.DATABASE_METADATA_UPDATE
     );
@@ -46,7 +47,7 @@ class DatabaseStore extends BaseStore {
 
   onCreateUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.create,
       this.events.DATABASE_CREATE_UPDATE
     );
@@ -54,7 +55,7 @@ class DatabaseStore extends BaseStore {
 
   onUpdateUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.update,
       this.events.DATABASE_UPDATE_UPDATE
     );
@@ -70,7 +71,7 @@ class DatabaseStore extends BaseStore {
 
   onGetUsersUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.users,
       this.events.DATABASE_USERS_UPDATE
     );
@@ -78,7 +79,7 @@ class DatabaseStore extends BaseStore {
 
   onGetSchemasUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.schemas,
       this.events.DATABASE_SCHEMAS_UPDATE
     );
@@ -86,7 +87,7 @@ class DatabaseStore extends BaseStore {
 
   onGetSchemaTablesUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.schemaTables,
       this.events.DATABASE_SCHEMA_TABLES_UPDATE
     );
@@ -94,7 +95,7 @@ class DatabaseStore extends BaseStore {
 
   onGetSchemaUserAccessUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.schemaUserAccess,
       this.events.DATABASE_SCHEMA_USER_ACCESS_UPDATE
     );
@@ -102,7 +103,7 @@ class DatabaseStore extends BaseStore {
 
   onGetSchemaTableAccessUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.schemaTableAccess,
       this.events.DATABASE_SCHEMA_TABLE_ACCESS_UPDATE
     );
@@ -110,7 +111,7 @@ class DatabaseStore extends BaseStore {
 
   onGrantAccessUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.DATABASE_GRANT_ACCESS_UPDATE
     );
@@ -118,7 +119,7 @@ class DatabaseStore extends BaseStore {
 
   onRevokeAccessUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.DATABASE_REVOKE_ACCESS_UPDATE
     );
@@ -126,7 +127,7 @@ class DatabaseStore extends BaseStore {
 
   onRestartApiUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.DATABASE_RESTART_API_UPDATE
     );
@@ -134,9 +135,17 @@ class DatabaseStore extends BaseStore {
 
   onInitUpdate(ido, payload) {
     this._set(
-      utils.getAppPayload(ido, payload),
+      payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.DATABASE_INIT_UPDATE
+    );
+  }
+
+  onLinkUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.DATABASE_LINK_UPDATE
     );
   }
 

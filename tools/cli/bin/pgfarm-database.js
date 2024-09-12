@@ -23,11 +23,12 @@ program.command('search')
     database.search(opts, cmd.optsWithGlobals());
   });
 
-
 program.command('link <org/database> <remoteOrg/remoteDatabase>')
+  .option('-l, --local-schema <schema>', 'Schema to link to.  Defaults to the remote database name')
+  .option('-r, --remote-schema <schema>', 'Schema to link from on the remote server.  Default is: api')
   .description('Link a remote database to a local database using foreign data wrappers '+print.dbAdminOnlyMsg())
-  .action((dbName, remoteDbName) => {
-    database.link(dbName, remoteDbName);
+  .action((dbName, remoteDbName, opts) => {
+    database.link(dbName, remoteDbName, opts);
   });
 
 program.command('show', 'Helper methods viewings users, schemas, and tables in a database '+print.dbAdminOnlyMsg());

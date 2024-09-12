@@ -311,7 +311,7 @@ router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
   keycloak.protect('instance-admin'), 
   async (req, res) => {
   
-    try {
+  try {
     let organization = req.params.organization;
     if( organization === '_' ) {
       organization = null;
@@ -321,7 +321,7 @@ router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
       remoteOrg = null;
     }
 
-    let resp = await database.remoteLink(
+    let resp = await database.link(
       req.params.database, 
       organization,
       req.params.remoteDb,
