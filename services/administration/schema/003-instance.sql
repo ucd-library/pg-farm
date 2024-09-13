@@ -68,7 +68,7 @@ CREATE OR REPLACE FUNCTION update_instance_state_history()
       VALUES (OLD.instance_id, OLD.state);
     END IF;
 
-    -- UPDATE pgfarm.instance SET updated_at = now() WHERE instance_id = NEW.instance_id;
+    NEW.updated_at = now();
 
     RETURN NEW;
   END;

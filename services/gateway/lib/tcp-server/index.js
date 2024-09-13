@@ -2,6 +2,7 @@ import net from 'net';
 import ProxyMonitor from './monitor.js';
 import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
+import pgClient from '../../../lib/pg-admin-client.js';
 import {v4 as uui4} from 'uuid';
 
 /**
@@ -30,6 +31,17 @@ class PgFarmTcpServer {
     this.server = null;
     this.sockets = new Map();
     this.sessions = new Map();
+
+    process.on('SIGINT', async () => {
+      logger.info('Received SIGINT, closing all sockets');
+      await this.closeAllSockets();
+      process.exit();
+    });
+    process.on('SIGTERM', async () => {
+      logger.info('Received SIGTERM, closing all sockets');
+      await this.closeAllSockets();
+      process.exit();
+    });
   }
 
   /**
@@ -55,6 +67,19 @@ class PgFarmTcpServer {
     this.server.listen(this.opts.port, () => {
       logger.info(`${this.name} is running on port ${this.opts.port}`);
     });
+  }
+
+  async closeAllSockets() {
+    for( let [socket, info] of this.sockets ) {
+      try {
+        if( info.type === 'incoming' ) {
+          await pgClient.onConnectionClose(info.session, new Date().toISOString())
+        }
+        await utils.closeSocket(socket);
+      } catch(e) {
+        logger.error('Error closing socket', e);
+      }
+    }
   }
 
   /**

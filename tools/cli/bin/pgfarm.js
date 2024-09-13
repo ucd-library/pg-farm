@@ -56,6 +56,7 @@ Homepage: https://pgfarm.library.ucdavis.edu
   .command('database', 'View, find and manage databases')
   .command('instance', 'View and manage postgres instances.  An instance is a running postgres server, can have multiple databases')
   .command('organization', 'View and manage organizations')
+  .command('admin', 'PG Admin system commands')
 
   
 

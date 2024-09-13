@@ -11,6 +11,20 @@ CREATE TABLE IF NOT EXISTS pgfarm.organization (
     updated_at timestamp NOT NULL DEFAULT now()
 );
 
+-- Trigger to update updated_at
+CREATE OR REPLACE FUNCTION pgfarm.organization_updated()
+  RETURNS TRIGGER AS $$
+  BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER organization_updated_trigger
+  BEFORE UPDATE ON pgfarm.organization
+  FOR EACH ROW
+  EXECUTE FUNCTION pgfarm.organization_updated();
+
 CREATE OR REPLACE FUNCTION pgfarm.get_organization_id(name_or_id text)
   RETURNS UUID AS $$
   DECLARE

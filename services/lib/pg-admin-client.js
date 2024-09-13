@@ -693,18 +693,77 @@ class PgFarmAdminClient {
     `, [dbId, event]);
   }
 
+  /**
+   * @method onConnectionOpen
+   * @description record a connection open event
+   * 
+   * @param {Object} args 
+   * @param {String} args.sessionId session ID of the connection
+   * @param {String} args.databaseName database name
+   * @param {String} args.orgName organization name
+   * @param {String} args.userName pgfarm username
+   * @param {String} args.remoteAddress ip address of the client
+   * @param {Object} args.data additional connection data
+   * @param {String} args.timestamp time of the connection
+   * 
+   * @returns 
+   */
   onConnectionOpen(args={}) {
     return client.query(`
-      SELECT * FROM ${this.schema}.connection_open($1, $2, $3, $4, $5)
+      SELECT * FROM ${this.schema}.connection_open($1, $2, $3, $4, $5, $6, $7)
     `, 
     [args.sessionId, args.databaseName, args.orgName, args.userName, args.remoteAddress, args.data, args.timestamp]);
   }
 
+  /**
+   * @method onConnectionClose
+   * @description record a connection close event
+   * 
+   * @param {String} sessionId session ID of the connection
+   * @param {String} timestamp time of the connection
+   * 
+   * @returns Promise<Object>
+   */
   onConnectionClose(sessionId, timestamp) {
     return client.query(`
       SELECT * FROM ${this.schema}.connection_close($1, $2)
     `, 
     [sessionId, timestamp]);
+  }
+
+  getConnections(query={}) {
+    let params = [];
+    let where = [];
+
+    if( query.database ) {
+      let org = null;
+      let db = query.database;
+      if( query.database.indexOf('/') > -1 ) {
+        let parts = query.database.split('/');
+        org = parts[0];
+        db = parts[1];
+      }
+
+      where.push(`database_name = get_database_id($${params.length+1}, $${params.length+2})`);
+      params.push(db);
+      params.push(org);
+    }
+
+    if( query.username ) {
+      where.push(`user_id = get_user_id($${params.length+1})`);
+      params.push(query.username);
+    }
+
+    if( query.open === true ) {
+      where.push('closed_at IS NULL');
+    }
+
+    return client.query(
+      `SELECT * FROM ${this.schema}.connection_view c
+        ${where.length > 0 ? 'WHERE '+where.join(' AND ') : ''}
+      `,
+      params
+    );
   }
 
 }

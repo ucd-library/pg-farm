@@ -32,19 +32,16 @@ CREATE INDEX IF NOT EXISTS database_tsv_content_idx ON pgfarm.database USING gin
 CREATE OR REPLACE FUNCTION database_tsvector_trigger() RETURNS trigger AS $$
 BEGIN
   NEW.tsv_content := to_tsvector('english', CONCAT(NEW.name, ' ', NEW.title, ' ', ARRAY_TO_STRING(NEW.tags, ' '), ' ', NEW.short_description, ' ', NEW.description));
+  NEW.updated_at := now();
   RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
 
 -- Create a trigger to call the function before insert or update
-DO
-$$BEGIN
-  CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
-  ON pgfarm.database FOR EACH ROW EXECUTE FUNCTION database_tsvector_trigger();
-EXCEPTION
-  WHEN duplicate_object THEN
-    NULL;
-END;$$;
+CREATE OR REPLACE TRIGGER tsvectorupdate 
+BEFORE INSERT OR UPDATE ON pgfarm.database 
+FOR EACH ROW 
+EXECUTE FUNCTION database_tsvector_trigger();
 
 CREATE OR REPLACE FUNCTION check_organization_id()
   RETURNS TRIGGER AS $$

@@ -2,7 +2,7 @@ set search_path to pgfarm, public;
 
 
 CREATE TABLE IF NOT EXISTS pgfarm.connection (
-    session_id UUID PRIMARY KEY,
+    session_id TEXT PRIMARY KEY,
     database_id UUID REFERENCES pgfarm.database(database_id),
     user_id UUID REFERENCES pgfarm.user(user_id),
     ip_address inet NOT NULL,
@@ -11,9 +11,31 @@ CREATE TABLE IF NOT EXISTS pgfarm.connection (
     closed_at timestamp
 );
 CREATE INDEX IF NOT EXISTS connection_database_id_idx ON pgfarm.connection(database_id);
+CREATE INDEX IF NOT EXISTS connection_user_id_idx ON pgfarm.connection(user_id);
+CREATE INDEX IF NOT EXISTS connection_opened_at_idx ON pgfarm.connection(opened_at);
+CREATE INDEX IF NOT EXISTS connection_closed_at_idx ON pgfarm.connection(closed_at);
+
+CREATE OR REPLACE VIEW pgfarm.connection_view AS
+  SELECT
+    c.session_id,
+    c.database_id,
+    c.user_id,
+    c.ip_address,
+    c.connection_data,
+    c.opened_at,
+    c.closed_at,
+    d.name as database_name,
+    i.name as instance_name,
+    o.name as organization_name,
+    u.username as username
+  FROM pgfarm.connection c
+  JOIN pgfarm.database d ON d.database_id = c.database_id
+  JOIN pgfarm.instance i ON i.instance_id = d.instance_id
+  JOIN pgfarm.organization o ON o.organization_id = i.organization_id
+  JOIN pgfarm.user u ON u.user_id = c.user_id;
 
 CREATE OR REPLACE FUNCTION pgfarm.connection_open(
-    ses_id_in UUID,
+    ses_id_in text,
     dbname_in text,
     organization_in text,
     user_in text,
@@ -62,7 +84,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION pgfarm.connection_close(
-    ses_id_in UUID,
+    ses_id_in TEXT,
     closed_at_in timestamp
 ) RETURNS void AS $$
 BEGIN

@@ -179,6 +179,19 @@ class ProxyConnection extends EventEmitter {
 
     // When the client sends data, forward it to the target server
     this.clientSocket.on('data', data => this.onClientSocketData(data));
+
+    // Handle client socket closure
+    this.clientSocket.on('close', () => this.onClientSocketClose());
+  }
+
+  /**
+   * @method onClientSocketClose
+   */
+  onClientSocketClose() {
+    this.emitStat('client-close', {
+      sessionId: this.sessionId,
+      timestamp: new Date().toISOString()
+    });
   }
 
   /**
@@ -712,6 +725,13 @@ class ProxyConnection extends EventEmitter {
       } else if (type === this.AUTHENTICATION_CODE.OK) {
         logger.info('Pg instance connect authentication ok message received.', this.getConnectionInfo());
 
+        this.emitStat('client-connection', {
+          startupProperties: this.startupProperties,
+          user: this.pgFarmUser,
+          remoteAddress : this.clientSocket.remoteAddress
+        });
+
+        // if we have pending messages, send them now
         if (this.pendingMessages.length) {
           logger.info('Sending pending client messages: ', this.pendingMessages.length, this.getConnectionInfo());
           for (let msg of this.pendingMessages) {

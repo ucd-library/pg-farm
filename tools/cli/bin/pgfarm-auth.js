@@ -1,5 +1,6 @@
 import {Command} from 'commander';
 import auth from '../lib/auth.js';
+import colors from 'colors';
 import {config, getParsedToken} from '../lib/config.js';
 const program = new Command();
 
@@ -40,12 +41,18 @@ program.command('status')
   .action(() => {
     let token = getParsedToken();
     if( !token ) {
-      console.log('Not logged in');
+      console.log(colors.red('Not logged in'));
       return;
     }
     if( token.expires.getTime() > Date.now() ) {
-      console.log('Logged in as', token.username || token.preferred_username);
-      console.log(`Password token expires: ${token.expires.toLocaleDateString()} ${token.expires.toLocaleTimeString()} (${token.expiresDays} days from now)`);
+      console.log(colors.green('Logged in as', token.username || token.preferred_username));
+
+      let text = `Password token expires: ${token.expires.toLocaleDateString()} ${token.expires.toLocaleTimeString()} (${token.expiresDays} days from now)`;
+      if( token.expiresDays < 1 ) {
+        console.log(colors.yellow(text));
+      } else {
+        console.log(text);
+      }
     } else {
       console.log('Token has expired');
     }

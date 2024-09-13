@@ -65,7 +65,7 @@ class ProxyStatus {
     proxyConnection.on('stat', data => this._onSocketMessage(data, proxyConnection));
   }
 
-  _onSocketMessage(msg, proxyConnection) {
+  async _onSocketMessage(msg, proxyConnection) {
     let dbName = msg?.data?.database || proxyConnection.startupProperties?.database;
 
 
@@ -79,7 +79,30 @@ class ProxyStatus {
       this.data.queryCount++;
     } else if( msg.type === 'instance-start' ) {
       this.data.instanceStarts.push(msg.data);
+    } else if( msg.type === 'client-connection' ) {
+      try {
+        await client.onConnectionOpen({
+          sessionId: proxyConnection.sessionId,
+          databaseName: msg.data.user.database_name,
+          orgName: msg.data.user.organization_name,
+          userName: msg.data.user.username,
+          remoteAddress: msg.data.remoteAddress,
+          data : {
+            startupProperties: msg.data.startupProperties
+          },
+          timestamp: new Date().toISOString()
+        });
+      } catch(e) {
+        logger.error('Error logging connection to pg: ', e);
+      }
+    } else if (msg.type === 'client-close') {
+      try {
+        await client.onConnectionClose(msg.data.sessionId, msg.data.timestamp);
+      } catch(e) {
+        logger.error('Error logging disconnection to pg: ', e);
+      }
     }
+
   }
 
 }

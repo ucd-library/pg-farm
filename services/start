@@ -1,0 +1,25 @@
+#! /bin/bash
+
+
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd $DIR
+
+declare -A procs
+
+# Adding key-value pairs
+procs["administration"]="node administration/src/index.js"
+procs["gateway"]="node gateway/index.js"
+procs["pg-helper"]="node pg-helper/index.js"
+procs["health-probe"]="node health-probe/index.js"
+procs["client"]="node client/index.js"
+
+if [ -z "$1" ]; then
+  echo "Please provide a service name"
+  echo "Available services: ${!procs[@]}"
+  exit 1
+fi
+
+# Run script
+CMD=${procs["$1"]}
+exec $CMD

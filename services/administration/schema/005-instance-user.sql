@@ -18,6 +18,7 @@ BEGIN
   IF NEW.type = 'SERVICE_ACCOUNT' AND NEW.parent_user_id IS NULL THEN
     RAISE EXCEPTION 'Parent user ID cannot be null for service accounts';
   END IF;
+  NEW.updated_at = now();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
