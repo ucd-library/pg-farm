@@ -5,7 +5,6 @@ import keycloak from '../../../lib/keycloak.js';
 import config from '../../../lib/config.js';
 import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
-import pgAdminClient from '../../../lib/pg-admin-client.js';
 import {admin, user as userModel, instance} from '../../../models/index.js';
 
 let tlsOptions = {};
@@ -182,6 +181,11 @@ class ProxyConnection extends EventEmitter {
 
     // Handle client socket closure
     this.clientSocket.on('close', () => this.onClientSocketClose());
+
+    // still alive update interval
+    this.aliveInterval = setInterval(() => {
+      this.emitStat('client-alive', {sessionId: this.sessionId});
+    }, 1000 * 60 * 5); // 5 minutes
   }
 
   /**
@@ -190,8 +194,12 @@ class ProxyConnection extends EventEmitter {
   onClientSocketClose() {
     this.emitStat('client-close', {
       sessionId: this.sessionId,
+      serverId: this.server.id,
       timestamp: new Date().toISOString()
     });
+
+    // stop updating pg farm database about alive status
+    clearInterval(this.aliveInterval);
   }
 
   /**
@@ -728,7 +736,8 @@ class ProxyConnection extends EventEmitter {
         this.emitStat('client-connection', {
           startupProperties: this.startupProperties,
           user: this.pgFarmUser,
-          remoteAddress : this.clientSocket.remoteAddress
+          remoteAddress : this.clientSocket.remoteAddress,
+          serverId : this.server.id
         });
 
         // if we have pending messages, send them now

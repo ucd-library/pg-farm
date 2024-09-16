@@ -152,6 +152,10 @@ class Print {
     console.log(`  - State: ${i.state}`);
   }
 
+  connections(connections) {
+    
+  }
+
 }
 
 const print = new Print();

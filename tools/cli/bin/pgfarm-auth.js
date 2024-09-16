@@ -54,7 +54,7 @@ program.command('status')
         console.log(text);
       }
     } else {
-      console.log('Token has expired');
+      console.log(colors.red('Token has expired.  Run `pgfarm auth login` to login'));
     }
   });
 

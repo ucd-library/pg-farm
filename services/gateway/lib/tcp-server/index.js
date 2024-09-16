@@ -12,6 +12,7 @@ import {v4 as uui4} from 'uuid';
  **/
 class PgFarmTcpServer {
   constructor(opts, onConnection) {
+    this.id = uui4();
     this.opts = opts;
     this.name = opts.name || 'pgfarm-tcp-server';
     this.metrics = new ProxyMonitor(this.name, {

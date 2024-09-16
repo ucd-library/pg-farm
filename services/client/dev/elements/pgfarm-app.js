@@ -16,7 +16,8 @@ import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js'
 import '@ucd-lib/theme-elements/brand/ucd-theme-header/ucd-theme-header.js'
 import '@ucd-lib/theme-elements/brand/ucd-theme-primary-nav/ucd-theme-primary-nav.js'
 
-import '../../../../tools/lib/index.js';
+import {appStateModel} from '../../../../tools/lib/index.js';
+console.log(appStateModel);
 
 import './pages/app-home.js';
 import './pages/app-search.js';

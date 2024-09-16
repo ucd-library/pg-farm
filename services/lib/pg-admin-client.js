@@ -710,9 +710,11 @@ class PgFarmAdminClient {
    */
   onConnectionOpen(args={}) {
     return client.query(`
-      SELECT * FROM ${this.schema}.connection_open($1, $2, $3, $4, $5, $6, $7)
-    `, 
-    [args.sessionId, args.databaseName, args.orgName, args.userName, args.remoteAddress, args.data, args.timestamp]);
+        SELECT * FROM ${this.schema}.connection_open($1, $2, $3, $4, $5, $6, $7, $8)
+      `, 
+      [args.sessionId, args.databaseName, args.orgName, args.userName, 
+        args.remoteAddress, args.data, args.gatewayId, args.timestamp]
+    );
   }
 
   /**
@@ -729,6 +731,16 @@ class PgFarmAdminClient {
       SELECT * FROM ${this.schema}.connection_close($1, $2)
     `, 
     [sessionId, timestamp]);
+  }
+
+  updateConnectionAlive(sessionId) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.update_connection_alive_timestamp($1)
+    `, [sessionId]);
+  }
+
+  cleanupClosedConnections() {
+    return client.query(`SELECT * FROM ${this.schema}.cleanup_closed_connections()`);
   }
 
   getConnections(query={}) {
@@ -756,6 +768,7 @@ class PgFarmAdminClient {
 
     if( query.open === true ) {
       where.push('closed_at IS NULL');
+      where.push('alive_at > NOW() - INTERVAL \'10 minutes\'');
     }
 
     return client.query(

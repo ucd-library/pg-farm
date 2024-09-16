@@ -1,4 +1,5 @@
 const webpack = require('webpack');
+const path = require('path');
 
 let configs = require('@ucd-lib/cork-app-build').watch({
   // root directory, all paths below will be relative to root
@@ -15,13 +16,15 @@ configs.forEach((config, index) => {
   config.output.publicPath = '/js/'
   config.output.chunkFilename = '[name].'+config.output.filename;
 
-  config.resolve = {
-    fallback: {
-      fs : false,
-      path : false,
-      os : false,
-      events : require.resolve("events/")
-    }
+  config.resolve.alias = {
+    '@ucd-lib/cork-app-utils': path.resolve(__dirname, 'dev/node_modules/@ucd-lib/cork-app-utils'),
+  }
+
+  config.resolve.fallback = {
+    fs : false,
+    path : false,
+    os : false,
+    events : require.resolve("events/")
   }
 
   let cssModule = config.module.rules.find(rule => {

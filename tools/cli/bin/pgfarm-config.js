@@ -62,8 +62,8 @@ program.command('show')
 pgfarm connect --help`);
       }
     } else {
-      console.log(colors.yellow('You are not logged in.')+'  You can login using:\n');
-      console.log('pgfarm auth login');
+      console.log(colors.yellow('\n\nYou are not logged in.'));
+      console.log(colors.yellow('Login using: "pgfarm auth login"'));
     }
 
     console.log('');

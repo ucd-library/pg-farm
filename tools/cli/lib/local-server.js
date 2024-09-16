@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import open from 'open';
 import crypto from 'crypto';
+import colors from 'colors';
 import { fileURLToPath } from 'url';
 import {config, save as saveConfig} from './config.js';
 
@@ -50,15 +51,16 @@ class LocalLoginServer {
       let username = payload.username || payload.preferred_username;
 
 
-      console.log(`Logged in successfully!
+      console.log(`
+${colors.green('Logged in successfully!')}
       
-   
 You can access token at any time by using 'pgfarm auth token'.  Alternatively, can set
 the password to the PGPASSWORD environment variable. For example:
 
-export PGPASSWORD=$(pgfarm auth token)
-psql -U ${username} -h ${hostname} [database]
----------------------------------
+> export PGPASSWORD=$(pgfarm auth token)
+> psql -U ${username} -h ${hostname} [database]
+
+For more examples on how to connect run 'pgfarm connect --help'
 `);
 
 
@@ -69,6 +71,7 @@ psql -U ${username} -h ${hostname} [database]
       await sleep(1000);
 
       this.server.close();
+      process.exit();
     });
 
     this.server.listen(port, function() {

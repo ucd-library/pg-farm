@@ -22,7 +22,7 @@ class ProxyStatus {
       unit: '',
       valueType: ValueType.INT,
     });
-    
+
     tcpSocketConnections.addCallback(async result => {
       for( let dbName in this.data.connections.client ) {
         result.observe(this.data.connections.client[dbName], {
@@ -87,6 +87,7 @@ class ProxyStatus {
           orgName: msg.data.user.organization_name,
           userName: msg.data.user.username,
           remoteAddress: msg.data.remoteAddress,
+          gatewayId: msg.data.serverId,
           data : {
             startupProperties: msg.data.startupProperties
           },
@@ -97,7 +98,17 @@ class ProxyStatus {
       }
     } else if (msg.type === 'client-close') {
       try {
-        await client.onConnectionClose(msg.data.sessionId, msg.data.timestamp);
+        await client.onConnectionClose(
+          msg.data.sessionId, 
+          msg.data.timestamp
+        );
+        proxyConnection.removeAllListeners();
+      } catch(e) {
+        logger.error('Error logging disconnection to pg: ', e);
+      }
+    } else if( msg.type === 'client-alive' ) {
+      try {
+        await client.updateConnectionAlive(msg.data.sessionId);
       } catch(e) {
         logger.error('Error logging disconnection to pg: ', e);
       }
