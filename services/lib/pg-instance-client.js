@@ -116,9 +116,31 @@ class PGInstance {
     return this.query(connection, query);
   }
 
-  deletePgUser(connection, opts={}) {
-    let query = pgFormat(`DROP USER %I`, opts.username);
+  async reassignOwnedBy(connection, opts={}) {
+    let query = pgFormat(`REASSIGN OWNED BY %I TO ${config.pgInstance.adminRole}`, opts.username);
     return this.query(connection, query);
+  }
+
+  /**
+   * @method deletePgUser
+   * @description Delete a user from the database.  This will also reassign any objects owned by 
+   * the user to the admin role.
+   * 
+   * @param {Object} connection connection object
+   * @param {Object} opts
+   * @param {String} opts.username username to delete 
+   * @returns {Promise<Array>} array of responses from the queries
+   */
+  async deletePgUser(connection, opts={}) {
+    let responses = [];
+
+    let query = pgFormat(`REVOKE ALL PRIVILEGES ON DATABASE "${connection.database}" FROM %I;`, opts.username);
+    responses.push(await this.query(connection, query));
+
+    query = pgFormat(`DROP USER %I`, opts.username);
+    responses.push(await this.query(connection, query));
+
+    return responses;
   }
 
   async alterPgUserPassword(connection, opts={}) {
@@ -312,6 +334,11 @@ class PGInstance {
     if( !opts.remoteSchema ) opts.remoteSchema = config.pgRest.schema;
     if( !opts.localSchema ) opts.localSchema = serverName.split('/').pop();
     let query = pgFormat(`IMPORT FOREIGN SCHEMA "%s" FROM SERVER "%s" INTO "%s";`, opts.remoteSchema, serverName, opts.localSchema);
+    return this.query(connection, query);
+  }
+
+  listDatabases(connection) {
+    let query = `SELECT datname FROM pg_database WHERE datistemplate = false`;
     return this.query(connection, query);
   }
 

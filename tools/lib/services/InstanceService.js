@@ -97,6 +97,48 @@ class InstanceService extends BaseService {
     return this.store.data.addUser.get(id);
   }
 
+  async updateUser(org, instance, user, opts) {
+    let ido = {org, instance, user, action: 'update-user'};
+    let id = payload.getKey(ido);
+    let flags = {
+      type: opts.type
+    };
+
+    await this.request({
+      url: `${this.basePath}/${org}/${instance}/${user}`,
+      qs: flags,
+      fetchOptions: {
+        method : 'PATCH',
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onUserUpdateUpdate(ido, {request}),
+      onLoad: payload => this.store.onUserUpdateUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onUserUpdateUpdate(ido, {error})
+    });
+
+    return this.store.data.actions.get(id);
+  }
+
+  async deleteUser(org, instance, user) {
+    let ido = {org, instance, user, action: 'delete-user'};
+    let id = payload.getKey(ido);
+
+    await this.request({
+      url: `${this.basePath}/${org}/${instance}/${user}`,
+      fetchOptions: {
+        method : 'DELETE',
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onUserDeleteUpdate(ido, {request}),
+      onLoad: payload => this.store.onUserDeleteUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onUserDeleteUpdate(ido, {error})
+    });
+
+    return this.store.data.actions.get(id);
+  }  
+
   async start(org, instance, opts) {
     let id = payload.getKey({org, instance});
 

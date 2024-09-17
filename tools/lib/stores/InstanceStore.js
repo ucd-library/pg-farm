@@ -18,6 +18,7 @@ class InstanceStore extends BaseStore {
       archive : new LruStore({name: 'instance.archive'}),
       restore : new LruStore({name: 'instance.restore'}),
       resize : new LruStore({name: 'instance.resize'}),
+      actions : new LruStore({name: 'instance.actions'}),
       syncUsers : new LruStore({name: 'instance.syncUsers'}),
     };
 
@@ -26,6 +27,8 @@ class InstanceStore extends BaseStore {
       INSTANCE_LIST_UPDATE : 'instance-list-update',
       INSTANCE_GET_UPDATE : 'instance-get-update',
       INSTANCE_ADD_USER_UPDATE : 'instance-add-user-update',
+      INSTANCE_UPDATE_USER_UPDATE : 'instance-update-user-update',
+      INSTANCE_DELETE_USER_UPDATE : 'instance-delete-user-update',
       INSTANCE_START_UPDATE : 'instance-start-update',
       INSTANCE_STOP_UPDATE : 'instance-stop-update',
       INSTANCE_RESTART_UPDATE : 'instance-restart-update',
@@ -66,6 +69,22 @@ class InstanceStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.addUser,
       this.events.INSTANCE_ADD_USER_UPDATE
+    );
+  }
+
+  onUserUpdateUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.INSTANCE_UPDATE_USER_UPDATE
+    );
+  }
+
+  onUserDeleteUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.INSTANCE_DELETE_USER_UPDATE
     );
   }
 

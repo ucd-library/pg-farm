@@ -52,15 +52,15 @@ class LocalLoginServer {
 
 
       console.log(`
-${colors.green('Logged in successfully!')}
+${colors.green('🎉 Logged in successfully!')}
       
-You can access token at any time by using 'pgfarm auth token'.  Alternatively, can set
-the password to the PGPASSWORD environment variable. For example:
+You can access your PG Farm password token at any time by using '${colors.yellow('pgfarm auth token')}'.  
+Alternatively, can set the password to the PGPASSWORD environment variable. For example:
 
 > export PGPASSWORD=$(pgfarm auth token)
 > psql -U ${username} -h ${hostname} [database]
 
-For more examples on how to connect run 'pgfarm connect --help'
+For more examples on how to connect run '${colors.yellow('pgfarm connect --help')}'
 `);
 
 
@@ -76,16 +76,16 @@ For more examples on how to connect run 'pgfarm connect --help'
 
     this.server.listen(port, function() {
       console.log();
-      console.log('Visit this URL on any device to log in:');
+      console.log('🌐 Visit the following URL on this device to log in:');
       console.log(authUrl);
       console.log();
-      console.log('Waiting for authentication...');
+      console.log('⏳ Waiting for authentication...');
 
       open(authUrl);
     });
 
     this.server.on('error', (e) => {
-      console.log('Failed to login :(');
+      console.log('💥 Failed to login :(');
       console.error(e);
       this.server.close();
       this.reject(e);

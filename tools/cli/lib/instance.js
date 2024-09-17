@@ -65,6 +65,24 @@ class Instances {
     process.exit(0);
   }
 
+  async updateUser(name, user, opts={}) {
+    let { organization, instance } = this.parseOrg(name);
+
+    let resp = await instanceModel.updateUser(organization, instance, user, opts);
+
+    print.display(resp, opts.output);
+    process.exit(0);
+  }
+
+  async deleteUser(name, user, opts={}) {
+    let { organization, instance } = this.parseOrg(name);
+
+    let resp = await instanceModel.deleteUser(organization, instance, user);
+
+    print.display(resp, opts.output);
+    process.exit(0);
+  }
+
   async stop(name, opts={}) {
     let { organization, instance } = this.parseOrg(name);
 

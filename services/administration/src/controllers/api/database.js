@@ -170,7 +170,8 @@ router.get('/:organization/:database/users',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
-    res.json(await database.getDatabaseUsers(req.params.organization, req.params.database));
+    let dbUsers = await database.getDatabaseUsers(req.params.organization, req.params.database)
+    res.json(dbUsers);
   } catch(e) {
     handleError(res, e);
   }

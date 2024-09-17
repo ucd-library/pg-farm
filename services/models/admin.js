@@ -55,6 +55,15 @@ class AdminModel {
     }
   }
 
+  async updateUser(instNameOrId, orgNameOrId, user, type='USER') {
+    let userObj = await this.models.user.get(instNameOrId, orgNameOrId, user);
+    if( userObj.user_type !== 'USER' && userObj.user_type !== 'ADMIN' ) {
+      throw new Error('Cannot update user type: '+userObj.user_type);
+    }
+
+    await this.models.user.updateType(instNameOrId, orgNameOrId, user, type);
+  }
+
   async deleteUser(instNameOrId, orgNameOrId, user) {
     await this.models.user.delete(instNameOrId, orgNameOrId, user);
   }

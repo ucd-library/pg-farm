@@ -1,4 +1,4 @@
-import {Command} from 'commander';
+import {Command, Option} from 'commander';
 import instance from '../lib/instance.js';
 import {wrapAllCmds} from '../lib/global-opts.js';
 import print from '../lib/print.js';
@@ -28,6 +28,19 @@ program.command('add-user <org/instance> <user>')
   .option('-p, --parent <parent>', 'Parent user for service account')
   .action((instanceName, user, opts) => {
     instance.addUser(instanceName, user, opts);
+  });
+
+  program.command('update-user <org/instance> <user>')
+  .description('Update user type '+print.dbAdminOnlyMsg())
+  .addOption(new Option('-t, --type <type>', 'User type').choices(['USER', 'ADMIN']))
+  .action((instanceName, user, opts) => {
+    instance.updateUser(instanceName, user, opts);
+  });
+
+program.command('delete-user <org/instance> <user>')
+  .description('Remove user from all databases on instance '+print.dbAdminOnlyMsg())
+  .action((instanceName, user, opts) => {
+    instance.deleteUser(instanceName, user, opts);
   });
 
 program.command('start <org/instance>')

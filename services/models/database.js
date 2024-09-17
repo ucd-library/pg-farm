@@ -305,6 +305,8 @@ class Database {
     let access = await pgInstClient.getDatabaseAccess(con, database.database_name);
     access = access.rows;
 
+    let pgFarmUsers = await client.getInstanceUsers(database.instance_id, ['u.username', 'u.user_id', 'type']);
+
     let users = resp.rows.filter(row => !row.rolname.match(/^pg_/))
       .map(row => {
         let user = row.rolname;
@@ -312,7 +314,18 @@ class Database {
         delete uaccess.role_name;
         delete uaccess.database_name;
         uaccess = Object.values(uaccess).filter(v => v);
-        return {name: user, access: uaccess}
+        
+        let obj = {name: user, pgPrivileges: uaccess};
+
+        let farmUser = pgFarmUsers.find(u => u.username === user);
+        if( farmUser ) {
+          obj.pgFarmUser = {
+            id : farmUser.user_id,
+            type : farmUser.type
+          };
+        }
+
+        return obj;
       });
 
     return users;

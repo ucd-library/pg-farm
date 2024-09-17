@@ -66,12 +66,7 @@ class User {
 
       if( type !== user.type ) {
         logger.info('Updating user type: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId, type);
-        await client.query(
-          `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
-          SET type = $4 
-          WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
-          [username, nameOrId, orgNameOrId, type]
-        );
+        await this.updateType(username, nameOrId, orgNameOrId, type);
       }
     }
 
@@ -88,6 +83,15 @@ class User {
     await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });
   }
 
+  updateType(nameOrId, orgNameOrId=null, username, type) {
+    return client.query(
+      `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
+      SET type = $4 
+      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
+      [username, nameOrId, orgNameOrId, type]
+    );
+  }
+
   async delete(nameOrId, orgNameOrId=null, username) {
     let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
     if( !instance ) {
@@ -99,12 +103,32 @@ class User {
     // get instance connection information
     let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
 
-    logger.info('Removing pg user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
-    await pgInstClient.deletePgUser(con, { username });  
+    // get all databases for instance
+    let databases = await pgInstClient.listDatabases(con);
 
-    // add user to database
+    for( let db of databases.rows ) {
+      con.database = db.datname;
+      logger.info('Removing pg user: '+username+' from instance='+orgNameOrId+'/'+instance.name+' database='+db.datname);
+      try {
+        // reassign owned objects
+        await pgInstClient.reassignOwnedBy(con, { username });
+
+        // revoke all access from all schemas
+        let schemas = await pgInstClient.listSchema(con);
+        for( let schema of schemas.rows ) {
+          await this.revoke(con, null, schema.schema_name, username, 'READ');
+        }
+
+        // revoke access from database and finally delete user
+        await pgInstClient.deletePgUser(con, { username });
+      } catch(e) {
+        logger.error('Error deleting user: '+username, instance, db.datname, e);
+      }
+    }
+
+    // remove user to database
     try {
-      logger.info('Deleting instance user: ', {
+      logger.info('Deleting pg farm instance user: ', {
         username,
         instance: instance.name,
         organization: orgNameOrId
@@ -299,7 +323,18 @@ class User {
   }
 
   async revoke(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+    let con;
+  
+    if ( typeof dbNameOrId === 'object' ) {
+      con = dbNameOrId;
+    } else {
+      let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+
+      con = await this.models.database.getConnection(
+        database.database_name,
+        database.organization_name
+      );
+    }
 
     let tableName = null;
     if( schemaName.includes('.') ) {
@@ -309,16 +344,11 @@ class User {
     }
 
     logger.info('running user revoke', {
-      database,
+      database: con.database,
       schemaName,
       tableName,
       roleName
     });
-
-    let con = await this.models.database.getConnection(
-      database.database_name,
-      database.organization_name
-    );
 
     // revoke table access
     if( tableName ) {

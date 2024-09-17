@@ -7,6 +7,7 @@ class Print {
     this.schemaUserAccess = this.schemaUserAccess.bind(this);
     this.orgUsers = this.orgUsers.bind(this);
     this.instances = this.instances.bind(this);
+    this.dbUsers = this.dbUsers.bind(this);
   }
 
 
@@ -114,9 +115,16 @@ class Print {
   }
 
   dbUsers(users) {
+    let obj = {};
+
     users.forEach(user => {
-      console.log(`${user.name}: ${user.access.join(', ')}`);
+      obj[user.name] = {
+        type : user?.pgFarmUser?.type || 'POSTGRES_ONLY',
+        privileges: (user.pgPrivileges || []).join(', ')
+      }
     });
+
+    this.yaml(obj);
   }
 
   dbAdminOnlyMsg() {

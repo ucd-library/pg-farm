@@ -57,6 +57,27 @@ router.put('/:organization/:instance/:user',
   }
 });
 
+router.patch('/:organization/:instance/:user', 
+  keycloak.protect('instance-admin'), 
+  async (req, res) => {
+  
+    try {
+    let {instance, organization} = getOrgAndIsntFromReq(req);
+    let user = req.params.user;
+
+    // do not let api create special users, for now
+    let type = req.query.type || 'USER';
+    if( type !== 'USER' && type !== 'ADMIN') {
+      throw new Error('Invalid type: '+type);
+    }
+
+    await model.updateUser(instance, organization, user, type);
+    res.json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.delete('/:organization/:instance/:user', 
   keycloak.protect('instance-admin'), 
   async (req, res) => {
@@ -64,6 +85,10 @@ router.delete('/:organization/:instance/:user',
   try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
     let user = req.params.user;
+
+    if( user === (req.user.username || req.user.preferred_username) ) {
+      throw new Error('Cannot delete yourself');
+    }
 
     let success = await model.deleteUser(instance, organization, user);
     res.status(204).json({success});
