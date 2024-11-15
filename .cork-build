@@ -1,0 +1,16 @@
+{
+  "registry" : "us-docker.pkg.dev/pgfarm-419213/containers",
+
+  "images" : {
+    "pgfarm-service" : {
+      "contextPath" : ".",
+      "dockerfile" : "services/Dockerfile"
+    },
+    "pgfarm-instance" : {
+      "contextPath" : "pg-instance",
+      "options" : {
+        "build-arg" : "PG_VERSION=16"
+      }
+    }
+  }
+}

@@ -131,11 +131,7 @@ class Instance {
     
     // make sure instance's always start with 'inst-'
     // this lets us know its an instance and not a database by name
-    name = 'inst-'+name
-      .replace(/^inst-/, '')
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]/g, '-');
+    name = 'inst-'+modelUtils.cleanInstDbName(name);
     
     let shortName = name.replace(/^inst-/, '');
 

@@ -66,7 +66,7 @@ class User {
 
       if( type !== user.type ) {
         logger.info('Updating user type: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId, type);
-        await this.updateType(username, nameOrId, orgNameOrId, type);
+        await this.updateType(nameOrId, orgNameOrId, username, type);
       }
     }
 

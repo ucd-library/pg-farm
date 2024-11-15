@@ -83,7 +83,7 @@ class AdminModel {
    * @param {String} opts.instance name or id of instance 
    */
   async ensureDatabase(opts={}) {
-    let name = opts.name || opts.database;
+    let name = modelUtils.cleanInstDbName(opts.name || opts.database);
     let organization;
 
     if( opts.organization ) {

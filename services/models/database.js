@@ -3,6 +3,7 @@ import pgInstClient from '../lib/pg-instance-client.js';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
+import utils from './utils.js';
 
 class Database {
 
@@ -108,13 +109,13 @@ class Database {
    */
   async create(title, opts) {
     if( !opts.name ) {
-      opts.name = title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+      opts.name = title;
     }
 
     // make sure the name is prefixed with inst- (instance) prefix
     // this is to avoid conflicts with accessing the postgres instance
     // by name 
-    opts.name = opts.name.replace(/^inst-/, '');
+    opts.name = utils.cleanInstDbName(opts.name);
 
     let orgName = '';
     if( opts.organization ) {

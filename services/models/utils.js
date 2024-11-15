@@ -109,6 +109,22 @@ class ModelUtils {
     }, 1000);
   }
 
+  /**
+   * @method cleanInstDbName
+   * @description Cleans an instance database name.  
+   * This will remove any special
+   * 
+   * @param {String} name name or title to clean
+   * @returns 
+   */
+  cleanInstDbName(name) {
+    return name
+      .replace(/^inst-/, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]/g, '-');
+  }
+
 
   /**
    * @method runGsutils
