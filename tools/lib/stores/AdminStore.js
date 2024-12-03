@@ -10,7 +10,8 @@ class AdminStore extends BaseStore {
       actions : new LruStore({name: 'admin.actions'})
     };
     this.events = {
-      CONNECTIONS_UPDATE : 'admin-connections-update'
+      CONNECTIONS_UPDATE : 'admin-connections-update',
+      CONNECTION_LOG_UPDATE : 'admin-connection-log-update'
     };
   }
 
@@ -19,6 +20,14 @@ class AdminStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.CONNECTIONS_UPDATE
+    );
+  }
+
+  onConnectionLogUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.CONNECTION_LOG_UPDATE
     );
   }
 

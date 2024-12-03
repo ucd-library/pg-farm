@@ -720,6 +720,14 @@ class PgFarmAdminClient {
     );
   }
 
+  logProxyConnectionEvent(sessionId, type, message) {
+    return client.query(`
+      INSERT INTO ${this.schema}.connection_event (session_id, type, message) VALUES ($1, $2, $3)
+    `, 
+      [sessionId, type, message]
+    );
+  }
+
   /**
    * @method onConnectionClose
    * @description record a connection close event
@@ -746,6 +754,14 @@ class PgFarmAdminClient {
     return client.query(`SELECT * FROM ${this.schema}.cleanup_closed_connections()`);
   }
 
+  getConnectionLog(sessionId) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.connection_event
+      WHERE session_id = $1
+      ORDER BY timestamp DESC
+    `, [sessionId]);
+  }
+
   getConnections(query={}) {
     let params = [];
     let where = [];
@@ -769,9 +785,11 @@ class PgFarmAdminClient {
       params.push(query.username);
     }
 
-    if( query.open === true ) {
+    if( query.active === true ) {
       where.push('closed_at IS NULL');
       where.push('alive_at > NOW() - INTERVAL \'10 minutes\'');
+    } else {
+      where.push('closed_at IS NULL');
     }
 
     return client.query(

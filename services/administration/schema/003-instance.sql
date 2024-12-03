@@ -4,6 +4,7 @@ DO $$ BEGIN
   CREATE TYPE pgfarm.instance_state AS ENUM (
     'CREATING',
     'RUN',
+    'STOPPING',
     'SLEEP',
     'ARCHIVE',
     'ARCHIVING',

@@ -1,6 +1,5 @@
 set search_path to pgfarm, public;
 
-
 CREATE TABLE IF NOT EXISTS pgfarm.connection (
     session_id TEXT PRIMARY KEY,
     database_id UUID REFERENCES pgfarm.database(database_id),
@@ -9,13 +8,20 @@ CREATE TABLE IF NOT EXISTS pgfarm.connection (
     connection_data jsonb NOT NULL,
     gateway_id UUID NOT NULL,
     opened_at timestamp NOT NULL DEFAULT now(),
-    alive_at timestamp NOT NULL DEFAULT now(),
     closed_at timestamp
 );
 CREATE INDEX IF NOT EXISTS connection_database_id_idx ON pgfarm.connection(database_id);
 CREATE INDEX IF NOT EXISTS connection_user_id_idx ON pgfarm.connection(user_id);
 CREATE INDEX IF NOT EXISTS connection_opened_at_idx ON pgfarm.connection(opened_at);
 CREATE INDEX IF NOT EXISTS connection_closed_at_idx ON pgfarm.connection(closed_at);
+
+CREATE TABLE IF NOT EXISTS pgfarm.connection_event (
+    connection_event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id TEXT REFERENCES pgfarm.connection(session_id),
+    type TEXT NOT NULL,
+    message TEXT,
+    timestamp timestamp NOT NULL DEFAULT now()
+);
 
 CREATE OR REPLACE VIEW pgfarm.connection_view AS
   SELECT
@@ -88,14 +94,6 @@ BEGIN
       pgfarm.connection(session_id, database_id, user_id, ip_address, connection_data, gateway_id, opened_at)
     VALUES 
       (ses_id_in, db_id, user_id, ip_in, data_in, gateway_id_in, opened_at_in);
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION pgfarm.update_connection_alive_timestamp(
-    ses_id_in TEXT
-) RETURNS void AS $$
-BEGIN
-    UPDATE pgfarm.connection SET alive_at = now() WHERE session_id = ses_id_in;
 END;
 $$ LANGUAGE plpgsql;
 

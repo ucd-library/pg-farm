@@ -1,6 +1,5 @@
 import config from '../../../lib/config.js';
 import ProxyConnection from './proxy-connection.js';
-import proxyStatus from './status.js';
 import PgFarmTcpServer from '../tcp-server/index.js';
 
 
@@ -13,8 +12,7 @@ let server = new PgFarmTcpServer({
     port: definition.port
   }, 
   (clientSocket, sessionId) => {
-    let con = new ProxyConnection(clientSocket, server, sessionId)
-    proxyStatus.registerConnection(con);
+    let con = new ProxyConnection(clientSocket, server, sessionId);
     return con;
   }
 );

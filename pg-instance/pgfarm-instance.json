@@ -1,9 +1,0 @@
-{
-  "remote": "https://github.com/ucd-library/pg-farm",
-  "commit": "191aebf",
-  "tag": "",
-  "branch": "main",
-  "name": "pg-farm",
-  "date": "2024-09-17T19:48:46.000Z",
-  "imageTag": "localhost/local-dev/pgfarm-instance:main"
-}

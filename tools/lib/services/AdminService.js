@@ -33,6 +33,26 @@ class AdminService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  async getConnectionLog(sessionId) {
+    let ido = {action: 'get-connection-log'};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/connection-log/${sessionId}`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onConnectionLogUpdate(ido, {request}),
+          onLoad: payload => this.store.onConnectionLogUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onConnectionLogUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
 }
 
 const service = new AdminService();

@@ -11,6 +11,7 @@ class Instance {
     this.STATES = {
       CREATING : 'CREATING',
       RUN : 'RUN',
+      STOPPING : 'STOPPING',
       SLEEP : 'SLEEP',
       ARCHIVE : 'ARCHIVE',
       ARCHIVING : 'ARCHIVING',
@@ -372,6 +373,7 @@ class Instance {
     let hostname = instance.hostname;
 
     logger.info('Stopping instance', hostname);
+    await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.STOPPING);
 
     let pgResult, pgServiceResult;
 

@@ -7,10 +7,11 @@ const router = Router();
 
 router.get('/connections', keycloak.protect('admin'), async (req, res) => {
   try {
-    let opts = {
-      open: true
-    };
+    let opts = {};
 
+    if( req.query.active ) {
+      opts.active = req.query.active === 'true';
+    }
     if( req.query.username ) {
       opts.username = req.query.username;
     }
@@ -24,5 +25,15 @@ router.get('/connections', keycloak.protect('admin'), async (req, res) => {
     handleError(res, e);
   }
 });
+
+router.get('/connection-log/:sessionId', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let resp = await pgClient.getConnectionLog(req.params.sessionId);
+    res.json(resp.rows);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 
 export default router;
