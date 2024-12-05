@@ -244,7 +244,7 @@ class ProxyConnection {
       // else, just proxy message
       this.serverSocket.write(data);
     } catch(e) {
-      logger.error('Error handling client data', this.getConnectionInfo(), e);
+      logger.warn('Error handling client data', this.getConnectionInfo(), e);
       this.closeSockets();
     }
   }
@@ -438,14 +438,15 @@ class ProxyConnection {
       userError = true;
     }
 
+    // TODO: split db error from user error
     let orgText = this.dbOrganization ? this.dbOrganization + '/' : '';
     if ( userError ) {
       this.sendNotice(
         'ERROR',
         '28P01',
-        'Invalid Username',
-        `The username provided (${this.startupProperties.user}) is not registered with the database (${orgText}${this.startupProperties.database}).`,
-        'Make sure you are using the correct username and that your account has been registered with PG Farm.',
+        'Invalid Username or Database',
+        `The username provided (${this.startupProperties.user}) is not registered with the database (${orgText}${this.startupProperties.database}) or database does not exist.`,
+        'Make sure you are using the correct database name, username and that your account has been registered with PG Farm.',
         this.clientSocket
       );
       return false;
@@ -1152,7 +1153,6 @@ class ProxyConnection {
    * @param {Buffer} data 
    */
   debug(socket, data) {
-    console.log('debug', this.debugEnabled);
     if (!this.debugEnabled) return;
 
     if (data instanceof Buffer) {
