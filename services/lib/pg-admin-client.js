@@ -750,10 +750,6 @@ class PgFarmAdminClient {
     `, [sessionId]);
   }
 
-  cleanupClosedConnections() {
-    return client.query(`SELECT * FROM ${this.schema}.cleanup_closed_connections()`);
-  }
-
   getConnectionLog(sessionId) {
     return client.query(`
       SELECT * FROM ${this.schema}.connection_event

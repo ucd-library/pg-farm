@@ -31,7 +31,6 @@ CREATE OR REPLACE VIEW pgfarm.connection_view AS
     c.ip_address,
     c.connection_data,
     c.opened_at,
-    c.alive_at,
     c.closed_at,
     d.name as database_name,
     i.name as instance_name,
@@ -94,15 +93,6 @@ BEGIN
       pgfarm.connection(session_id, database_id, user_id, ip_address, connection_data, gateway_id, opened_at)
     VALUES 
       (ses_id_in, db_id, user_id, ip_in, data_in, gateway_id_in, opened_at_in);
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION pgfarm.cleanup_closed_connections() RETURNS void AS $$
-BEGIN
-    UPDATE 
-      pgfarm.connection SET closed_at = now() 
-    WHERE 
-      alive_at < now() - INTERVAL '15 minutes';
 END;
 $$ LANGUAGE plpgsql;
 
