@@ -1,7 +1,20 @@
-import { error, log } from 'console';
 import fs from 'fs';
 const env = process.env;
 
+// construct the image tag from the build info or env
+let BUILD_INFO = {};
+let PG_INSTANCE_IMAGE = 'us-west1-docker.pkg.dev/digital-ucdavis-edu/pub/postgres:16'
+let BASE_IMAGE;
+if( fs.existsSync('/cork-build-info/pgfarm-service.json') ) {
+  BUILD_INFO = JSON.parse(fs.readFileSync('/cork-build-info/pgfarm-service.json'));
+  BASE_IMAGE = BUILD_INFO.imageTag;
+}
+if( env.PG_INSTANCE_IMAGE ) PG_INSTANCE_IMAGE = env.PG_INSTANCE_IMAGE;
+if( env.BASE_IMAGE ) BASE_IMAGE = env.BASE_IMAGE;
+
+if( !PG_INSTANCE_IMAGE || !BASE_IMAGE ) {
+  throw new Error('Missing required image tags via env (PG_INSTANCE_IMAGE and BASE_IMAGE) or build info');
+}
 
 const PORT = parseInt(env.PORT || env.SERVICE_PORT || 3000);
 let SERVICE_URL = env.SERVICE_URL || 'http://localhost:'+PORT;
@@ -23,8 +36,6 @@ let serviceAccountExists = false;
 if( env.GOOGLE_APPLICATION_CREDENTIALS ) {
   serviceAccountExists = fs.existsSync(env.GOOGLE_APPLICATION_CREDENTIALS);
 }
-
-let DEFAULT_IMAGE_TAG = env.PG_FARM_REPO_TAG || env.PG_FARM_REPO_BRANCH || 'main';
 
 // k8s env collision
 let healthProbePort = env.HEALTH_PROBE_PORT || '3000';
@@ -169,7 +180,7 @@ const config = {
     name : env.PG_INSTANCE_NAME || '', // set for running pg instances
     organization : env.PG_INSTANCE_ORGANIZATION || null, // set for running pg instances
     port : 5432,
-    image : env.PG_INSTANCE_IMAGE || 'us-docker.pkg.dev/pgfarm-419213/containers/pgfarm-instance:16',
+    image : PG_INSTANCE_IMAGE,
     adminRole : 'postgres',
     adminInitPassword : env.PG_INSTANCE_ADMIN_INIT_PASSWORD || 'postgres',
     publicRole : {
@@ -181,7 +192,7 @@ const config = {
   },
 
   pgRest : {
-    image : env.PG_REST_IMAGE || 'us-docker.pkg.dev/pgfarm-419213/containers/pgfarm-service:'+DEFAULT_IMAGE_TAG,
+    image : BASE_IMAGE,
     authenticator : {
       username : env.PG_REST_AUTHENTICATOR_USERNAME || 'pgfarm-authenticator'
     },
@@ -190,7 +201,7 @@ const config = {
   },
 
   pgHelper : {
-    image : env.PG_HELPER_IMAGE || 'us-docker.pkg.dev/pgfarm-419213/containers/pgfarm-service:'+DEFAULT_IMAGE_TAG,
+    image : BASE_IMAGE,
     port : env.PG_HELPER_PORT || 3000
   },
 

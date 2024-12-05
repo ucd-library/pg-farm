@@ -12,3 +12,4 @@ dist
 *.pyc
 __pycache__
 .vscode
+Dockerfile.corkbuild
