@@ -313,7 +313,7 @@ class AdminModel {
    * time, shut it down.
    */
   async sleepInstances() {
-    let active = await client.getInstances(this.models.instance.STATES.RUN);
+    let active = await client.getInstances({state: this.models.instance.STATES.RUN});
     let availableStates = this.models.instance.AVAILABLE_STATES;
     let now = Date.now();
     
