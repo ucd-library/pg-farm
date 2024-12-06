@@ -946,11 +946,17 @@ class ProxyConnection {
     if( this.serverSocket?.readyState == 'open' ) return false;
 
     logger.info('Checking instance is up', this.getConnectionInfo());
-    let started = await admin.startInstance(
+    let resp = await admin.startInstance(
       this.startupProperties.database, 
-      this.dbOrganization
+      this.dbOrganization,
+      {isDb: true}
     );
-    if( started ) {
+
+    if( resp.starting ) {
+      await resp.instance;
+    }
+
+    if( resp.starting ) {
       logger.info('Instance started', this.getConnectionInfo());
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.INSTANCE_START);
     } else {

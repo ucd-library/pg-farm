@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
+import { start } from 'repl';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -107,7 +108,11 @@ class AdminModel {
       instance = await this.models.instance.create(opts.instance, iOpts);
     }
 
-    await this.startInstance(instance.name, opts.organization);
+    let startResp = await this.startInstance(instance.name, opts.organization);
+    if( startResp.starting ) {
+      await startResp.instance;
+      await startResp.pgrest;
+    }
 
     // ensure the public user and pg user password update
     await this.models.instance.initInstanceDb(instance.name, opts.organization);
@@ -347,28 +352,30 @@ class AdminModel {
 
   /**
    * @method startInstance
-   * @description Starts an instance.  This will start the pg instance and pgRest.  This
-   * function will wait for the instance to be ready before returning.  If the instance
+   * @description Starts an instance.  This will start the pg instance and pgRest. If the instance
    * is already starting from a prior call, this function will wait for the current request to finish.
    * A health check is performed before starting the instance.  If the instance is already
    * running, this function will return false unless opts.force is set to true.  Instances
    * are 'started' by applying the k8s deployment and service yaml files, then polling the
    * TCP port until it is ready and accepting connections.
    * 
+   * To use:
+   * let respStart = await admin.startInstance('my-instance', 'my-org');
+   * if( respStart.starting ) {
+   *  await respStart.instance;
+   *  await respStart.pgrest;
+   * }
+   * 
    * @param {String} nameOrId Either the name or id of the instance or database.  If database, set opts.isDb=true
    * @param {String} orgNameOrId organization name or id
    * @param {Object} opts
    * @param {Boolean} opts.isDb nameOrId parameter is a database name or id
    * @param {Boolean} opts.force force start the instance even if health check passes
-   * @param {Boolean} opts.startPgRest start pgRest services as well as the pg instance
-   * @param {Boolean} opts.waitForPgRest wait for pgRest services to be ready before resolving the promise
    *  
-   * @returns {Promise<Boolean>} true if the instance was started, false if the instance was already running
+   * @returns {Promise<Object>} 
    */
   async startInstance(nameOrId, orgNameOrId, opts={}) {
     let instance;
-
-    let timestamp = Date.now();
     
     // get instance by database name or instance name depending on opts
     if( opts.isDb ) {
@@ -400,11 +407,22 @@ class AdminModel {
       instance.organization_name
     );
 
-    // TODO: split out pgRest and instance test.
-    if (health.state === 'RUN' && health.tcpStatus.instance?.isAlive && !opts.force) {
-      logger.info('Instance running', instance.hostname);
+    // check if pgRest services are alive
+    let dbRestTcpAlive = true;
+    for( let db in health.tcpStatus.pgRest ) {
+      if( !health.tcpStatus.pgRest[db].isAlive ) {
+        dbRestTcpAlive = false;
+        break;
+      }
+    }
+
+    if (health.state === 'RUN' && 
+        health.tcpStatus.instance?.isAlive && 
+        dbRestTcpAlive &&
+        !opts.force) {
+      logger.info('Instance running and ports are alive', instance.hostname);
       this.resolveStart(instance);
-      return false;
+      return {starting: false};
     }
 
     // log why we are starting the instance
@@ -416,39 +434,18 @@ class AdminModel {
         health
       });
     }
+
+    let response = {
+      starting: true,
+      instance : null,
+      pgrest : null
+    }
     
-    try {
-      let proms = [];
-      let dbs;
-
-      // instances can have multiple databases associated with them.  Start all pgRest services
-      // as pgRest services are started per database.
-      if( opts.startPgRest ) {
-        dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
-        proms = dbs.map(db => {
-          return this.models.pgRest.start(db.database_id, db.organization_id);
-        })
-      }
-
-      proms.push(this.models.instance.start(instance.instance_id, instance.organization_id));
-
-      // wait for instance to be ready
+    response.instance = (async () => {
+      // start the instance
+      await this.models.instance.start(instance.instance_id, instance.organization_id);
+      // wait for the instance to accept connections
       await utils.waitUntil(instance.hostname, instance.port);
-
-      logger.info('Instance is ready', instance.hostname);
-
-      // if there are pgRest services, wait for them to be ready if flag is set
-      if( opts.startPgRest && opts.waitForPgRest && dbs.length ) {
-        // wait for all instances to be deploy
-        await Promise.all(proms);
-
-        // wait for instances to come alive        
-        proms = dbs.map(async db => {
-          await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
-          await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
-        });
-        await Promise.all(proms);
-      }
 
       // hack for docker-desktop to wait for the instance DNS to be ready
       // there seems to be issues with it going up and down when instance first starts
@@ -456,18 +453,46 @@ class AdminModel {
         logger.info('Waiting for DNS to be ready in docker-desktop');
         await utils.sleep(5000);
       }
+    })();
 
-    } catch(e) {
-      logger.error('Error starting instance', e);
+    let dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
+    let proms = dbs.map(db => {
+      async function start() {
+        // make sure instance is ready before starting pgRest
+        await response.instance; 
+        // start pgRest
+        await this.models.pgRest.start(db.database_id, db.organization_id);
+        // wait for the port to be alive
+        await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
+
+        // hack for docker-desktop to wait for the instance DNS to be ready
+        // there seems to be issues with it going up and down when instance first starts
+        if( config.k8s.platform === 'docker-desktop' ) {
+          logger.info('Waiting for DNS to be ready in docker-desktop');
+          await utils.sleep(5000);
+        }
+
+        // wait for pgRest to be actually be ready
+        await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
+      }
+      return start.bind(this);
+    })
+    .map(f => f());
+    response.pgrest = Promise.all(proms);
+
+
+    // wait for things to finish to resolve for others
+    response.instance.then(() => {
+      response.pgrest.then(() => {
+        this.resolveStart(instance);
+      }).catch(e => {
+        this.rejectStart(instance, e);
+      });
+    }).catch(e => {
       this.rejectStart(instance, e);
-      return;
-    }
+    });
 
-    logger.info(`Instance health ${instance.hostname} started.  time=`, ((Date.now()-timestamp)/1000).toFixed(1), 's');
-
-    this.resolveStart(instance);
-
-    return true;
+    return response;
   }
 
   rejectStart(instance, e) {
@@ -477,11 +502,10 @@ class AdminModel {
     this.instancesStarting[id].reject(e);
     delete this.instancesStarting[id];
   }
-  
+
   resolveStart(instance) {
     let id = instance.instance_id || instance.id;
     if( !this.instancesStarting[id] ) return;
-  
     this.instancesStarting[id].resolve(instance);
     delete this.instancesStarting[id];
   }
@@ -506,10 +530,15 @@ async function waitForPgRestDb(host, port, maxAttempts=10, delayTime=500) {
   let attempts = 0;
 
   while( !isAlive && attempts < maxAttempts ) {
-    let resp = await fetch(`http://${host}:${port}`);
-    isAlive = (resp.status !== 503);
-    
-    if( !isAlive ) {
+    try {
+      let resp = await fetch(`http://${host}:${port}`);
+      isAlive = (resp.status !== 503);
+      
+      if( !isAlive ) {
+        attempts++;
+        await utils.sleep(delayTime);
+      }
+    } catch(e) {
       attempts++;
       await utils.sleep(delayTime);
     }
