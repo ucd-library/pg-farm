@@ -2,13 +2,8 @@ import { html, css } from 'lit';
 
 export function styles() {
   const elementStyles = css`
-    :host {
+    pgfarm-app {
       display: block;
-    }
-
-    .main-content {
-      flex: 1;
-      width: 100%;
     }
 
     .loading-dots {
@@ -60,36 +55,47 @@ export function styles() {
   return [elementStyles];
 }
 
-export function render() { 
+export function render() {
 return html`
 
-  <ucd-theme-header
-    site-name="PG Farm"
-    slogan="Research Databases as a Service"
-    figure-src=""
-    prevent-fixed>
+  <ucd-theme-header>
+
+    <ucdlib-branding-bar
+      site-name="PG Farm"
+      slogan="via UC Davis Library">
+    </ucdlib-branding-bar>
+
     <ucd-theme-primary-nav>
-      <a href="/search">Discover</a>
-      <a href="/about">About</a>
+      <a href="#">Features</a>
+      <a href="#">Find a Database</a>
+      <a href="#">Organizations</a>
+      <a href="#">Contact</a>
     </ucd-theme-primary-nav>
+
+    <ucd-theme-search-popup>
+      <ucd-theme-search-form
+        @search=${e => console.log(e.detail.searchTerm)}>
+      </ucd-theme-search-form>
+    </ucd-theme-search-popup>
+
+    <ucd-theme-quick-links
+      title="Sign In"
+      use-icon
+      style-modifiers="highlight">
+      <svg slot="custom-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
+      <a href="#">Need to update component to optionally turn into button</a>
+      <a href="#">also set some css vars for icon/bg color</a>
+    </ucd-theme-quick-links>
   </ucd-theme-header>
 
   <div class="main-content">
     <ucdlib-pages
-      selected="${this.page}"
-      selectedAttribute="visible"
+      selected=${this.page}
+      attr-for-selected='page-id'
     >
-      <div id="loading" ?hidden="${this.page}">
-        <img src="/images/logos/logo-icon.svg" style="max-width: 128px" />
-        <div class="loading-dots">
-          <h1 class="dot one">.</h1>
-          <h1 class="dot two">.</h1>
-          <h1 class="dot three">.</h1>
-        </div>
-      </div>
-      <app-home id="home"></app-home>
-      <app-search id="search"></app-search>
-      <app-database id="db"></app-database>
+      <app-home page-id="home"></app-home>
+      <app-search page-id="search"></app-search>
+      <app-database page-id="db"></app-database>
     </ucdlib-pages>
 
     <div class="footer site-frame">

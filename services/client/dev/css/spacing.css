@@ -1,0 +1,18 @@
+.u-space-py-responsive--huge {
+  padding-top: var(--spacer--large, 2rem);
+  padding-bottom: var(--spacer--large, 2rem);
+}
+.u-space-py-responsive--medium-2x {
+  padding-top: var(--spacer--medium, 1.5rem);
+  padding-bottom: var(--spacer--medium, 1.5rem);
+}
+@media (min-width: 768px) {
+  .u-space-py-responsive--huge {
+    padding-top: var(--spacer--huge, 4rem);
+    padding-bottom: var(--spacer--huge, 4rem);
+  }
+  .u-space-py-responsive--medium-2x {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+}

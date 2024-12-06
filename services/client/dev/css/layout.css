@@ -1,0 +1,9 @@
+.l-container--narrow-desktop {
+  width: 92%;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .l-container--narrow-desktop {
+    width: 68%;
+  }
+}
