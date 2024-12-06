@@ -459,7 +459,8 @@ class AdminModel {
     let proms = dbs.map(db => {
       async function start() {
         // make sure instance is ready before starting pgRest
-        await response.instance; 
+        // await response.instance; 
+
         // start pgRest
         await this.models.pgRest.start(db.database_id, db.organization_id);
         // wait for the port to be alive
