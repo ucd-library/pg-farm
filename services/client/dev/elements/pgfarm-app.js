@@ -23,9 +23,10 @@ console.log(appStateModel);
 // global app components
 import './components/app-build-info/app-build-info.js';
 
-import './pages/app-home.js';
-import './pages/app-search.js';
-import './pages/app-database.js';
+import bundles from './pages/bundles/index.js';
+
+// import './pages/app-search.js';
+// import './pages/app-database.js';
 
 export default class PgfarmApp extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -44,6 +45,7 @@ export default class PgfarmApp extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
+    this.loadedBundles = {};
 
     this.page = 'home';
     this.pathInfo = '';
@@ -53,12 +55,62 @@ export default class PgfarmApp extends Mixin(LitElement)
     this.AppStateModel.get().then(e => this._onAppStateUpdate(e));
   }
 
-  _onAppStateUpdate(e) {
-    if( e.page && e.page !== this.page ) {
-      this.page = e.page;
+  async _onAppStateUpdate(e) {
+    const { page, location } = e;
+    this.pathInfo = location.pathname;
+
+    const bundle = this._getBundleName(page);
+    let bundleAlreadyLoaded = true;
+
+    // dynamically load code
+    if ( !this.loadedBundles[bundle] ) {
+      bundleAlreadyLoaded = false;
+      this.loadedBundles[bundle] = this._loadBundle(bundle, page);
+    }
+    if ( !this.loadedBundles[bundle] ) return;
+    await this.loadedBundles[bundle];
+
+    // requested page element might also be listening to app-state-update
+    // in which case we need to fire it again
+    if ( !bundleAlreadyLoaded ){
+      this.AppStateModel.get().then(e => this._onAppStateUpdate(e));
     }
 
-    this.pathInfo = e.location.pathname;
+    this.page = page;
+    window.scroll(0,0);
+  }
+
+  /**
+   * @description Get name of bundle a page element is in
+   * @param {String} page
+   * @returns {String}
+   */
+  _getBundleName(page){
+    for (const bundle in bundles) {
+      if ( bundles[bundle].includes(page) ){
+        return bundle;
+      }
+    }
+    return '';
+  }
+
+  /**
+   * @description code splitting done here
+   *
+   * @param {String} bundle bundle to load
+   * @param {String} page page to load. Just used for error logging.
+   *
+   * @returns {Promise}
+   */
+  _loadBundle(bundle, page='') {
+
+    if( bundle == 'public' ) {
+      return import(/* webpackChunkName: "public" */ "./pages/bundles/public.js");
+    } else if( bundle == 'admin' ) {
+      return import(/* webpackChunkName: "admin" */ "./pages/bundles/admin.js");
+    }
+    this.logger.warn(`AppMain: bundle ${bundle} not found for page ${page}. Check pages/bundles/index.js`);
+    return false;
   }
 
 
