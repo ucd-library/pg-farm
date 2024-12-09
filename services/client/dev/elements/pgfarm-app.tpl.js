@@ -97,69 +97,46 @@ return html`
       <app-search page-id="search"></app-search>
       <app-database page-id="db"></app-database>
     </ucdlib-pages>
-
-    <div class="footer site-frame">
-      <ucdlib-site-footer>
-        <ucdlib-site-footer-column header="PG Farm">
-          <ul>
-            <li><a href="/search">Discover</a></li>
-            <li><a href="/about">About PG Farm</a></li>
-            <li><a href="">FAQ</a></li>
-          </ul>
-        </ucdlib-site-footer-column>
-        <ucdlib-site-footer-column header="Library Info">
-          <ul>
-            <li>
-              <a
-                href="https://library.ucdavis.edu/special-collections/"
-                target="_blank"
-                rel="noopener"
-                >Archives and Special Collections</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://library.ucdavis.edu/library/"
-                target="_blank"
-                rel="noopener"
-                >Visit the Library</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://library.ucdavis.edu/news/"
-                target="_blank"
-                rel="noopener"
-                >Library News</a
-              >
-            </li>
-            <li>
-              <a
-                href="http://give.ucdavis.edu/ULIB"
-                target="_blank"
-                rel="noopener"
-                >Give to the Library</a
-              >
-            </li>
-          </ul>
-        </ucdlib-site-footer-column>
-        <ucdlib-site-footer-column header="Account">
-          <ul>
-            <li><app-auth-footer></app-auth-footer></li>
-            <li class="fin-admin" ?hidden="${!this.isAdmin}">
-              <a href="/fin/admin/${this.pathInfo.length > 1 ? '#path-info' + this.pathInfo : ''}">Fin Admin</a>
-            </li>
-          </ul>
-        </ucdlib-site-footer-column>
-        <div insert-into="below-address" ?hidden="${this.showVersion}">
-          <div><b>Build Information</b></div>
-          <div>App Version: ${this.appVersion}</div>
-          <div>Build Time: ${this.localBuildTime}</div>
-          <div>Build Number: ${this.buildNum}</div>
-          <div>Client Env: ${this.clientEnv}</div>
-        </div>
-      </ucdlib-site-footer>
-    </div>
   </div>
+
+  <footer class="l-footer footer dark-background">
+    <div class="l-container">
+      <div class="flex-footer">
+        <div class="flex-footer__item">
+          <div class="site-credits u-space-mb">
+            <p>
+              UC Davis Library<br>
+              100 NW Quad<br>
+              University of California, Davis<br>
+              Davis, CA 95616
+            </p>
+            <div><a href='https>//library.ucdavis.edu'>library.ucdavis.edu</a></div>
+          </div>
+          <app-build-info></app-build-info>
+        </div>
+        <div class="flex-footer__item">
+          <h2>PG Farm</h2>
+          <div class="footer-nav">
+            <ul class="menu">
+              <li><a href='#'>Features</a></li>
+              <li><a href='#'>Documentation</a></li>
+              <li><a href='#'>Support</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="uc-footer">
+        <p><a href="https://www.ucdavis.edu/">University of California, Davis</a>, One Shields Avenue, Davis, CA 95616 | 530-752-1011</p>
+        <ul class="list--pipe">
+          <li><a href="#">Questions or comments?</a></li>
+          <li><a href="#">Privacy & Accessibility</a></li>
+          <li><a href="https://diversity.ucdavis.edu/principles-community">Principles of Community</a></li>
+          <li><a href="http://www.universityofcalifornia.edu/">University of California</a></li>
+        </ul>
+        <p>Copyright © The Regents of the University of California, Davis campus. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
 
 `;}

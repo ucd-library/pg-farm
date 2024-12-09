@@ -26,25 +26,54 @@ return html`
     </div>
   </div>
 </div>
+
 <div class='u-space-py-responsive--medium-2x bg--blue-30'>
   <div class='l-container'>
     <h2 class='u-align--center u-space-mb--large'>Key Features</h2>
     <div>
       ${chunkIntoColumns(this.features, 3).map(row => html`
-          <div class="${row.class}">
-            ${row.columns.map(col => html`
-              <div class="${col.class} u-space-mb--large u-space-mt--flush">
-                <h3 class='h4'>${col.item.title}</h3>
-                <div>${col.item.description}</div>
-              </div>
-            `)}
-          </div>
-        `)}
+        <div class=${row.class}>
+          ${row.columns.map(col => html`
+            <div class="${col.class} u-space-mb--large u-space-mt--flush">
+              <h3 class='h4'>${col.item.title}</h3>
+              <div>${col.item.description}</div>
+            </div>
+          `)}
+        </div>
+      `)}
     </div>
   </div>
 </div>
 
+<div class='u-space-py-responsive--medium-2x'>
+  <div class='l-container'>
+    <div class='l-2col l-2col--33-67'>
+      <div class='l-first'>
+        <h2 class='u-align--center heading--weighted'>
+          <span class='heading--weighted--weighted'>Project Examples</span>
+        </h2>
+      </div>
+      <div class='l-second'>
+        <div class='o-box u-space-mb--large'>
+          <div class='h4'>Project Teaser 1</div>
+        </div>
+        <div class='o-box'>
+          <div class='h4'>Project Teaser 2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-
-
+<div class='u-space-pt u-space-pb--medium-2x'>
+  <div class='alignable-promo'>
+    <div class="alignable-promo__wrapper">
+      <h2 class='black u-space-mb--large'>To get started, tell us about your project</h2>
+      <div class="alignable-promo__buttons">
+        <a href="#" class="btn btn--primary">Get Started</a>
+        <a href="#" class="btn btn--invert">Learn More</a>
+      </div>
+    </div>
+  </div>
+</div>
 `;}

@@ -38,7 +38,8 @@ async function setup(app) {
         appRoutes : config.client.appRoutes,
         env : config.client.env,
         grants : pgInstClient.GRANTS,
-        logger : config.client.logger
+        logger : config.client.logger,
+        buildInfo: config.client.buildInfo
       });
     },
     template : async (req, res, next) => {

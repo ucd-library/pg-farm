@@ -89,6 +89,15 @@ const config = {
         key : env.CLIENT_ERROR_REPORTING_KEY || '',
         sourceMapExtension : '.map'
       }
+    },
+    buildInfo: {
+      remote: BUILD_INFO.remote,
+      commit: BUILD_INFO.commit,
+      tag: BUILD_INFO.tag,
+      branch: BUILD_INFO.branch,
+      name: BUILD_INFO.name,
+      date: BUILD_INFO.date,
+      imageTag: BUILD_INFO.imageTag
     }
   },
 
@@ -150,12 +159,12 @@ const config = {
     host : env.ADMIN_HOST || 'admin',
     port : env.ADMIN_PORT || 3000
   },
-  
+
   adminDb : {
     username : env.PG_USERNAME || 'postgres',
     password : env.PG_PASSWORD || 'postgres',
     database : env.PG_DATABASE || 'postgres',
-    schema : env.PG_SCHEMA || 'pgfarm', 
+    schema : env.PG_SCHEMA || 'pgfarm',
     port : env.PG_PORT || 5432,
     host : env.PG_HOST || 'admin-db',
 

@@ -16,3 +16,7 @@
     padding-bottom: 3rem;
   }
 }
+
+.u-space-pb--medium-2x {
+  padding-bottom: 3rem !important;
+}

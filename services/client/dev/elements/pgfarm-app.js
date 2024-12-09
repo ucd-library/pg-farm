@@ -20,10 +20,12 @@ import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 import {appStateModel} from '../../../../tools/lib/index.js';
 console.log(appStateModel);
 
+// global app components
+import './components/app-build-info/app-build-info.js';
+
 import './pages/app-home.js';
 import './pages/app-search.js';
 import './pages/app-database.js';
-import './components/footer/ucdlib-site-footer.js';
 
 export default class PgfarmApp extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
