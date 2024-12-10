@@ -1,3 +1,6 @@
 .bg--blue-30 {
   background-color: var(--ucd-blue-30,#ebf3fa);
 }
+.blue-70 {
+  color: var(--ucd-blue-70, #73ABDD);
+}

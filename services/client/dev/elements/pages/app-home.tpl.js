@@ -35,7 +35,8 @@ return html`
         <div class=${row.class}>
           ${row.columns.map(col => html`
             <div class="${col.class} u-space-mb--large u-space-mt--flush">
-              <h3 class='h4'>${col.item.title}</h3>
+              <app-icon class='blue-70 u-block' slug=${col.item.icon} size='medium-2x' fetch-method='page-load'></app-icon>
+              <h3 class='h4 u-space-mt--small'>${col.item.title}</h3>
               <div>${col.item.description}</div>
             </div>
           `)}

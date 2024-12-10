@@ -22,6 +22,7 @@ console.log(appStateModel);
 
 // global app components
 import './components/app-build-info/app-build-info.js';
+import './components/app-icon/app-icon.js';
 
 import bundles from './pages/bundles/index.js';
 

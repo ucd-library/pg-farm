@@ -2,6 +2,7 @@
 import sharedStyles from '@ucd-lib/theme-sass/style-ucdlib.css';
 import brandCssProps from '@ucd-lib/theme-sass/css-properties.css';
 import color from './color.css';
+import cssProps from './css-props.css';
 import fonts from './fonts.css';
 import headings from './headings.css';
 import layout from './layout.css';
@@ -12,6 +13,7 @@ const styles = `
   ${sharedStyles}
   ${brandCssProps}
   ${color}
+  ${cssProps}
   ${fonts}
   ${headings}
   ${layout}

@@ -5,6 +5,23 @@ export function styles() {
     pgfarm-app {
       display: block;
     }
+    .site-credits__logo app-icon {
+      width: 100%;
+      --app-icon-size: 100%;
+    }
+    .footer-spacer__logo app-icon {
+      width: 6rem;
+      --app-icon-size: 100%;
+
+    }
+    @media (min-width: 300px) {
+      .site-credits__logo app-icon {
+        width: 220px;
+      }
+      .footer-spacer__logo app-icon {
+        width: 12rem;
+      }
+    }
 
     .loading-dots {
       text-align: center;
@@ -45,11 +62,7 @@ export function styles() {
         opacity: 0;
       }
     }
-    @media (max-width: 768px) {
-      .footer.site-frame {
-        padding: 0.5rem;
-      }
-    }
+
   `;
 
   return [elementStyles];
@@ -90,6 +103,7 @@ return html`
 
   <div class="main-content">
     <ucdlib-pages
+      id='app-pages'
       selected=${this.page}
       attr-for-selected='page-id'
     >
@@ -104,6 +118,9 @@ return html`
       <div class="flex-footer">
         <div class="flex-footer__item">
           <div class="site-credits u-space-mb">
+            <div class='site-credits__logo'>
+              <app-icon slug='ucdlib-signature' auto-height></app-icon>
+            </div>
             <p>
               UC Davis Library<br>
               100 NW Quad<br>
@@ -123,6 +140,13 @@ return html`
               <li><a href='#'>Support</a></li>
             </ul>
           </div>
+        </div>
+      </div>
+      <div class="footer-spacer">
+        <div class='footer-spacer__logo'>
+          <a href='https://ucdavis.edu'>
+            <app-icon slug='aggie-logo' auto-height></app-icon>
+          </a>
         </div>
       </div>
       <div class="uc-footer">
