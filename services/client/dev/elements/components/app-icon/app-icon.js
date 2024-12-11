@@ -21,7 +21,8 @@ export default class AppIcon extends Mixin(LitElement)
       fetchMethod: {type: String, attribute: 'fetch-method'},
       invisibleIfEmpty: {type: Boolean, attribute: 'invisible-if-empty'},
       autoHeight: {type: Boolean, attribute: 'auto-height'},
-      svg: {type: String}
+      svg: {type: String},
+      appPageId: {state: true}
     }
   }
 
@@ -93,6 +94,7 @@ export default class AppIcon extends Mixin(LitElement)
         pageId = el.pageId;
       }
       if( el.tagName === 'UCDLIB-PAGES' && el.id === 'app-pages' ) {
+        this.appPageId = pageId;
         return el.selected === pageId;
       }
       if ( el.parentElement ){
@@ -104,6 +106,19 @@ export default class AppIcon extends Mixin(LitElement)
         return false;
       }
     }
+  }
+
+  /**
+   * @description Callback for when the app state model updates
+   * @param {Object} e - cork-app-utils event object
+   */
+  _onAppStateUpdate(e){
+    if ( this.fetchMethod !== 'page-load' ) return;
+    if ( !this.appPageId ) this.isOnActiveAppPage();
+    if ( this.appPageId === e.page && !this.svg) {
+      this.getSvg();
+    }
+
   }
 }
 

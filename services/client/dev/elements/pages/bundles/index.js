@@ -6,7 +6,7 @@
  */
 const defs = {
   public : [
-    'home'
+    'home', 'features'
   ],
   admin: [
   ]

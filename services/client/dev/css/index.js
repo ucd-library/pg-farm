@@ -6,17 +6,19 @@ import cssProps from './css-props.css';
 import fonts from './fonts.css';
 import headings from './headings.css';
 import layout from './layout.css';
+import pageHeader from './page-header.css';
 import spacing from './spacing.css';
 import text from './text.css';
 
 const styles = `
   ${sharedStyles}
   ${brandCssProps}
-  ${color}
   ${cssProps}
+  ${color}
   ${fonts}
   ${headings}
   ${layout}
+  ${pageHeader}
   ${spacing}
   ${text}
 `;
