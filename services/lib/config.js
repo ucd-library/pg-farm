@@ -78,7 +78,7 @@ const config = {
     port : parseInt(clientPort),
     assets : (clientEnv === 'prod') ? 'dist' : 'dev',
     title : 'PG Farm',
-    appRoutes : ['search', 'db', 'features'],
+    appRoutes : ['search', 'db', 'features', 'contact'],
     staticAssetsBaseUrl : env.CLIENT_STATIC_ASSETS_BASE_URL || 'https://storage.googleapis.com/application-static-assets',
     logger : {
       logLevel : env.CLIENT_LOG_LEVEL || 'info',

@@ -81,10 +81,10 @@ function _renderMainContent(){
     <ucdlib-pages
       id='app-pages'
       selected=${this.page}
-      attr-for-selected='page-id'
-    >
+      attr-for-selected='page-id'>
       <app-home page-id="home"></app-home>
       <app-features page-id="features"></app-features>
+      <app-contact page-id="contact"></app-contact>
       <app-search page-id="search"></app-search>
       <app-database page-id="db"></app-database>
     </ucdlib-pages>
@@ -107,7 +107,7 @@ function _renderHeader(){
         <a href="/features">Features</a>
         <a href="#">Find a Database</a>
         <a href="#">Organizations</a>
-        <a href="#">Contact</a>
+        <a href="/contact">Contact</a>
       </ucd-theme-primary-nav>
       <ucd-theme-search-popup>
         <ucd-theme-search-form
@@ -154,7 +154,7 @@ function _renderFooter(){
             <h2>PG Farm</h2>
             <div class="footer-nav">
               <ul class="menu">
-                <li><a href='#'>Features</a></li>
+                <li><a href='/features'>Features</a></li>
                 <li><a href='#'>Documentation</a></li>
                 <li><a href='#'>Support</a></li>
               </ul>

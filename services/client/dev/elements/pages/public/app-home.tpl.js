@@ -19,7 +19,7 @@ return html`
       <h1 class='alignable-promo__title black'>PG-Farm hosts your data so you can focus on your research</h1>
       <div class="alignable-promo__text">24/7 access to a full PostgreSQL database environment with easy management of who can access your data.</div>
       <div class="alignable-promo__buttons">
-        <a href="#" class="btn btn--primary">Get Started</a>
+        <a href="/contact" class="btn btn--primary">Get Started</a>
         <a href="/features" class="btn btn--invert">Learn More</a>
       </div>
       <div class="alignable-promo__text u-space-mt--small">or <a href='#'>find a database</a></div>
@@ -71,7 +71,7 @@ return html`
     <div class="alignable-promo__wrapper">
       <h2 class='black u-space-mb--large'>To get started, tell us about your project</h2>
       <div class="alignable-promo__buttons">
-        <a href="#" class="btn btn--primary">Get Started</a>
+        <a href="/contact" class="btn btn--primary">Get Started</a>
         <a href="/features" class="btn btn--invert">Learn More</a>
       </div>
     </div>
