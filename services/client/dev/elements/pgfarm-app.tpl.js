@@ -105,13 +105,14 @@ function _renderHeader(){
       </ucdlib-branding-bar>
       <ucd-theme-primary-nav>
         <a href="/features">Features</a>
-        <a href="#">Find a Database</a>
+        <a href="/search">Find a Database</a>
         <a href="#">Organizations</a>
         <a href="/contact">Contact</a>
       </ucd-theme-primary-nav>
       <ucd-theme-search-popup>
         <ucd-theme-search-form
-          @search=${e => console.log(e.detail.searchTerm)}>
+        @search=${this._onSearch}
+        >
         </ucd-theme-search-form>
       </ucd-theme-search-popup>
       <ucd-theme-quick-links

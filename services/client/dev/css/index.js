@@ -4,6 +4,7 @@ import brandCssProps from '@ucd-lib/theme-sass/css-properties.css';
 import color from './color.css';
 import cssProps from './css-props.css';
 import fonts from './fonts.css';
+import forms from './forms.css';
 import headings from './headings.css';
 import layout from './layout.css';
 import pageHeader from './page-header.css';
@@ -16,6 +17,7 @@ const styles = `
   ${cssProps}
   ${color}
   ${fonts}
+  ${forms}
   ${headings}
   ${layout}
   ${pageHeader}

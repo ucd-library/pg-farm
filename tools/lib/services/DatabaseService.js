@@ -9,7 +9,7 @@ class DatabaseService extends BaseService {
   constructor() {
     super();
     this.store = DatabaseStore;
-    this.basePath = `${config.host}/api/db`;
+    this.basePath = `${serviceUtils.host}/api/db`;
     this.searchId = 0;
   }
 
@@ -274,8 +274,8 @@ class DatabaseService extends BaseService {
 
   async link(local, remote, flags={}) {
     let ido = {
-      org: local.org, 
-      db: local.db, 
+      org: local.org,
+      db: local.db,
       action: 'link-'+remote.org+'/'+remote.db
     };
     let id = payload.getKey(ido);

@@ -1,0 +1,5 @@
+select.blue {
+  background: var(--ucd-blue-50, #CCE0F3);
+  color: var(--ucd-blue, #022851);
+  border: 1px solid var(--ucd-blue-50, #CCE0F3);
+}

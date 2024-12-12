@@ -22,7 +22,7 @@ return html`
         <a href="/contact" class="btn btn--primary">Get Started</a>
         <a href="/features" class="btn btn--invert">Learn More</a>
       </div>
-      <div class="alignable-promo__text u-space-mt--small">or <a href='#'>find a database</a></div>
+      <div class="alignable-promo__text u-space-mt--small">or <a href='/search'>find a database</a></div>
     </div>
   </div>
 </div>

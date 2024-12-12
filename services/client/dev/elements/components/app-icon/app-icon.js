@@ -74,11 +74,26 @@ export default class AppIcon extends Mixin(LitElement)
   }
 
   /**
+   * @description Fade in the icon
+   */
+  fadeIn(){
+    this.animate([
+      {opacity: 0},
+      {opacity: 1}
+    ], {
+      duration: 200,
+      easing: 'ease-in-out',
+      fill: 'forwards'
+    });
+  }
+
+  /**
    * @description Callback for when the icon model updates
    * @param {Object} e - cork-app-utils event object
    */
   _onIconGetUpdate(e){
     if ( e.state !== 'loaded' || !e.payload?.[this.slug] ) return;
+    this.fadeIn();
     this.svg = e.payload[this.slug];
   }
 
@@ -90,8 +105,9 @@ export default class AppIcon extends Mixin(LitElement)
     let el = this;
     let pageId;
     while( el ) {
-      if ( el.pageId ){
-        pageId = el.pageId;
+      const p = el.getAttribute('page-id');
+      if ( p ){
+        pageId = p;
       }
       if( el.tagName === 'UCDLIB-PAGES' && el.id === 'app-pages' ) {
         this.appPageId = pageId;

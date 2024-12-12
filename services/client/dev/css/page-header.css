@@ -6,6 +6,11 @@
   width: 92%;
   margin: 0 auto;
 }
+@media (min-width: 768px) {
+  .page-header__wrapper {
+    width: 86%;
+  }
+}
 .page-header__title {
   display: flex;
   align-items: center;

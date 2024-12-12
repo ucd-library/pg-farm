@@ -14,6 +14,7 @@ import '@ucd-lib/theme-elements/brand/ucd-theme-primary-nav/ucd-theme-primary-na
 import '@ucd-lib/theme-elements/brand/ucd-theme-header/ucd-theme-header.js';
 import '@ucd-lib/theme-elements/ucdlib/ucdlib-branding-bar/ucdlib-branding-bar.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-quick-links/ucd-theme-quick-links.js'
+import '@ucd-lib/theme-elements/brand/ucd-theme-search-form/ucd-theme-search-form.js'
 import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-popup.js'
 import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 
@@ -74,7 +75,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     // requested page element might also be listening to app-state-update
     // in which case we need to fire it again
     if ( !bundleAlreadyLoaded ){
-      this.AppStateModel.get().then(e => this._onAppStateUpdate(e));
+      this.AppStateModel.refresh();
     }
 
     this.page = page;
@@ -93,6 +94,11 @@ export default class PgfarmApp extends Mixin(LitElement)
       }
     }
     return '';
+  }
+
+  _onSearch(e){
+    this.AppStateModel.setLocation(`/search?text=${encodeURIComponent(e.detail.searchTerm)}`);
+    this.renderRoot.querySelector('ucd-theme-search-popup').close();
   }
 
   /**
