@@ -54,7 +54,6 @@ export default class PgfarmApp extends Mixin(LitElement)
 
 
     this._injectModel('AppStateModel');
-    this.AppStateModel.get().then(e => this._onAppStateUpdate(e));
   }
 
   async _onAppStateUpdate(e) {

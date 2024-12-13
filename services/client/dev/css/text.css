@@ -1,3 +1,9 @@
 .black {
   color: var(--black, #000) !important;
 }
+.italic {
+  font-style: italic;
+}
+.bold {
+  font-weight: 700;
+}

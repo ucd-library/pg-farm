@@ -17,6 +17,7 @@ export default class QueryParamController {
     this.hostProperty = opts.hostProperty;
     this.value = '';
     this.defaultValue = opts.defaultValue || '';
+    this.valueType = opts.type || 'string';
   }
 
   /**
@@ -68,6 +69,11 @@ export default class QueryParamController {
   setProperty(value, setLocation=false){
     if ( !this.queryParam ) return;
     value = value || this.defaultValue;
+    if ( this.valueType === 'number' ) {
+      value = Number(value);
+    } else if ( this.valueType === 'string') {
+      value = String(value);
+    }
     if ( this.hostProperty ) {
       this.host[this.hostProperty] = value;
     } else {

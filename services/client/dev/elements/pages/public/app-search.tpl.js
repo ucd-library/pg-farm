@@ -1,5 +1,6 @@
 import { html, css } from 'lit';
 import '../../components/app-search-input/app-search-input.js';
+import '../../components/database-teaser/database-teaser.js';
 
 export function styles() {
   const elementStyles = css`
@@ -43,9 +44,9 @@ return html`
           <app-search-input query-param="text" placeholder='Keyword or database name'></app-search-input>
           <div class='dd-wrapper'>
             <label for=${this.idGen.get('sort')}>Sort by:</label>
-            <select class='blue' id=${this.idGen.get('sort')} @input=${e => this.orderByCtl.setProperty(e.target.value, true)}>
-              <option value="rank" ?selected=${this.orderByCtl.equals('rank')}>Relevance</option>
-              <option value="database_title" ?selected=${this.orderByCtl.equals('database_title')}>Title</option>
+            <select class='blue' id=${this.idGen.get('sort')} @input=${e => this.queryCtl.orderBy.setProperty(e.target.value, true)}>
+              <option value="rank" ?selected=${this.queryCtl.orderBy.equals('rank')}>Relevance</option>
+              <option value="database_title" ?selected=${this.queryCtl.orderBy.equals('database_title')}>Title</option>
             </select>
           </div>
         </div>
@@ -55,7 +56,21 @@ return html`
   <div class='l-container'>
     <div class="l-basic">
       <div class="l-content">
-        <div class="u-space-mt--large">Content</div>
+        <div class="u-space-mt--large">
+          <div ?hidden=${this.results?.length}>
+            No results element
+          </div>
+          <div ?hidden=${!this.results?.length}>
+            <div class="u-space-mb">
+              <span class='grey italic bold'>${this.total} database${this.total != 1 ? 's' : ''}</span>
+              <div>
+                ${this.results.map(result => html`
+                  <database-teaser .data=${result} featured></database-teaser>
+                `)}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="l-sidebar-first">
         <div class="u-space-mt">Filters</div>
