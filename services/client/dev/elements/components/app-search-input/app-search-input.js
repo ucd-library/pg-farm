@@ -53,7 +53,7 @@ export default class AppSearchInput extends Mixin(LitElement)
     e.preventDefault();
     if ( this.disabled ) return;
     if ( this.queryParam ){
-      this.queryCtl.setLocation();
+      this.queryCtl.setLocation({resetOffset: true});
     } else {
       this.dispatchEvent(new CustomEvent('search', {
         detail: {

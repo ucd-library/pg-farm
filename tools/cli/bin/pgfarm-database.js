@@ -40,6 +40,8 @@ program.command('update <org/database>')
   .option('-t, --title <title>', 'Title')
   .option('-d, --description <description>', 'Description')
   .option('-s, --short-description <shortDescription>', 'Short description')
+  .option('-i, --icon <icon>', 'Icon')
+  .option('-b, --brand-color <brandColor>', 'Brand color')
   .option('-u, --url <url>', 'URL')
   .option('-l, --tags <tags>', 'Tags (comma separated)')
   .action((dbName, opts, cmd) => {

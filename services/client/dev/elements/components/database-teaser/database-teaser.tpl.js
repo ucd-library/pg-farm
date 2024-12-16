@@ -10,8 +10,11 @@ export function styles() {
       display: flex;
       gap: 1rem;
     }
+    .icon {
+      --app-icon-size: 2.5rem;
+    }
     .title {
-      margin: 0;
+      margin: 0 0 var(--spacer--small, .5rem) 0;
       padding: 0;
       color: var(--forced-contrast-heading-primary, #022851);
       font-size: 1rem;
@@ -28,13 +31,29 @@ export function styles() {
       color: var(--forced-contrast, #022851);
       text-decoration: underline;
     }
+    .organization {
+      color: var(--ucd-black-70, #4C4C4C);
+      font-size: var(--font-size--small, .875rem);
+      margin-bottom: var(--spacer--small, .5rem);
+    }
+    .description {
+      font-size: var(--font-size, 1rem);
+    }
+    .featured-label {
+      display: none;
+    }
+    .featured .featured-label {
+      display: block;
+      text-transform: uppercase;
+      color: var(--ucd-blue-100, #022851);
+      font-size: var(--font-size--small, .875rem);
+      font-weight: var(--font-weight--bold, 700);
+      margin-bottom: var(--spacer--small, .5rem);
+    }
     @media (min-width: 768px) {
       .title {
         font-size: 1.428rem;
       }
-    }
-    .icon {
-      --app-icon-size: 2.5rem;
     }
   `;
 
@@ -44,17 +63,18 @@ export function styles() {
 export function render() {
 return html`
   <style>
-    .icon {color: ${this._brandColorHex}};
-    .container.featured {background-color: ${this._brandColorHex + '1A'}}
+    .icon {color: ${this._brandColorHex};}
+    .container.featured {background-color: ${this._brandColorHex + '1A'};}
   </style>
   <div class="container ${this.featured ? 'featured' : ''}">
     <div class='icon'>
       <app-icon slug="${this.data.icon || this.defaultIcon}" auto-height></app-icon>
     </div>
     <div>
+      <div class='featured-label'>${this.featuredLabel}</div>
       <div class="title"><a href="">${this.data.title}</a></div>
+      <div ?hidden=${this.hideOrganization || !this._organization} class='organization'>via ${this._organization}</div>
+      <div class='description' ?hidden=${!this._description}>${this._description}</div>
     </div>
   </div>
-
-
 `;}

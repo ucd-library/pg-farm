@@ -48,7 +48,6 @@ export default class AppSearch extends Mixin(LitElement)
 
   _onSearchSuccess(e) {
     const data = this.DatabaseModel.getSearchResult(e.id).payload;
-    console.log(data);
     this.total = data.total;
     this.results = data.items;
 

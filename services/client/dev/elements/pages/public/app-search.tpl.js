@@ -1,6 +1,7 @@
 import { html, css } from 'lit';
 import '../../components/app-search-input/app-search-input.js';
 import '../../components/database-teaser/database-teaser.js';
+import '../../components/app-no-results/app-no-results.js';
 
 export function styles() {
   const elementStyles = css`
@@ -25,6 +26,9 @@ export function styles() {
     }
     app-search .search-form-wrapper .dd-wrapper label {
       white-space: nowrap;
+    }
+    app-search database-teaser {
+      margin-bottom: var(--spacer, 1rem);
     }
   `;
 
@@ -58,16 +62,24 @@ return html`
       <div class="l-content">
         <div class="u-space-mt--large">
           <div ?hidden=${this.results?.length}>
-            No results element
+            <app-no-results text="No databases found"></app-no-results>
           </div>
           <div ?hidden=${!this.results?.length}>
             <div class="u-space-mb">
-              <span class='grey italic bold'>${this.total} database${this.total != 1 ? 's' : ''}</span>
-              <div>
-                ${this.results.map(result => html`
-                  <database-teaser .data=${result} featured></database-teaser>
-                `)}
-              </div>
+              <span class='gray italic bold'>${this.total} database${this.total != 1 ? 's' : ''}</span>
+            </div>
+            <div>
+              ${this.results.map(result => html`
+                <database-teaser .data=${result}></database-teaser>
+              `)}
+            </div>
+            <div>
+              <ucd-theme-pagination
+                current-page=${this.queryCtl.getCurrentPage()}
+                max-pages=${this.queryCtl.getMaxPage(this.total)}
+                @page-change=${e => this.queryCtl.setPage(e.detail.page)}
+                xs-screen
+              ></ucd-theme-pagination>
             </div>
           </div>
         </div>

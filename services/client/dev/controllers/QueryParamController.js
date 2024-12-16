@@ -34,7 +34,7 @@ export default class QueryParamController {
    * @description Set app location based on current property value
    * @returns {Promise}
    */
-  async setLocation(){
+  async setLocation(opts={}){
     if ( !this.queryParam ) return;
     let appState = await this.AppStateModel.get();
     const queryParams = new URLSearchParams(appState?.location?.query);
@@ -43,6 +43,9 @@ export default class QueryParamController {
       queryParams.delete(this.queryParam);
     } else {
       queryParams.set(this.queryParam, value);
+    }
+    if ( opts.resetOffset ) {
+      queryParams.delete('offset');
     }
     const qs = queryParams.toString();
     this.AppStateModel.setLocation(`${appState.location.pathname}${qs ? '?'+qs : ''}`);

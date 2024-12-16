@@ -8,7 +8,8 @@ const router = Router();
 const GET_DB_COLUMNS = ["organization_name", "organization_title","organization_id",
   "instance_name","instance_state","instance_id",
   "database_name","database_title","database_short_description",
-  "database_description","database_url","database_tags","database_id"
+  "database_description","database_url","database_tags","database_id",
+  "database_icon", "database_brand_color"
 ];
 
 const USER_COLUMNS = ["username","type"];
@@ -41,6 +42,8 @@ async function search(req, res) {
         title : db.database_title || '',
         short_description : db.database_short_description || '',
         description : db.database_description || '',
+        icon : db.database_icon || '',
+        brandColor : db.database_brand_color || '',
         tags : db.database_tags,
         url : db.database_url || '',
         organization : null,
@@ -76,6 +79,8 @@ router.get('/:organization/:database', async (req, res) => {
       title : db.database_title,
       shortDescription : db.database_short_description,
       description : db.database_description,
+      icon : db.database_icon,
+      brandColor : db.database_brand_color,
       url : db.database_url,
       tags : db.database_tags,
       organization : {
@@ -108,8 +113,8 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
 
 /** Update Metadata **/
 router.patch(
-  '/:organization/:database', 
-  keycloak.protect('instance-admin'), 
+  '/:organization/:database',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
 
   try {
@@ -119,7 +124,7 @@ router.patch(
     }
 
     await database.setMetadata(
-      req.params.database, 
+      req.params.database,
       organization,
       req.body
     );
@@ -166,7 +171,7 @@ router.post('/:organization/:database/init', keycloak.protect('admin'), async (r
 });
 
 /** Get Users **/
-router.get('/:organization/:database/users', 
+router.get('/:organization/:database/users',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -178,7 +183,7 @@ router.get('/:organization/:database/users',
 });
 
 /** Get Schemas **/
-router.get('/:organization/:database/schemas', 
+router.get('/:organization/:database/schemas',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -189,13 +194,13 @@ router.get('/:organization/:database/schemas',
 });
 
 /** Get Tables **/
-router.get('/:organization/:database/schema/:schema/tables', 
+router.get('/:organization/:database/schema/:schema/tables',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.listTables(
-      req.params.organization, 
-      req.params.database, 
+      req.params.organization,
+      req.params.database,
       req.params.schema
     ));
   } catch(e) {
@@ -237,10 +242,10 @@ router.get('/:organization/:database/schema/:schema/access/:username',
 });
 
 /** Grant user schema access **/
-router.put('/:organization/:database/grant/:schema/:user/:permission', 
-  keycloak.protect('instance-admin'), 
+router.put('/:organization/:database/grant/:schema/:user/:permission',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -250,17 +255,17 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
     let resp;
     if( req.params.schema === '_' ) {
       resp = await user.grantDatabaseAccess(
-        req.params.database, 
-        organization, 
-        req.params.schema, 
+        req.params.database,
+        organization,
+        req.params.schema,
         req.params.user,
         req.params.permission
       );
     } else {
       resp = await user.grant(
-        req.params.database, 
-        organization, 
-        req.params.schema, 
+        req.params.database,
+        organization,
+        req.params.schema,
         req.params.user,
         req.params.permission
       );
@@ -273,10 +278,10 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
 });
 
 /** Revoke user schema access **/
-router.delete('/:organization/:database/revoke/:schema/:user/:permission', 
-  keycloak.protect('instance-admin'), 
+router.delete('/:organization/:database/revoke/:schema/:user/:permission',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -286,16 +291,16 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
     let resp;
     if( req.params.schema === '_' ) {
       resp = await user.revokeDatabaseAccess(
-        req.params.database, 
-        organization, 
+        req.params.database,
+        organization,
         req.params.user,
         req.params.permission
       );
     } else {
       resp = await user.revoke(
-        req.params.database, 
-        organization, 
-        req.params.schema, 
+        req.params.database,
+        organization,
+        req.params.schema,
         req.params.user,
         req.params.permission
       );
@@ -308,10 +313,10 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
 });
 
 /** Create foreign data table to PG Farm db **/
-router.post('/:organization/:database/link/:remoteOrg/:remoteDb', 
-  keycloak.protect('instance-admin'), 
+router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -323,7 +328,7 @@ router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
     }
 
     let resp = await database.link(
-      req.params.database, 
+      req.params.database,
       organization,
       req.params.remoteDb,
       remoteOrg,

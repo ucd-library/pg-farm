@@ -8,19 +8,19 @@ import utils from './utils.js';
 class Database {
 
   constructor() {
-    this.METADATA_FIELDS = ['title', 'description', 'shortDescription', 'url', 'tags'];
+    this.METADATA_FIELDS = ['title', 'description', 'shortDescription', 'url', 'tags', 'icon', 'brandColor'];
   }
 
   /**
    * @method getConnection
    * @description Returns a postgres user connection object for a postgres instance
-   * 
-   * @param {String} dbNameOrId PG Farm instance name or ID 
-   * @param {String} orgNameOrId PG Farm organization name or ID 
+   *
+   * @param {String} dbNameOrId PG Farm instance name or ID
+   * @param {String} orgNameOrId PG Farm organization name or ID
    * @param {Object} opts
    * @param {String} opts.username optional.  Defaults to 'postgres'
    * @param {Boolean} opts.useSocket optional.  If true, returns a connection object for a unix socket
-   * 
+   *
    * @returns {Promise<Object>}
    */
   async getConnection(dbNameOrId, orgNameOrId=null, opts={}) {
@@ -48,7 +48,7 @@ class Database {
     let user;
     try {
       user = await this.models.user.get(dbNameOrId, orgNameOrId, opts.username);
-    } catch(e) { 
+    } catch(e) {
       if( username === 'postgres' ) {
         let instance = await this.models.instance.get(db.instance_id);
         return {
@@ -74,12 +74,12 @@ class Database {
   /**
    * @method get
    * @description Get a database by name or ID
-   * 
-   * @param {String} nameOrId database name or ID 
+   *
+   * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {Array} columns optional.  columns to return
-   * 
-   * @returns 
+   *
+   * @returns
    */
   async get(nameOrId, orgNameOrId, columns=null) {
     let organizationId = null;
@@ -103,9 +103,9 @@ class Database {
   /**
    * @method create
    * @description Create a new database
-   * 
-   * @param {*} name 
-   * @param {*} opts 
+   *
+   * @param {*} name
+   * @param {*} opts
    */
   async create(title, opts) {
     if( !opts.name ) {
@@ -114,7 +114,7 @@ class Database {
 
     // make sure the name is prefixed with inst- (instance) prefix
     // this is to avoid conflicts with accessing the postgres instance
-    // by name 
+    // by name
     opts.name = utils.cleanInstDbName(opts.name);
 
     let orgName = '';
@@ -140,13 +140,15 @@ class Database {
   /**
    * @method setMetadata
    * @description Set/patch metadata for a database
-   * 
+   *
    * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId database organization name or ID
    * @param {Object} metadata
    * @param {String} metadata.title optional.  The human title of the database
    * @param {String} metadata.description optional.  A description of the database.  Markdown is supported.
    * @param {String} metadata.shortDescription optional.  A short description of the database
+   * @param {String} metadata.icon optional.  An icon slug for the database e.g. 'fa.solid.database'
+   * @param {String} metadata.brandColor optional.  A ucd brand color slug for the database e.g. 'putah-creek'
    * @param {String} metadata.url optional.  A website for more information about the database
    * @param {Array<String>} metadata.tags optional.  An array of search tags for the database
    */
@@ -168,9 +170,9 @@ class Database {
 
   /**
    * @method ensurePgDatabase
-   * @description Ensure a database exists on a postgres instance.  
+   * @description Ensure a database exists on a postgres instance.
    * Creates the database if it does not exist.
-   * 
+   *
    * @param {String} instNameOrId instance name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {String} dbName database name
@@ -188,15 +190,15 @@ class Database {
   /**
    * @method link
    * @description Create a foreign data wrapper and link a database
-   * in pg-farm.  By default this will link the foriegn dataabases 
+   * in pg-farm.  By default this will link the foriegn dataabases
    * api schema to the local database with a schema of the name
    * of the remote database. Eg: "library/ca-base-layer".api -> "ca-base-layer"
-   * 
-   * @param {String} localOrg 
-   * @param {String} localDb 
+   *
+   * @param {String} localOrg
+   * @param {String} localDb
    * @param {String} remoteDb
    * @param {String} remoteOrg
-   * @param {Object} opts 
+   * @param {Object} opts
    * @param {String} opts.localSchema optional.  The schema to link to.  Defaults to the remote database name
    * @param {String} opts.remoteSchema optional.  The schema to link from on the remote server.  Default is: api
    */
@@ -289,7 +291,6 @@ class Database {
 
     // console.log(countQuery, countParams);
     let count = await client.query(countQuery, countParams);
-
     return {
       items : results.rows,
       total : parseInt(count.rows[0].total),
@@ -315,7 +316,7 @@ class Database {
         delete uaccess.role_name;
         delete uaccess.database_name;
         uaccess = Object.values(uaccess).filter(v => v);
-        
+
         let obj = {name: user, pgPrivileges: uaccess};
 
         let farmUser = pgFarmUsers.find(u => u.username === user);
@@ -347,7 +348,7 @@ class Database {
   async getTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
     let resp = await pgInstClient.getTableAccess(con, con.database, schemaName, tableName);
-    
+
     let userMap = {};
     for( let row of resp.rows ) {
       if( !userMap[row.grantee] ) {
@@ -355,14 +356,14 @@ class Database {
       }
       userMap[row.grantee].push(row.privilege_type);
     }
-    
+
     return userMap;
   }
 
   async getTableAccessByUser(orgNameOrId, dbNameOrId, schemaName, username) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
     let resp = await pgInstClient.getTableAccessByUser(con, con.database, schemaName, username);
-    
+
     let tableMap = {};
     for( let row of resp.rows ) {
       if( !tableMap[row.table_name] ) {
