@@ -25,10 +25,10 @@ console.log(appStateModel);
 // global app components
 import './components/app-build-info/app-build-info.js';
 import './components/app-icon/app-icon.js';
+import './components/app-loader/app-loader.js';
 
 import bundles from './pages/bundles/index.js';
 
-// import './pages/app-search.js';
 // import './pages/app-database.js';
 
 export default class PgfarmApp extends Mixin(LitElement)
@@ -53,11 +53,11 @@ export default class PgfarmApp extends Mixin(LitElement)
     this.page = 'home';
     this.pathInfo = '';
 
-
     this._injectModel('AppStateModel');
   }
 
   async _onAppStateUpdate(e) {
+    this.closeNav();
     const { page, location } = e;
     this.pathInfo = location.pathname;
 
@@ -78,8 +78,11 @@ export default class PgfarmApp extends Mixin(LitElement)
       this.AppStateModel.refresh();
     }
 
-    this.page = page;
-    window.scroll(0,0);
+    // timeout to allow page element to render
+    setTimeout(() => {
+      this.page = page;
+      window.scroll(0,0);
+    }, 300);
   }
 
   /**
@@ -118,6 +121,20 @@ export default class PgfarmApp extends Mixin(LitElement)
     }
     this.logger.warn(`AppMain: bundle ${bundle} not found for page ${page}. Check pages/bundles/index.js`);
     return false;
+  }
+
+  /**
+   * @description Close the app's primary nav menu
+   */
+  closeNav(){
+    let ele = this.renderRoot.querySelector('ucd-theme-header');
+    if ( ele ) {
+      ele.close();
+    }
+    ele = this.renderRoot.querySelector('ucd-theme-quick-links');
+    if ( ele ) {
+      ele.close();
+    }
   }
 
 

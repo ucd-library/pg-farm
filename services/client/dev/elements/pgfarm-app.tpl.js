@@ -77,6 +77,7 @@ return html`
 
 function _renderMainContent(){
   return html`
+  <app-loader></app-loader>
   <div class="main-content">
     <ucdlib-pages
       id='app-pages'

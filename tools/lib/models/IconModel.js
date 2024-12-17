@@ -63,7 +63,7 @@ class IconModel extends BaseModel {
    * @param {(string|string[])} iconSlug - A single icon slug or an array of icon slugs
    * @returns {Object} - An object with the icon slugs as keys and the svgs as values
    */
-  async getFromCache(iconSlug){
+  getFromCache(iconSlug){
     const out = {};
     if ( !Array.isArray(iconSlug) ) iconSlug = [iconSlug];
     iconSlug.forEach(slug => {

@@ -67,7 +67,7 @@ export default class AppIcon extends Mixin(LitElement)
   getSvg(){
     const cached = this.IconModel.getFromCache(this.slug);
     if ( cached?.[this.slug] ) {
-      this.svg = cached;
+      this.svg = cached?.[this.slug];
       return;
     }
     this.IconModel.get(this.slug)

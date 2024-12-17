@@ -28,14 +28,13 @@ class IconService extends BaseService {
         checkCached: () => requestStore.get(id),
         onUpdate: resp => {
           this.store.set({...resp, id},requestStore);
-          if ( resp?.state === 'loaded' ){
-            const payload = resp?.payload?.data || {};
-            Object.keys(payload).forEach(slug => {
-              if ( payload[slug] ) {
-                svgStore.set(slug, payload[slug]);
-              }
-            });
-          }
+          const payload = resp?.payload || {};
+          Object.keys(payload).forEach(slug => {
+            if ( payload[slug] ) {
+              svgStore.set(slug, payload[slug]);
+            }
+          });
+
         }
       })
     );

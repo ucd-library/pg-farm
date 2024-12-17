@@ -1,4 +1,5 @@
 import { Registry } from '@ucd-lib/cork-app-utils';
+import { WaitController } from "@ucd-lib/theme-elements/utils/controllers/wait.js";
 
 /**
  * under development.
@@ -10,12 +11,13 @@ export default class PageDataController {
     this.host = host;
     host.addController(this);
     this.AppStateModel = Registry.getModel('AppStateModel');
+    this.wait = new WaitController(this.host);
 
     this.opts = opts;
   }
 
   async get(requests, opts={}){
-    // todo: show loader
+    this.AppStateModel.showLoading();
 
     requests = this._formatRequests(requests);
     await this._allSettled(requests);
@@ -48,7 +50,10 @@ export default class PageDataController {
       }
     }
 
-    // todo: show loaded
+
+    this.wait.waitForUpdate();
+    this.wait.waitForFrames(3);
+    this.AppStateModel.hideLoading();
 
     return requests;
 
