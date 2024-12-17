@@ -54,6 +54,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     this.pathInfo = '';
 
     this._injectModel('AppStateModel');
+    this.AppStateModel.refresh();
   }
 
   async _onAppStateUpdate(e) {
