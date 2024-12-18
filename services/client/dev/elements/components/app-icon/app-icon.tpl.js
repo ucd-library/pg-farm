@@ -11,6 +11,10 @@ export function styles() {
       width: var(--app-icon-size, var(--spacer, 1rem));
       fill: currentColor;
     }
+    svg {
+      width: 100%;
+      height: auto;
+    }
   `;
 
   return [elementStyles];

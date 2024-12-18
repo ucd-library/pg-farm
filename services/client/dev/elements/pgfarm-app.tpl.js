@@ -87,6 +87,7 @@ function _renderMainContent(){
       <app-features page-id="features"></app-features>
       <app-contact page-id="contact"></app-contact>
       <app-search page-id="search"></app-search>
+      <app-organizations page-id="org"></app-organizations>
       <app-database page-id="db"></app-database>
     </ucdlib-pages>
   </div>
@@ -107,7 +108,7 @@ function _renderHeader(){
       <ucd-theme-primary-nav>
         <a href="/features">Features</a>
         <a href="/search">Find a Database</a>
-        <a href="#">Organizations</a>
+        <a href="/org">Organizations</a>
         <a href="/contact">Contact</a>
       </ucd-theme-primary-nav>
       <ucd-theme-search-popup>
