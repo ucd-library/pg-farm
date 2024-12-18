@@ -55,6 +55,7 @@ export default class AppContact extends Mixin(LitElement)
    */
   _onAppStateUpdate(e){
     if ( e.page !== this.pageId ) return;
+    this.AppStateModel.hideLoading();
     this._showSuccess = false;
   }
 

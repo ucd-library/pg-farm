@@ -8,7 +8,7 @@ export default class AppFeatures extends Mixin(LitElement)
 
   static get properties() {
     return {
-
+      pageId: {type: String, attribute: 'page-id'},
     }
   }
 
@@ -19,6 +19,18 @@ export default class AppFeatures extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
+
+    this._injectModel('AppStateModel');
+  }
+
+  /**
+   * @description Callback for when the app state is updated
+   * @param {Object} e - app state update event
+   * @returns
+   */
+  _onAppStateUpdate(e){
+    if ( e.page !== this.pageId ) return;
+    this.AppStateModel.hideLoading();
   }
 
 }

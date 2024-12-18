@@ -37,7 +37,8 @@ export default class PgfarmApp extends Mixin(LitElement)
   static get properties() {
     return {
       page : {type: String},
-      pathInfo: { type: String }
+      pathInfo: { type: String },
+      _firstAppStateUpdate : { state: true }
     }
   }
 
@@ -50,14 +51,25 @@ export default class PgfarmApp extends Mixin(LitElement)
     this.render = render.bind(this);
     this.loadedBundles = {};
 
+    this._firstAppStateUpdate = false;
+
     this.page = 'home';
     this.pathInfo = '';
 
     this._injectModel('AppStateModel');
+    this.AppStateModel.showLoading();
     this.AppStateModel.refresh();
   }
 
   async _onAppStateUpdate(e) {
+    if ( !this._firstAppStateUpdate ) {
+      setTimeout(() => {
+        this._firstAppStateUpdate = true;
+        document.querySelector('#site-loader').style.display = 'none';
+        this.style.display = 'block';
+      }, 500);
+    }
+    this.AppStateModel.showLoading();
     this.closeNav();
     const { page, location } = e;
     this.pathInfo = location.pathname;
@@ -83,7 +95,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     setTimeout(() => {
       this.page = page;
       window.scroll(0,0);
-    }, 300);
+    }, 200);
   }
 
   /**

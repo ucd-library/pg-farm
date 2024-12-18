@@ -12,6 +12,7 @@ mkdir dist
 
 cp dev/index.html dist/
 cp dev/jwt.html dist/
+cp dev/loader.html.mjs dist/
 cp dev/manifest.json dist/
 
 webpack --config webpack-dist.config.cjs

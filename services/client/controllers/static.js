@@ -3,6 +3,7 @@ import express from 'express';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import pgInstClient from '../../lib/pg-instance-client.js';
+import loaderHtml from '../dev/loader.html.mjs';
 import path from 'path';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
@@ -48,6 +49,7 @@ async function setup(app) {
       return next({
         jsonld, src,
         title : config.client.title,
+        loader: loaderHtml,
         description : '',
         keywords : ''
       });

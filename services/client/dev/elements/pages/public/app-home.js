@@ -53,6 +53,18 @@ export default class AppHome extends Mixin(LitElement)
         icon: 'fa.solid.door-open'
       }
     ];
+
+    this._injectModel('AppStateModel');
+  }
+
+  /**
+   * @description Callback for when the app state is updated
+   * @param {Object} e - app state update event
+   * @returns
+   */
+  _onAppStateUpdate(e){
+    if ( e.page !== this.pageId ) return;
+    this.AppStateModel.hideLoading();
   }
 
 }
