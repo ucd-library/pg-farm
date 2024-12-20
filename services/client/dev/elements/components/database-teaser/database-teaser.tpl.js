@@ -72,7 +72,7 @@ return html`
     </div>
     <div>
       <div class='featured-label'>${this.featuredLabel}</div>
-      <div class="title"><a href="">${this.data.title}</a></div>
+      <div class="title"><a href="/db/${this.data?.organization?.name || '_'}/${this.data?.name || ''}">${this.data.title}</a></div>
       <div ?hidden=${this.hideOrganization || !this._organization} class='organization'>via ${this._organization}</div>
       <div class='description' ?hidden=${!this._description}>${this._description}</div>
     </div>
