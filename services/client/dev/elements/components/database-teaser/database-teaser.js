@@ -61,8 +61,8 @@ export default class DatabaseTeaser extends LitElement {
   }
 
   _setDescription(){
-    if ( this.data.short_description ) {
-      this._description = this.data.short_description;
+    if ( this.data.shortDescription ) {
+      this._description = this.data.shortDescription;
     } else if ( this.data.description ) {
       const d = this.data.description.split(' ');
       this._description = d.slice(0, this.descriptionMaxWords).join(' ') + (d.length > this.descriptionMaxWords ? '...' : '');

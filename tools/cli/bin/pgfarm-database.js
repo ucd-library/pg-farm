@@ -72,5 +72,27 @@ program.command('create')
     database.create(opts, cmd.optsWithGlobals());
   });
 
+program.command('add-featured <org/database>')
+  .description('Add a database to the featured list '+print.pgFarmAdminOnlyMsg())
+  .option('-i, --order-index <number>', 'Order index')
+  .option('-g, --organization-list', "Will add to organization's featured list. If not provided, will add to global featured list")
+  .action((dbName, opts, cmd) => {
+    database.addFeatured(dbName, cmd.optsWithGlobals());
+  });
+
+program.command('remove-featured <org/database>')
+  .description('Remove a database from the featured list '+print.pgFarmAdminOnlyMsg())
+  .option('-g, --organization-list', "Will remove from organization's featured list. If not provided, will remove from global featured list")
+  .action((dbName, opts, cmd) => {
+    database.removeFeatured(dbName, cmd.optsWithGlobals());
+  });
+
+program.command('get-featured')
+  .description('Get a featured database list')
+  .argument('[organization]', 'Organization name. If not provided, will return the global featured list')
+  .action((orgName, opts, cmd) => {
+    database.getFeatured(orgName, cmd.optsWithGlobals());
+  });
+
 wrapAllCmds(program);
 program.parse(process.argv);

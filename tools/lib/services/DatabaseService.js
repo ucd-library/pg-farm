@@ -73,6 +73,53 @@ class DatabaseService extends BaseService {
     return this.store.data.update.get(id);
   }
 
+  async updateFeaturedList(org, db, opts={}) {
+    const ido = {org, db, ...opts};
+    let id = payload.getKey(ido);
+    let url = `${this.basePath}/featured`;
+    if ( opts.organizationList ) url += `/${org}`;
+
+    await this.request({
+      url,
+      fetchOptions: {
+        method : 'PATCH',
+        body: ido,
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onUpdateFeaturedListUpdate(ido, {request}),
+      onLoad: payload => {
+        this.store.data.getFeaturedList.cache.clear();
+        this.store.onUpdateFeaturedListUpdate(ido, {payload: payload.body})
+      },
+      onError: error => this.store.onUpdateFeaturedListUpdate(ido, {error})
+    });
+
+    return this.store.data.updateFeaturedList.get(id);
+  }
+
+  async getFeaturedList(org) {
+    const ido = {org};
+    let id = payload.getKey(ido);
+    let url = `${this.basePath}/featured`;
+    if ( org ) url += `/${org}`;
+
+    await this.checkRequesting(
+      id, this.store.data.getFeaturedList,
+      () => this.request({
+          url,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onGetFeaturedListUpdate(ido, {request}),
+          onLoad: payload => this.store.onGetFeaturedListUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onGetFeaturedListUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.getFeaturedList.get(id);
+  }
+
   search(searchParams) {
     let id = this.searchId++;
 

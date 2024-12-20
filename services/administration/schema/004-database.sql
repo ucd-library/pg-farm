@@ -175,3 +175,19 @@ CREATE TABLE IF NOT EXISTS pgfarm.pg_rest_config (
     updated_at timestamp NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS pgfarm.database_featured (
+  database_featured_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  database_id UUID NOT NULL REFERENCES pgfarm.database(database_id),
+  organization_id UUID REFERENCES pgfarm.organization(organization_id),
+  order_index INT NOT NULL DEFAULT 0,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE VIEW pgfarm.instance_database_featured AS
+  SELECT
+    idv.*,
+    df.order_index as order_index,
+    df.organization_id as featured_organization_id,
+    df.database_featured_id as database_featured_id
+  FROM pgfarm.instance_database idv
+  INNER JOIN pgfarm.database_featured df ON df.database_id = idv.database_id;

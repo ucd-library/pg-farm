@@ -40,7 +40,7 @@ async function search(req, res) {
         id : db.database_id,
         name : db.database_name,
         title : db.database_title || '',
-        short_description : db.database_short_description || '',
+        shortDescription : db.database_short_description || '',
         description : db.database_description || '',
         icon : db.database_icon || '',
         brandColor : db.database_brand_color || '',
@@ -63,6 +63,68 @@ async function search(req, res) {
     });
 
     res.json(result);
+  } catch(e) {
+    handleError(res, e);
+  }
+}
+
+/**
+ * Manage featured database lists
+ */
+router.patch('/featured', keycloak.protect('admin'), async (req, res) => patchFeatured(req, res));
+router.patch('/featured/:organization', keycloak.protect('organization-admin'),  async (req, res) => patchFeatured(req, res, true));
+async function patchFeatured(req, res, organizationList){
+  const db = req.body.db;
+  const org = req.body.org;
+  req.body.organizationList = organizationList;
+
+  try {
+    if ( req.body.action === 'remove' ) {
+      await database.removeFeatured(db, org, req.body.organizationList);
+    } else {
+      await database.makeFeatured(db, org, req.body);
+    }
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+}
+
+/**
+ * Get featured database lists
+ */
+router.get('/featured', async (req, res) => getFeatured(res));
+router.get('/featured/:organization', async (req, res) => getFeatured(res, req.params.organization));
+async function getFeatured(res, organization){
+  try {
+    let results = await database.getFeatured(organization);
+    const resp = results.map(db => {
+      let result = {
+        id : db.database_id,
+        name : db.database_name,
+        title : db.database_title || '',
+        shortDescription : db.database_short_description || '',
+        description : db.database_description || '',
+        icon : db.database_icon || '',
+        brandColor : db.database_brand_color || '',
+        tags : db.database_tags,
+        url : db.database_url || '',
+        organization : null,
+        state : db.instance_state,
+        score : db.rank || -1
+      }
+
+      if( db.organization_id ) {
+        result.organization = {
+          id : db.organization_id,
+          name : db.organization_name,
+          title : db.organization_title
+        }
+      }
+
+      return result;
+    });
+    res.json(resp);
   } catch(e) {
     handleError(res, e);
   }

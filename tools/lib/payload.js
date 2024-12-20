@@ -1,7 +1,9 @@
 import {PayloadUtils} from '@ucd-lib/cork-app-utils'
 
-const ID_ORDER = ['org', 'instance', 'db', 'schema', 
-  'schemaTable', 'table', 'user', 'action', 'access'];
+const ID_ORDER = ['org', 'instance', 'db', 'schema',
+  'schemaTable', 'table', 'user', 'action', 'access',
+  'orderIndex', 'organizationList'
+];
 
 let inst = new PayloadUtils({
   idParts: ID_ORDER,

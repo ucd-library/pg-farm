@@ -22,7 +22,6 @@ export default class PageDataController {
     requests = this._formatRequests(requests);
     await this._allSettled(requests);
 
-
     const errors = requests.filter(r => r.response.status === 'rejected' || r.response?.value?.state === 'error');
     if ( errors.length ) {
       // todo: handle error
@@ -49,7 +48,6 @@ export default class PageDataController {
         r.setCtlProp(value);
       }
     }
-
 
     this.wait.waitForUpdate();
     this.wait.waitForFrames(3);

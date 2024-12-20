@@ -89,6 +89,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     // in which case we need to fire it again
     if ( !bundleAlreadyLoaded ){
       this.AppStateModel.refresh();
+      return;
     }
 
     // timeout to allow page element to render

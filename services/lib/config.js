@@ -172,6 +172,7 @@ const config = {
       get ORGANIZATION() { return config.adminDb.schema+'.organization' },
       get INSTANCE() { return config.adminDb.schema+'.instance' },
       get DATABASE() { return config.adminDb.schema+'.database' },
+      get DATABASE_FEATURED() { return config.adminDb.schema+'.database_featured' },
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_USER() { return config.adminDb.schema+'.instance_user' },
       get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' }
@@ -179,6 +180,7 @@ const config = {
     views : {
       get INSTANCE() { return config.adminDb.schema+'.instance_view' },
       get INSTANCE_DATABASE() { return config.adminDb.schema+'.instance_database' },
+      get INSTANCE_DATABASE_FEATURED() { return config.adminDb.schema+'.instance_database_featured' },
       get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' },
       get DATABASE_EVENT() { return config.adminDb.schema+'.database_last_event_view' },
       get ORGANIZATION_USER() { return config.adminDb.schema+'.organization_user' },

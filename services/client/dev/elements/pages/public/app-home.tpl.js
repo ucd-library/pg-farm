@@ -1,11 +1,23 @@
 import { html, css } from 'lit';
 import chunkIntoColumns from '../../../utils/chunkIntoColumns.js';
+import '../../components/database-teaser/database-teaser.js';
 
 export function styles() {
   const elementStyles = css`
     app-home {
       display: block;
     }
+    .featured-projects database-teaser {
+      margin-top: var(--spacer--medium, 2rem);
+    }
+    .featured-projects database-teaser:first-child {
+      margin-top: 0;
+    }
+    .project-cta {
+      padding-top: 1rem;
+    }
+    .featured-projects[hidden] + .project-cta {
+      padding-top: 3rem;
   `;
 
   return [elementStyles];
@@ -46,7 +58,7 @@ return html`
   </div>
 </div>
 
-<div class='u-space-py-responsive--medium-2x'>
+<div class='u-space-py-responsive--medium-2x featured-projects' ?hidden=${!this.dataCtl.featuredDbs?.length}>
   <div class='l-container'>
     <div class='l-2col l-2col--33-67'>
       <div class='l-first'>
@@ -55,18 +67,15 @@ return html`
         </h2>
       </div>
       <div class='l-second'>
-        <div class='o-box u-space-mb--large'>
-          <div class='h4'>Project Teaser 1</div>
-        </div>
-        <div class='o-box'>
-          <div class='h4'>Project Teaser 2</div>
-        </div>
+        ${this.dataCtl?.featuredDbs?.map(db => html`
+          <database-teaser .data=${db}></database-teaser>
+        `)}
       </div>
     </div>
   </div>
 </div>
 
-<div class='u-space-pt u-space-pb--medium-2x'>
+<div class='u-space-pb--medium-2x project-cta'>
   <div class='alignable-promo'>
     <div class="alignable-promo__wrapper">
       <h2 class='black u-space-mb--large'>To get started, tell us about your project</h2>

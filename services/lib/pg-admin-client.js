@@ -373,6 +373,66 @@ class PgFarmAdminClient {
     return iconfig;
   }
 
+  async getFeaturedDatabases(orgNameOrId){
+    const values = [];
+    let sql = `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_FEATURED}`;
+    if( orgNameOrId ) {
+      sql += ` WHERE featured_organization_id = ${this.schema}.get_organization_id($1)`;
+      values.push(orgNameOrId);
+    } else {
+      sql += ` WHERE featured_organization_id IS NULL`;
+    }
+    sql += ' ORDER BY order_index ASC';
+    let resp = await client.query(sql, values);
+    return resp.rows;
+  }
+
+  /**
+   * @description add a database to the featured list for an organization or globally
+   * @param {String} nameOrId - database name or ID
+   * @param {String} orgNameOrId - organization name or ID
+   * @param {Object} opts - options
+   * @param {Number} opts.orderIndex - order index for the database in the featured list
+   * @param {Boolean} opts.organizationList - if true, database will be featured for the organization. Otherwise, it will be featured globally
+   * @returns {Promise<Object>}
+   */
+  async addFeaturedDatabase(nameOrId, orgNameOrId, opts) {
+    const orderIndex = opts?.orderIndex || 0;
+    const values = [nameOrId, orgNameOrId, orderIndex];
+    let sql = `
+      INSERT INTO ${config.adminDb.tables.DATABASE_FEATURED}
+      (database_id, order_index, organization_id)
+      VALUES (${this.schema}.get_database_id($1, $2), $3, ${opts?.organizationList ? `${this.schema}.get_organization_id($2)` : 'NULL'})
+    `;
+    return client.query(sql, values);
+  }
+
+  /**
+   * @description Update the order index of a featured database.
+   * @param {String} featuredId - database featured ID
+   * @param {Number} orderIndex - new order index
+   * @returns {Promise<Object>}
+   */
+  async setFeaturedDatabaseOrder(featuredId, orderIndex) {
+    return client.query(`
+      UPDATE ${config.adminDb.tables.DATABASE_FEATURED}
+      SET order_index = $1
+      WHERE database_featured_id = $2
+    `, [orderIndex, featuredId]);
+  }
+
+  /**
+   * @description Remove a database from the featured list
+   * @param {String} featuredId - database featured ID
+   * @returns
+   */
+  async removeFeaturedDatabase(featuredId) {
+    return client.query(`
+      DELETE FROM ${config.adminDb.tables.DATABASE_FEATURED}
+      WHERE database_featured_id = $1
+    `, [featuredId]);
+  }
+
   /**
    * @method getDatabase
    * @description get database by name or ID

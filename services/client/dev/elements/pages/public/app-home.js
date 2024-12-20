@@ -3,6 +3,7 @@ import {render, styles} from "./app-home.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
+import PageDataController from '../../../controllers/PageDataController.js';
 
 export default class AppHome extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -54,7 +55,9 @@ export default class AppHome extends Mixin(LitElement)
       }
     ];
 
-    this._injectModel('AppStateModel');
+    this.dataCtl = new PageDataController(this);
+
+    this._injectModel('AppStateModel', 'DatabaseModel');
   }
 
   /**
@@ -62,9 +65,11 @@ export default class AppHome extends Mixin(LitElement)
    * @param {Object} e - app state update event
    * @returns
    */
-  _onAppStateUpdate(e){
+  async _onAppStateUpdate(e){
     if ( e.page !== this.pageId ) return;
-    this.AppStateModel.hideLoading();
+    await this.dataCtl.get([
+      {request: this.DatabaseModel.getFeaturedList(), ctlProp: 'featuredDbs'}
+    ]);
   }
 
 }

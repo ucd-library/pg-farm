@@ -169,6 +169,78 @@ class Database {
   }
 
   /**
+   * @description Add a database to an organization's or the global featured list
+   * @param {String} nameOrId - database name or ID
+   * @param {String} orgNameOrId - organization name or ID
+   * @param {Object} opts - options
+   * @param {Number} opts.orderIndex - order index of the database in the list
+   * @param {Boolean} opts.organizationList - if true, add to organization's featured list.  If false or not provided, add to global featured list
+   */
+  async makeFeatured(nameOrId, orgNameOrId, opts={}) {
+    let db = await this.get(nameOrId, orgNameOrId);
+
+    const featured = await this.getFeatured(opts.organizationList ? orgNameOrId : null);
+    const orderIndex = Number(opts.orderIndex) || 0;
+
+    const selfInList = featured.find(f => f.database_id === db.database_id);
+    if( selfInList ) {
+      if (orderIndex === selfInList.order_index || featured.length === 1) {
+        return;
+      }
+      const i = featured.findIndex(f => f.database_id === db.database_id);
+      featured.splice(i, 1);
+      featured.splice(orderIndex, 0, selfInList);
+    } else {
+      featured.splice(orderIndex, 0, {
+        database_id : db.database_id,
+        database_name : db.database_name
+      });
+    }
+
+    for (let i = 0; i < featured.length; i++) {
+      const item = featured[i];
+      if ( !item.database_featured_id ){
+        const o = {orderIndex: i, organizationList: opts.organizationList}
+        await client.addFeaturedDatabase(db.database_id, db.organization_id, o);
+        continue;
+      }
+      await client.setFeaturedDatabaseOrder(item.database_featured_id, i);
+    }
+  }
+
+  /**
+   * @description Remove a database from an organization's or the global featured list
+   * @param {String} nameOrId - database name or ID
+   * @param {String} orgNameOrId - organization name or ID
+   * @param {Boolean} organizationList - if true, remove from organization's featured list; else, remove from global featured list
+   */
+  async removeFeatured(nameOrId, orgNameOrId, organizationList) {
+    let db = await this.get(nameOrId, orgNameOrId);
+    let featured = await this.getFeatured(organizationList ? orgNameOrId : null);
+
+    let item = featured.find(f => f.database_id === db.database_id);
+    if( !item ) {
+      throw new Error('Database is not in the featured list');
+    }
+    await client.removeFeaturedDatabase(item.database_featured_id);
+    featured.filter(f => f.database_id !== db.database_id);
+    for (let i = 0; i < featured.length; i++) {
+      const item = featured[i];
+      await client.setFeaturedDatabaseOrder(item.database_featured_id, i);
+    }
+  }
+
+  async getFeatured(orgNameOrId) {
+    let organizationId = null;
+    if( orgNameOrId ) {
+      let org = await client.getOrganization(orgNameOrId);
+      organizationId = org.organization_id;
+    }
+
+    return client.getFeaturedDatabases(organizationId);
+  }
+
+  /**
    * @method ensurePgDatabase
    * @description Ensure a database exists on a postgres instance.
    * Creates the database if it does not exist.
