@@ -1,0 +1,9 @@
+a.prefixed-icon {
+  display: inline-flex;
+  align-items: center;
+}
+a.prefixed-icon app-icon {
+  margin-right: var(--spacer--small, 1rem);
+  --app-icon-size: var(--font-size, 1rem);
+  color: var(--ucd-blue-70, #73ABDD);
+}

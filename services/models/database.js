@@ -314,6 +314,7 @@ class Database {
     let params = [];
     let countParams = [];
     let additionalSelect = '';
+    let additionalJoin = '';
     opts.orderBy = 'database_title';
 
     if( opts.text ) {
@@ -327,7 +328,16 @@ class Database {
     if( opts.organization ) {
       params.push(opts.organization);
       countParams.push(opts.organization);
-      where.push(` organization_name = ${params.length}`);
+      where.push(` organization_name = $${params.length}`);
+
+      if ( opts.excludeFeatured ) {
+        additionalJoin += ` LEFT JOIN
+        ${config.adminDb.tables.DATABASE_FEATURED} fd ON
+        fd.database_id = ${config.adminDb.views.INSTANCE_DATABASE}.database_id
+        AND fd.organization_id = ${config.adminDb.views.INSTANCE_DATABASE}.organization_id
+        `;
+        where.push(` fd.database_id IS NULL`);
+      }
     }
 
     if( opts.tags ) {
@@ -338,8 +348,8 @@ class Database {
 
     query += where.join(' AND ');
 
-    let itemQuery = 'SELECT * '+additionalSelect+' FROM '+config.adminDb.views.INSTANCE_DATABASE;
-    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE;
+    let itemQuery = 'SELECT * '+additionalSelect+' FROM '+config.adminDb.views.INSTANCE_DATABASE + additionalJoin;
+    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE + additionalJoin;
 
     countQuery += query;
 

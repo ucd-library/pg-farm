@@ -88,6 +88,7 @@ function _renderMainContent(){
       <app-contact page-id="contact"></app-contact>
       <app-search page-id="search"></app-search>
       <app-organizations page-id="org"></app-organizations>
+      <app-organization page-id="org-single"></app-organization>
       <app-database page-id="db"></app-database>
     </ucdlib-pages>
   </div>

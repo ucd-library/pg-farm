@@ -18,7 +18,7 @@ return html`
         <h1>Organizations</h1>
       </div>
       <div class='page-header__description'>
-        Something will go here
+        Something will go here. There is currently no figma design and no search method, so this is a todo
       </div>
     </div>
   </div>

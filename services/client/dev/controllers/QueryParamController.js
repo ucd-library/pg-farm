@@ -16,7 +16,7 @@ export default class QueryParamController {
     this.queryParam = queryParam;
     this.hostProperty = opts.hostProperty;
     this.value = '';
-    this.defaultValue = opts.defaultValue || '';
+    this.defaultValue = opts.defaultValue === undefined ? '' : opts.defaultValue;
     this.valueType = opts.type || 'string';
   }
 
@@ -88,5 +88,9 @@ export default class QueryParamController {
 
   equals(value){
     return this.getProperty() === value;
+  }
+
+  exists(){
+    return this.getProperty() !== this.defaultValue;
   }
 }

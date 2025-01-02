@@ -6,6 +6,7 @@ import cssProps from './css-props.css';
 import fonts from './fonts.css';
 import forms from './forms.css';
 import headings from './headings.css';
+import icons from './icons.css';
 import layout from './layout.css';
 import pageHeader from './page-header.css';
 import spacing from './spacing.css';
@@ -19,6 +20,7 @@ const styles = `
   ${fonts}
   ${forms}
   ${headings}
+  ${icons}
   ${layout}
   ${pageHeader}
   ${spacing}

@@ -19,6 +19,10 @@ class AppStateModelImpl extends AppStateModel {
       let page = update.location.path ? update.location.path[0] : 'home';
       if( !page ) page = 'home'
 
+      if ( page === 'org' && update.location.path.length > 1 ) {
+        page = 'org-single';
+      }
+
       update.page = page;
     }
 

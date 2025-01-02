@@ -6,7 +6,7 @@ export function styles() {
     :host {
       display: block;
     }
-    form {
+    .search-bar {
       display: flex;
       align-items: center;
       padding: var(--spacer--small, .5rem) .75rem;
@@ -38,6 +38,9 @@ export function styles() {
     button:hover {
       background-color: var(--ucd-blue-70, #73ABDD);
     }
+    label {
+      color: var(--app-search-input-label-color, var(--ucd-blue, #022851));
+    }
   `;
 
   return [formStyles, elementStyles];
@@ -46,15 +49,17 @@ export function styles() {
 export function render() {
 return html`
   <form @submit="${this._onFormSubmit}">
-    <input
-      placeholder=${this.placeholder}
-      .value="${this.value || ''}"
-      ?disabled=${this.disabled}
-      @input="${e => this.value = e.target.value}">
-    <button type="submit">
-      <app-icon slug='fa.solid.magnifying-glass' fetch-method='page-load'></app-icon>
-    </button>
+    <label ?hidden=${!this.label} for='app-search-input'>${this.label}</label>
+    <div class='search-bar'>
+      <input
+        id='app-search-input'
+        placeholder=${this.placeholder}
+        .value="${this.value || ''}"
+        ?disabled=${this.disabled}
+        @input="${e => this.value = e.target.value}">
+      <button type="submit">
+        <app-icon slug='fa.solid.magnifying-glass' fetch-method='page-load'></app-icon>
+      </button>
+    </div>
   </form>
-
-
 `;}

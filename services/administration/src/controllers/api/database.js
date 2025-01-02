@@ -27,7 +27,8 @@ async function search(req, res) {
       tags : input.tags,
       organization : input.organization,
       limit : input.limit ? parseInt(input.limit) : 10,
-      offset : input.offset ? parseInt(input.offset) : 0
+      offset : input.offset ? parseInt(input.offset) : 0,
+      excludeFeatured : input.excludeFeatured,
     };
 
     if( input.onlyMine && req.user ) {

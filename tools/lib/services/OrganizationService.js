@@ -9,7 +9,7 @@ class OrganizationService extends BaseService {
   constructor() {
     super();
     this.store = OrganizationStore;
-    this.basePath = `${config.host}/api/organization`;
+    this.basePath = `${serviceUtils.host}/api/organization`;
   }
 
   async create(opts) {

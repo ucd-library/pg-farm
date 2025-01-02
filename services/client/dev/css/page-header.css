@@ -31,3 +31,6 @@
 .page-header__subtitle + .page-header__description {
   margin-top: var(--spacer, 1rem);
 }
+.page-header__links {
+  margin-top: var(--spacer--medium, 1.5rem);
+}

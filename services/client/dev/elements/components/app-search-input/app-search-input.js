@@ -21,7 +21,9 @@ export default class AppSearchInput extends Mixin(LitElement)
       value: {type: String},
       disabled: {type: Boolean},
       placeholder: {type: String},
-      queryParam: {type: String, attribute: 'query-param'}
+      label: {type: String},
+      queryParam: {type: String, attribute: 'query-param'},
+      grayLabel: {type: Boolean, attribute: 'gray-label'}
     }
   }
 
@@ -35,6 +37,8 @@ export default class AppSearchInput extends Mixin(LitElement)
     this.value = '';
     this.disabled = false;
     this.placeholder = '';
+    this.label = '';
+    this.grayLabel = false;
 
     this._injectModel('AppStateModel');
   }
