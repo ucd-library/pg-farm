@@ -42,7 +42,7 @@ export default class AppDatabase extends Mixin(LitElement)
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
     await this.dataCtl.get([
-      {request: this.DatabaseModel.get(this.orgName, this.dbName), ctlProp: 'db'}
+      {request: this.DatabaseModel.get(this.orgName, this.dbName), ctlProp: 'db', errorMessage: 'Unable to load database'}
     ]);
   }
 

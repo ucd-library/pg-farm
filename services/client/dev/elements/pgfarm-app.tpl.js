@@ -22,47 +22,6 @@ export function styles() {
         width: 12rem;
       }
     }
-
-    .loading-dots {
-      text-align: center;
-      z-index: 5;
-      color: var(--default-primary-color);
-    }
-
-    .dot {
-      display: inline;
-      margin-left: 0.2em;
-      margin-right: 0.2em;
-      position: relative;
-      font-size: 3.5em;
-      opacity: 1;
-    }
-
-    .dot.one {
-      animation-delay: 0.2s;
-    }
-    .dot.two {
-      animation-delay: 0.4s;
-    }
-    .dot.three {
-      animation-delay: 0.6s;
-    }
-
-    @keyframes showHideDot {
-      0% {
-        opacity: 0;
-      }
-      50% {
-        opacity: 1;
-      }
-      60% {
-        opacity: 1;
-      }
-      100% {
-        opacity: 0;
-      }
-    }
-
   `;
 
   return [elementStyles];
@@ -78,6 +37,7 @@ return html`
 function _renderMainContent(){
   return html`
   <app-loader></app-loader>
+  <app-error></app-error>
   <div class="main-content">
     <ucdlib-pages
       id='app-pages'

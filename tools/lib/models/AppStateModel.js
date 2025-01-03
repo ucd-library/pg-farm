@@ -42,6 +42,14 @@ class AppStateModelImpl extends AppStateModel {
     this.store.emit(this.store.events.APP_LOADING_UPDATE, {show: false});
   }
 
+  showError(opts){
+    this.store.emit(this.store.events.APP_ERROR_UPDATE, {show: true, opts});
+  }
+
+  hideError(){
+    this.store.emit(this.store.events.APP_ERROR_UPDATE, {show: false});
+  }
+
 }
 
 const model = new AppStateModelImpl();

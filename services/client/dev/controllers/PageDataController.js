@@ -22,13 +22,14 @@ export default class PageDataController {
     requests = this._formatRequests(requests);
     await this._allSettled(requests);
 
-    const errors = requests.filter(r => r.response.status === 'rejected' || r.response?.value?.state === 'error');
+    const errors = requests.filter(r => this._requestIsError(r) && !r.ignoreError);
     if ( errors.length ) {
-      // todo: handle error
+      this.AppStateModel.showError({errors});
       return;
     }
 
     for( let r of requests ) {
+      if ( this._requestIsError(r) ) continue;
       let value;
       if ( !r.returnedResponse || r.returnedResponse === 'payload' ){
         value = r.response?.value?.payload;
@@ -70,6 +71,10 @@ export default class PageDataController {
     for( let i = 0; i < results.length; i++ ) {
       requests[i].response = results[i];
     }
+  }
+
+  _requestIsError(request) {
+    return request.response.status === 'rejected' || request.response?.value?.state === 'error';
   }
 
   _formatRequests(requests) {

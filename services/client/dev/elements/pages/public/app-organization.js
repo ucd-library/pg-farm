@@ -68,9 +68,22 @@ export default class AppOrganization extends Mixin(LitElement)
 
     // get data
     await this.dataCtl.get([
-      {request: this.OrganizationModel.get(this.orgName), ctlProp: 'org'},
-      {request: this.DatabaseModel.getFeaturedList(this.orgName), ctlProp: 'featured'},
-      {request: this.DatabaseModel.search(searchOpts), hostCallback: '_onSearchSuccess', returnedResponse: 'request'}
+      {
+        request: this.OrganizationModel.get(this.orgName),
+        ctlProp: 'org',
+        errorMessage: 'Unable to load organization'
+      },
+      {
+        request: this.DatabaseModel.getFeaturedList(this.orgName),
+        ctlProp: 'featured',
+        errorMessage: 'Unable to load featured databases'
+      },
+      {
+        request: this.DatabaseModel.search(searchOpts),
+        hostCallback: '_onSearchSuccess',
+        returnedResponse: 'request',
+        errorMessage: 'Unable to load organization databases'
+      }
     ]);
   }
 

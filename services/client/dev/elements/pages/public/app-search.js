@@ -42,7 +42,12 @@ export default class AppSearch extends Mixin(LitElement)
     if ( e.page !== this.pageId ) return;
     await this.queryCtl.setFromLocation();
     await this.dataCtl.get([
-      {request: this.DatabaseModel.search(e.location.query), hostCallback: '_onSearchSuccess', returnedResponse: 'request'}
+      {
+        request: this.DatabaseModel.search(e.location.query),
+        hostCallback: '_onSearchSuccess',
+        returnedResponse: 'request',
+        errorMessage: 'Error when performing database search'
+      }
     ])
   }
 

@@ -68,7 +68,7 @@ export default class AppHome extends Mixin(LitElement)
   async _onAppStateUpdate(e){
     if ( e.page !== this.pageId ) return;
     await this.dataCtl.get([
-      {request: this.DatabaseModel.getFeaturedList(), ctlProp: 'featuredDbs'}
+      {request: this.DatabaseModel.getFeaturedList(), ctlProp: 'featuredDbs', ignoreError: true}
     ]);
   }
 
