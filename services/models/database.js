@@ -315,14 +315,22 @@ class Database {
     let countParams = [];
     let additionalSelect = '';
     let additionalJoin = '';
-    opts.orderBy = 'database_title';
+    if ( opts.orderBy && !['database_title', 'rank'].includes(opts.orderBy) ) {
+      opts.orderBy = 'database_title';
+    }
+    opts.orderDirection = opts.orderBy === 'rank' ? 'DESC' : 'ASC';
 
     if( opts.text ) {
       params.push(opts.text);
       countParams.push(opts.text);
-      opts.orderBy = 'rank';
+      if ( !opts.orderBy ) {
+        opts.orderBy = 'rank';
+        opts.orderDirection = 'DESC';
+      }
       additionalSelect += ', ts_rank_cd(tsv_content, plainto_tsquery(\'english\', $'+params.length+')) AS rank';
       where.push(` tsv_content @@ plainto_tsquery('english', $${params.length})`);
+    } else {
+      opts.orderBy = 'database_title';
     }
 
     if( opts.organization ) {
@@ -354,8 +362,8 @@ class Database {
     countQuery += query;
 
     if( opts.orderBy ) {
-      params.push(opts.orderBy);
-      query += ' ORDER BY $'+(params.length);
+      query += ' ORDER BY '+opts.orderBy;
+      query += ' '+opts.orderDirection;
     }
     if( opts.limit ) {
       params.push(opts.limit);

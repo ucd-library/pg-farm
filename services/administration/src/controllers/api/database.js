@@ -29,6 +29,7 @@ async function search(req, res) {
       limit : input.limit ? parseInt(input.limit) : 10,
       offset : input.offset ? parseInt(input.offset) : 0,
       excludeFeatured : input.excludeFeatured,
+      orderBy : input.orderBy
     };
 
     if( input.onlyMine && req.user ) {
