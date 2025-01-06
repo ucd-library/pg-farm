@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS pgfarm.database (
   name text NOT NULL,
   title text NOT NULL,
   short_description text,
+  icon text,
+  brand_color text,
   pgrest_hostname TEXT NOT NULL UNIQUE,
   description text,
   url text,
@@ -38,9 +40,9 @@ END
 $$ LANGUAGE plpgsql;
 
 -- Create a trigger to call the function before insert or update
-CREATE OR REPLACE TRIGGER tsvectorupdate 
-BEFORE INSERT OR UPDATE ON pgfarm.database 
-FOR EACH ROW 
+CREATE OR REPLACE TRIGGER tsvectorupdate
+BEFORE INSERT OR UPDATE ON pgfarm.database
+FOR EACH ROW
 EXECUTE FUNCTION database_tsvector_trigger();
 
 CREATE OR REPLACE FUNCTION check_organization_id()
@@ -121,11 +123,11 @@ CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
         RAISE EXCEPTION 'Database not found: %', name_or_id;
       END IF;
 
-    ELSE 
+    ELSE
       SELECT pgfarm.get_organization_id(org_name_or_id) INTO oid;
 
       SELECT database_id INTO dbid FROM pgfarm.database
-      WHERE 
+      WHERE
         (name = name_or_id OR database_id=try_cast_uuid(name_or_id)) AND
         organization_id = oid;
 
@@ -133,7 +135,7 @@ CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
         RAISE EXCEPTION 'Database not found: %/%', org_name_or_id, name_or_id;
       END IF;
 
-    END IF; 
+    END IF;
 
     RETURN dbid;
   END;
@@ -157,7 +159,9 @@ CREATE OR REPLACE VIEW pgfarm.instance_database AS
     db.tags as database_tags,
     db.pgrest_hostname as pgrest_hostname,
     db.database_id as database_id,
-    db.tsv_content as tsv_content
+    db.tsv_content as tsv_content,
+    db.icon as database_icon,
+    db.brand_color as database_brand_color
   FROM pgfarm.database db
   LEFT JOIN pgfarm.instance i ON i.instance_id = db.instance_id
   LEFT JOIN pgfarm.organization o ON o.organization_id = i.organization_id;
@@ -171,3 +175,19 @@ CREATE TABLE IF NOT EXISTS pgfarm.pg_rest_config (
     updated_at timestamp NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS pgfarm.database_featured (
+  database_featured_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  database_id UUID NOT NULL REFERENCES pgfarm.database(database_id),
+  organization_id UUID REFERENCES pgfarm.organization(organization_id),
+  order_index INT NOT NULL DEFAULT 0,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE VIEW pgfarm.instance_database_featured AS
+  SELECT
+    idv.*,
+    df.order_index as order_index,
+    df.organization_id as featured_organization_id,
+    df.database_featured_id as database_featured_id
+  FROM pgfarm.instance_database idv
+  INNER JOIN pgfarm.database_featured df ON df.database_id = idv.database_id;

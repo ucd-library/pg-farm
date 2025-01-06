@@ -1,58 +1,26 @@
 import { html, css } from 'lit';
+import user from '../utils/user.js';
 
 export function styles() {
   const elementStyles = css`
-    :host {
+    pgfarm-app {
       display: block;
     }
-
-    .main-content {
-      flex: 1;
+    .site-credits__logo app-icon {
       width: 100%;
+      --app-icon-size: 100%;
     }
+    .footer-spacer__logo app-icon {
+      width: 6rem;
+      --app-icon-size: 100%;
 
-    .loading-dots {
-      text-align: center;
-      z-index: 5;
-      color: var(--default-primary-color);
     }
-
-    .dot {
-      display: inline;
-      margin-left: 0.2em;
-      margin-right: 0.2em;
-      position: relative;
-      font-size: 3.5em;
-      opacity: 1;
-    }
-
-    .dot.one {
-      animation-delay: 0.2s;
-    }
-    .dot.two {
-      animation-delay: 0.4s;
-    }
-    .dot.three {
-      animation-delay: 0.6s;
-    }
-
-    @keyframes showHideDot {
-      0% {
-        opacity: 0;
+    @media (min-width: 300px) {
+      .site-credits__logo app-icon {
+        width: 220px;
       }
-      50% {
-        opacity: 1;
-      }
-      60% {
-        opacity: 1;
-      }
-      100% {
-        opacity: 0;
-      }
-    }
-    @media (max-width: 768px) {
-      .footer.site-frame {
-        padding: 0.5rem;
+      .footer-spacer__logo app-icon {
+        width: 12rem;
       }
     }
   `;
@@ -60,100 +28,124 @@ export function styles() {
   return [elementStyles];
 }
 
-export function render() { 
+export function render() {
 return html`
+  <div class='${user.loggedIn ? 'user-logged-in' : 'user-logged-out'}'>
+    ${ _renderHeader.call(this) }
+    ${ _renderMainContent.call(this) }
+    ${ _renderFooter.call(this) }
+  </div>
+`;}
 
-  <ucd-theme-header
-    site-name="PG Farm"
-    slogan="Research Databases as a Service"
-    figure-src=""
-    prevent-fixed>
-    <ucd-theme-primary-nav>
-      <a href="/search">Discover</a>
-      <a href="/about">About</a>
-    </ucd-theme-primary-nav>
-  </ucd-theme-header>
-
+function _renderMainContent(){
+  return html`
+  <app-loader></app-loader>
+  <app-error></app-error>
   <div class="main-content">
     <ucdlib-pages
-      selected="${this.page}"
-      selectedAttribute="visible"
-    >
-      <div id="loading" ?hidden="${this.page}">
-        <img src="/images/logos/logo-icon.svg" style="max-width: 128px" />
-        <div class="loading-dots">
-          <h1 class="dot one">.</h1>
-          <h1 class="dot two">.</h1>
-          <h1 class="dot three">.</h1>
+      id='app-pages'
+      selected=${this.page}
+      attr-for-selected='page-id'>
+      <app-home page-id="home"></app-home>
+      <app-features page-id="features"></app-features>
+      <app-contact page-id="contact"></app-contact>
+      <app-search page-id="search"></app-search>
+      <app-organizations page-id="org"></app-organizations>
+      <app-organization page-id="org-single"></app-organization>
+      <app-database page-id="db"></app-database>
+    </ucdlib-pages>
+  </div>
+  `;
+}
+
+/**
+ * @description App header template
+ * @returns {TemplateResult}
+ */
+function _renderHeader(){
+  return html`
+    <ucd-theme-header>
+      <ucdlib-branding-bar
+        site-name="PG Farm"
+        slogan="via UC Davis Library">
+      </ucdlib-branding-bar>
+      <ucd-theme-primary-nav>
+        <a href="/features">Features</a>
+        <a href="/search">Find a Database</a>
+        <a href="/org">Organizations</a>
+        <a href="/contact">Contact</a>
+      </ucd-theme-primary-nav>
+      <ucd-theme-search-popup>
+        <ucd-theme-search-form
+        @search=${this._onSearch}
+        >
+        </ucd-theme-search-form>
+      </ucd-theme-search-popup>
+      <ucd-theme-quick-links
+        title=${user.loggedIn ? 'My Account' : 'Sign In'}
+        href=${user.loggedIn ? '' : user.loginPath}
+        use-icon
+        style-modifiers="highlight">
+        <svg slot="custom-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
+        <a href=${user.logoutPath}>Sign Out</a>
+      </ucd-theme-quick-links>
+    </ucd-theme-header>
+  `;
+}
+
+/**
+ * @description App footer template
+ * @returns {TemplateResult}
+ */
+function _renderFooter(){
+  return html`
+    <footer class="l-footer footer dark-background">
+      <div class="l-container">
+        <div class="flex-footer">
+          <div class="flex-footer__item">
+            <div class="site-credits u-space-mb">
+              <div class='site-credits__logo'>
+                <app-icon slug='ucdlib-signature' auto-height></app-icon>
+              </div>
+              <p>
+                UC Davis Library<br>
+                100 NW Quad<br>
+                University of California, Davis<br>
+                Davis, CA 95616
+              </p>
+              <div><a href='https>//library.ucdavis.edu'>library.ucdavis.edu</a></div>
+            </div>
+            <app-build-info></app-build-info>
+          </div>
+          <div class="flex-footer__item">
+            <h2>PG Farm</h2>
+            <div class="footer-nav">
+              <ul class="menu">
+                <li><a href='/features'>Features</a></li>
+                <li><a href='#'>Documentation</a></li>
+                <li><a href='#'>Support</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="footer-spacer">
+          <div class='footer-spacer__logo'>
+            <a href='https://ucdavis.edu'>
+              <app-icon slug='aggie-logo' auto-height></app-icon>
+            </a>
+          </div>
+        </div>
+        <div class="uc-footer">
+          <p><a href="https://www.ucdavis.edu/">University of California, Davis</a>, One Shields Avenue, Davis, CA 95616 | 530-752-1011</p>
+          <ul class="list--pipe">
+            <li><a href="#">Questions or comments?</a></li>
+            <li><a href="#">Privacy & Accessibility</a></li>
+            <li><a href="https://diversity.ucdavis.edu/principles-community">Principles of Community</a></li>
+            <li><a href="http://www.universityofcalifornia.edu/">University of California</a></li>
+          </ul>
+          <p>Copyright © The Regents of the University of California, Davis campus. All rights reserved.</p>
         </div>
       </div>
-      <app-home id="home"></app-home>
-      <app-search id="search"></app-search>
-      <app-database id="db"></app-database>
-    </ucdlib-pages>
-
-    <div class="footer site-frame">
-      <ucdlib-site-footer>
-        <ucdlib-site-footer-column header="PG Farm">
-          <ul>
-            <li><a href="/search">Discover</a></li>
-            <li><a href="/about">About PG Farm</a></li>
-            <li><a href="">FAQ</a></li>
-          </ul>
-        </ucdlib-site-footer-column>
-        <ucdlib-site-footer-column header="Library Info">
-          <ul>
-            <li>
-              <a
-                href="https://library.ucdavis.edu/special-collections/"
-                target="_blank"
-                rel="noopener"
-                >Archives and Special Collections</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://library.ucdavis.edu/library/"
-                target="_blank"
-                rel="noopener"
-                >Visit the Library</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://library.ucdavis.edu/news/"
-                target="_blank"
-                rel="noopener"
-                >Library News</a
-              >
-            </li>
-            <li>
-              <a
-                href="http://give.ucdavis.edu/ULIB"
-                target="_blank"
-                rel="noopener"
-                >Give to the Library</a
-              >
-            </li>
-          </ul>
-        </ucdlib-site-footer-column>
-        <ucdlib-site-footer-column header="Account">
-          <ul>
-            <li><app-auth-footer></app-auth-footer></li>
-            <li class="fin-admin" ?hidden="${!this.isAdmin}">
-              <a href="/fin/admin/${this.pathInfo.length > 1 ? '#path-info' + this.pathInfo : ''}">Fin Admin</a>
-            </li>
-          </ul>
-        </ucdlib-site-footer-column>
-        <div insert-into="below-address" ?hidden="${this.showVersion}">
-          <div><b>Build Information</b></div>
-          <div>App Version: ${this.appVersion}</div>
-          <div>Build Time: ${this.localBuildTime}</div>
-          <div>Build Number: ${this.buildNum}</div>
-          <div>Client Env: ${this.clientEnv}</div>
-        </div>
-      </ucdlib-site-footer>
-    </div>
-  </div>
-
-`;}
+    </footer>
+  `;
+}

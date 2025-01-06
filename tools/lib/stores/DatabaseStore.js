@@ -16,7 +16,9 @@ class DatabaseStore extends BaseStore {
       schemaTables : new LruStore({name: 'database.schemaTables'}),
       schemaUserAccess : new LruStore({name: 'database.schemaUserAccess'}),
       schemaTableAccess : new LruStore({name: 'database.schemaTableAccess'}),
-      actions : new LruStore({name: 'database.actions'})
+      actions : new LruStore({name: 'database.actions'}),
+      updateFeaturedList : new LruStore({name: 'database.updateFeaturedList'}),
+      getFeaturedList : new LruStore({name: 'database.getFeaturedList'})
     };
 
     this.events = {
@@ -33,7 +35,9 @@ class DatabaseStore extends BaseStore {
       DATABASE_REVOKE_ACCESS_UPDATE : 'database-revoke-access-update',
       DATABASE_RESTART_API_UPDATE : 'database-restart-api-update',
       DATABASE_INIT_UPDATE : 'database-init-update',
-      DATABASE_LINK_UPDATE : 'database-link-update'
+      DATABASE_LINK_UPDATE : 'database-link-update',
+      DATABASE_UPDATE_FEATURED_LIST_UPDATE : 'database-update-featured-list-update',
+      DATABASE_GET_FEATURED_LIST_UPDATE : 'database-get-featured-list-update'
     };
   }
 
@@ -146,6 +150,22 @@ class DatabaseStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.DATABASE_LINK_UPDATE
+    );
+  }
+
+  onUpdateFeaturedListUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.updateFeaturedList,
+      this.events.DATABASE_UPDATE_FEATURED_LIST_UPDATE
+    );
+  }
+
+  onGetFeaturedListUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.getFeaturedList,
+      this.events.DATABASE_GET_FEATURED_LIST_UPDATE
     );
   }
 

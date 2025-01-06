@@ -14,7 +14,7 @@ packageDef = JSON.parse(packageDef);
 let loaderVersion = packageDef.dependencies['@ucd-lib/cork-app-load'].replace('^\D', '');
 let assetsDir = path.join(__dirname, '..', 'client', config.client.assets);
 let loaderPath = path.join(assetsDir, 'loader', 'loader.js');
-let loaderSrc = fs.readFileSync(loaderPath, 'utf-8'); 
+let loaderSrc = fs.readFileSync(loaderPath, 'utf-8');
 
 const bundle = `
   <script>
@@ -63,5 +63,4 @@ module.exports = async (app) => {
         // keywords : keywords.join(', ')
       })
   });
-}  
-  
+}

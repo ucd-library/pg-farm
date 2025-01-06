@@ -1,0 +1,12 @@
+.bg--blue-30 {
+  background-color: var(--ucd-blue-30,#ebf3fa);
+}
+.blue-70 {
+  color: var(--ucd-blue-70, #73ABDD);
+}
+.black {
+  color: var(--black, #000) !important;
+}
+.gray {
+  color: var(--gray, #4c4c4c) !important;
+}

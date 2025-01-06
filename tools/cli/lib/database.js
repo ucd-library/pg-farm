@@ -165,6 +165,41 @@ class Database {
     process.exit(0);
   }
 
+  async addFeatured(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    let resp;
+    try {
+      resp = await databaseModel.addToFeaturedList(organization, database, opts);
+    } catch (e) {
+      resp = e;
+    }
+    print.display(resp, opts.output);
+    process.exit(0);
+  }
+
+  async getFeatured(orgName, opts){
+    let resp;
+    try {
+      resp = await databaseModel.getFeaturedList(orgName);
+    } catch (e) {
+      resp = e;
+    }
+    print.display(resp, opts.output, print.dbFeatured);
+    process.exit(0);
+  }
+
+  async removeFeatured(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    let resp;
+    try {
+      resp = await databaseModel.removeFromFeaturedList(organization, database, opts.organizationList);
+    } catch (e) {
+      resp = e;
+    }
+    print.display(resp, opts.output);
+    process.exit(0);
+  }
+
 }
 
 const database = new Database();

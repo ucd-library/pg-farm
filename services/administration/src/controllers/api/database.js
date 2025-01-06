@@ -8,7 +8,8 @@ const router = Router();
 const GET_DB_COLUMNS = ["organization_name", "organization_title","organization_id",
   "instance_name","instance_state","instance_id",
   "database_name","database_title","database_short_description",
-  "database_description","database_url","database_tags","database_id"
+  "database_description","database_url","database_tags","database_id",
+  "database_icon", "database_brand_color"
 ];
 
 const USER_COLUMNS = ["username","type"];
@@ -26,7 +27,9 @@ async function search(req, res) {
       tags : input.tags,
       organization : input.organization,
       limit : input.limit ? parseInt(input.limit) : 10,
-      offset : input.offset ? parseInt(input.offset) : 0
+      offset : input.offset ? parseInt(input.offset) : 0,
+      excludeFeatured : input.excludeFeatured,
+      orderBy : input.orderBy
     };
 
     if( input.onlyMine && req.user ) {
@@ -39,8 +42,10 @@ async function search(req, res) {
         id : db.database_id,
         name : db.database_name,
         title : db.database_title || '',
-        short_description : db.database_short_description || '',
+        shortDescription : db.database_short_description || '',
         description : db.database_description || '',
+        icon : db.database_icon || '',
+        brandColor : db.database_brand_color || '',
         tags : db.database_tags,
         url : db.database_url || '',
         organization : null,
@@ -65,6 +70,68 @@ async function search(req, res) {
   }
 }
 
+/**
+ * Manage featured database lists
+ */
+router.patch('/featured', keycloak.protect('admin'), async (req, res) => patchFeatured(req, res));
+router.patch('/featured/:organization', keycloak.protect('organization-admin'),  async (req, res) => patchFeatured(req, res, true));
+async function patchFeatured(req, res, organizationList){
+  const db = req.body.db;
+  const org = req.body.org;
+  req.body.organizationList = organizationList;
+
+  try {
+    if ( req.body.action === 'remove' ) {
+      await database.removeFeatured(db, org, req.body.organizationList);
+    } else {
+      await database.makeFeatured(db, org, req.body);
+    }
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+}
+
+/**
+ * Get featured database lists
+ */
+router.get('/featured', async (req, res) => getFeatured(res));
+router.get('/featured/:organization', async (req, res) => getFeatured(res, req.params.organization));
+async function getFeatured(res, organization){
+  try {
+    let results = await database.getFeatured(organization);
+    const resp = results.map(db => {
+      let result = {
+        id : db.database_id,
+        name : db.database_name,
+        title : db.database_title || '',
+        shortDescription : db.database_short_description || '',
+        description : db.database_description || '',
+        icon : db.database_icon || '',
+        brandColor : db.database_brand_color || '',
+        tags : db.database_tags,
+        url : db.database_url || '',
+        organization : null,
+        state : db.instance_state,
+        score : db.rank || -1
+      }
+
+      if( db.organization_id ) {
+        result.organization = {
+          id : db.organization_id,
+          name : db.organization_name,
+          title : db.organization_title
+        }
+      }
+
+      return result;
+    });
+    res.json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+}
+
 /** Get **/
 router.get('/:organization/:database', async (req, res) => {
   try {
@@ -76,6 +143,8 @@ router.get('/:organization/:database', async (req, res) => {
       title : db.database_title,
       shortDescription : db.database_short_description,
       description : db.database_description,
+      icon : db.database_icon,
+      brandColor : db.database_brand_color,
       url : db.database_url,
       tags : db.database_tags,
       organization : {
@@ -108,8 +177,8 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
 
 /** Update Metadata **/
 router.patch(
-  '/:organization/:database', 
-  keycloak.protect('instance-admin'), 
+  '/:organization/:database',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
 
   try {
@@ -119,7 +188,7 @@ router.patch(
     }
 
     await database.setMetadata(
-      req.params.database, 
+      req.params.database,
       organization,
       req.body
     );
@@ -166,7 +235,7 @@ router.post('/:organization/:database/init', keycloak.protect('admin'), async (r
 });
 
 /** Get Users **/
-router.get('/:organization/:database/users', 
+router.get('/:organization/:database/users',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -178,7 +247,7 @@ router.get('/:organization/:database/users',
 });
 
 /** Get Schemas **/
-router.get('/:organization/:database/schemas', 
+router.get('/:organization/:database/schemas',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -189,13 +258,13 @@ router.get('/:organization/:database/schemas',
 });
 
 /** Get Tables **/
-router.get('/:organization/:database/schema/:schema/tables', 
+router.get('/:organization/:database/schema/:schema/tables',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.listTables(
-      req.params.organization, 
-      req.params.database, 
+      req.params.organization,
+      req.params.database,
       req.params.schema
     ));
   } catch(e) {
@@ -237,10 +306,10 @@ router.get('/:organization/:database/schema/:schema/access/:username',
 });
 
 /** Grant user schema access **/
-router.put('/:organization/:database/grant/:schema/:user/:permission', 
-  keycloak.protect('instance-admin'), 
+router.put('/:organization/:database/grant/:schema/:user/:permission',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -250,17 +319,17 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
     let resp;
     if( req.params.schema === '_' ) {
       resp = await user.grantDatabaseAccess(
-        req.params.database, 
-        organization, 
-        req.params.schema, 
+        req.params.database,
+        organization,
+        req.params.schema,
         req.params.user,
         req.params.permission
       );
     } else {
       resp = await user.grant(
-        req.params.database, 
-        organization, 
-        req.params.schema, 
+        req.params.database,
+        organization,
+        req.params.schema,
         req.params.user,
         req.params.permission
       );
@@ -273,10 +342,10 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
 });
 
 /** Revoke user schema access **/
-router.delete('/:organization/:database/revoke/:schema/:user/:permission', 
-  keycloak.protect('instance-admin'), 
+router.delete('/:organization/:database/revoke/:schema/:user/:permission',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -286,16 +355,16 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
     let resp;
     if( req.params.schema === '_' ) {
       resp = await user.revokeDatabaseAccess(
-        req.params.database, 
-        organization, 
+        req.params.database,
+        organization,
         req.params.user,
         req.params.permission
       );
     } else {
       resp = await user.revoke(
-        req.params.database, 
-        organization, 
-        req.params.schema, 
+        req.params.database,
+        organization,
+        req.params.schema,
         req.params.user,
         req.params.permission
       );
@@ -308,10 +377,10 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
 });
 
 /** Create foreign data table to PG Farm db **/
-router.post('/:organization/:database/link/:remoteOrg/:remoteDb', 
-  keycloak.protect('instance-admin'), 
+router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let organization = req.params.organization;
     if( organization === '_' ) {
@@ -323,7 +392,7 @@ router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
     }
 
     let resp = await database.link(
-      req.params.database, 
+      req.params.database,
       organization,
       req.params.remoteDb,
       remoteOrg,

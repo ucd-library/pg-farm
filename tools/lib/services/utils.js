@@ -9,6 +9,14 @@ class ServiceUtils {
 
     return headers;
   }
+
+  /**
+ * @description get the host of the current application
+ * Ensures no trailing slash
+ */
+  get host(){
+    return config.host.replace(/\/$/, '');
+  }
 }
 
 const utils = new ServiceUtils();

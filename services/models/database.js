@@ -8,19 +8,19 @@ import utils from './utils.js';
 class Database {
 
   constructor() {
-    this.METADATA_FIELDS = ['title', 'description', 'shortDescription', 'url', 'tags'];
+    this.METADATA_FIELDS = ['title', 'description', 'shortDescription', 'url', 'tags', 'icon', 'brandColor'];
   }
 
   /**
    * @method getConnection
    * @description Returns a postgres user connection object for a postgres instance
-   * 
-   * @param {String} dbNameOrId PG Farm instance name or ID 
-   * @param {String} orgNameOrId PG Farm organization name or ID 
+   *
+   * @param {String} dbNameOrId PG Farm instance name or ID
+   * @param {String} orgNameOrId PG Farm organization name or ID
    * @param {Object} opts
    * @param {String} opts.username optional.  Defaults to 'postgres'
    * @param {Boolean} opts.useSocket optional.  If true, returns a connection object for a unix socket
-   * 
+   *
    * @returns {Promise<Object>}
    */
   async getConnection(dbNameOrId, orgNameOrId=null, opts={}) {
@@ -48,7 +48,7 @@ class Database {
     let user;
     try {
       user = await this.models.user.get(dbNameOrId, orgNameOrId, opts.username);
-    } catch(e) { 
+    } catch(e) {
       if( username === 'postgres' ) {
         let instance = await this.models.instance.get(db.instance_id);
         return {
@@ -74,12 +74,12 @@ class Database {
   /**
    * @method get
    * @description Get a database by name or ID
-   * 
-   * @param {String} nameOrId database name or ID 
+   *
+   * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {Array} columns optional.  columns to return
-   * 
-   * @returns 
+   *
+   * @returns
    */
   async get(nameOrId, orgNameOrId, columns=null) {
     let organizationId = null;
@@ -103,9 +103,9 @@ class Database {
   /**
    * @method create
    * @description Create a new database
-   * 
-   * @param {*} name 
-   * @param {*} opts 
+   *
+   * @param {*} name
+   * @param {*} opts
    */
   async create(title, opts) {
     if( !opts.name ) {
@@ -114,7 +114,7 @@ class Database {
 
     // make sure the name is prefixed with inst- (instance) prefix
     // this is to avoid conflicts with accessing the postgres instance
-    // by name 
+    // by name
     opts.name = utils.cleanInstDbName(opts.name);
 
     let orgName = '';
@@ -140,13 +140,15 @@ class Database {
   /**
    * @method setMetadata
    * @description Set/patch metadata for a database
-   * 
+   *
    * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId database organization name or ID
    * @param {Object} metadata
    * @param {String} metadata.title optional.  The human title of the database
    * @param {String} metadata.description optional.  A description of the database.  Markdown is supported.
    * @param {String} metadata.shortDescription optional.  A short description of the database
+   * @param {String} metadata.icon optional.  An icon slug for the database e.g. 'fa.solid.database'
+   * @param {String} metadata.brandColor optional.  A ucd brand color slug for the database e.g. 'putah-creek'
    * @param {String} metadata.url optional.  A website for more information about the database
    * @param {Array<String>} metadata.tags optional.  An array of search tags for the database
    */
@@ -167,10 +169,82 @@ class Database {
   }
 
   /**
+   * @description Add a database to an organization's or the global featured list
+   * @param {String} nameOrId - database name or ID
+   * @param {String} orgNameOrId - organization name or ID
+   * @param {Object} opts - options
+   * @param {Number} opts.orderIndex - order index of the database in the list
+   * @param {Boolean} opts.organizationList - if true, add to organization's featured list.  If false or not provided, add to global featured list
+   */
+  async makeFeatured(nameOrId, orgNameOrId, opts={}) {
+    let db = await this.get(nameOrId, orgNameOrId);
+
+    const featured = await this.getFeatured(opts.organizationList ? orgNameOrId : null);
+    const orderIndex = Number(opts.orderIndex) || 0;
+
+    const selfInList = featured.find(f => f.database_id === db.database_id);
+    if( selfInList ) {
+      if (orderIndex === selfInList.order_index || featured.length === 1) {
+        return;
+      }
+      const i = featured.findIndex(f => f.database_id === db.database_id);
+      featured.splice(i, 1);
+      featured.splice(orderIndex, 0, selfInList);
+    } else {
+      featured.splice(orderIndex, 0, {
+        database_id : db.database_id,
+        database_name : db.database_name
+      });
+    }
+
+    for (let i = 0; i < featured.length; i++) {
+      const item = featured[i];
+      if ( !item.database_featured_id ){
+        const o = {orderIndex: i, organizationList: opts.organizationList}
+        await client.addFeaturedDatabase(db.database_id, db.organization_id, o);
+        continue;
+      }
+      await client.setFeaturedDatabaseOrder(item.database_featured_id, i);
+    }
+  }
+
+  /**
+   * @description Remove a database from an organization's or the global featured list
+   * @param {String} nameOrId - database name or ID
+   * @param {String} orgNameOrId - organization name or ID
+   * @param {Boolean} organizationList - if true, remove from organization's featured list; else, remove from global featured list
+   */
+  async removeFeatured(nameOrId, orgNameOrId, organizationList) {
+    let db = await this.get(nameOrId, orgNameOrId);
+    let featured = await this.getFeatured(organizationList ? orgNameOrId : null);
+
+    let item = featured.find(f => f.database_id === db.database_id);
+    if( !item ) {
+      throw new Error('Database is not in the featured list');
+    }
+    await client.removeFeaturedDatabase(item.database_featured_id);
+    featured.filter(f => f.database_id !== db.database_id);
+    for (let i = 0; i < featured.length; i++) {
+      const item = featured[i];
+      await client.setFeaturedDatabaseOrder(item.database_featured_id, i);
+    }
+  }
+
+  async getFeatured(orgNameOrId) {
+    let organizationId = null;
+    if( orgNameOrId ) {
+      let org = await client.getOrganization(orgNameOrId);
+      organizationId = org.organization_id;
+    }
+
+    return client.getFeaturedDatabases(organizationId);
+  }
+
+  /**
    * @method ensurePgDatabase
-   * @description Ensure a database exists on a postgres instance.  
+   * @description Ensure a database exists on a postgres instance.
    * Creates the database if it does not exist.
-   * 
+   *
    * @param {String} instNameOrId instance name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {String} dbName database name
@@ -188,15 +262,15 @@ class Database {
   /**
    * @method link
    * @description Create a foreign data wrapper and link a database
-   * in pg-farm.  By default this will link the foriegn dataabases 
+   * in pg-farm.  By default this will link the foriegn dataabases
    * api schema to the local database with a schema of the name
    * of the remote database. Eg: "library/ca-base-layer".api -> "ca-base-layer"
-   * 
-   * @param {String} localOrg 
-   * @param {String} localDb 
+   *
+   * @param {String} localOrg
+   * @param {String} localDb
    * @param {String} remoteDb
    * @param {String} remoteOrg
-   * @param {Object} opts 
+   * @param {Object} opts
    * @param {String} opts.localSchema optional.  The schema to link to.  Defaults to the remote database name
    * @param {String} opts.remoteSchema optional.  The schema to link from on the remote server.  Default is: api
    */
@@ -240,20 +314,38 @@ class Database {
     let params = [];
     let countParams = [];
     let additionalSelect = '';
-    opts.orderBy = 'database_title';
+    let additionalJoin = '';
+    if ( opts.orderBy && !['database_title', 'rank'].includes(opts.orderBy) ) {
+      opts.orderBy = 'database_title';
+    }
+    opts.orderDirection = opts.orderBy === 'rank' ? 'DESC' : 'ASC';
 
     if( opts.text ) {
       params.push(opts.text);
       countParams.push(opts.text);
-      opts.orderBy = 'rank';
+      if ( !opts.orderBy ) {
+        opts.orderBy = 'rank';
+        opts.orderDirection = 'DESC';
+      }
       additionalSelect += ', ts_rank_cd(tsv_content, plainto_tsquery(\'english\', $'+params.length+')) AS rank';
       where.push(` tsv_content @@ plainto_tsquery('english', $${params.length})`);
+    } else {
+      opts.orderBy = 'database_title';
     }
 
     if( opts.organization ) {
       params.push(opts.organization);
       countParams.push(opts.organization);
-      where.push(` organization_name = ${params.length}`);
+      where.push(` organization_name = $${params.length}`);
+
+      if ( opts.excludeFeatured ) {
+        additionalJoin += ` LEFT JOIN
+        ${config.adminDb.tables.DATABASE_FEATURED} fd ON
+        fd.database_id = ${config.adminDb.views.INSTANCE_DATABASE}.database_id
+        AND fd.organization_id = ${config.adminDb.views.INSTANCE_DATABASE}.organization_id
+        `;
+        where.push(` fd.database_id IS NULL`);
+      }
     }
 
     if( opts.tags ) {
@@ -264,14 +356,14 @@ class Database {
 
     query += where.join(' AND ');
 
-    let itemQuery = 'SELECT * '+additionalSelect+' FROM '+config.adminDb.views.INSTANCE_DATABASE;
-    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE;
+    let itemQuery = 'SELECT * '+additionalSelect+' FROM '+config.adminDb.views.INSTANCE_DATABASE + additionalJoin;
+    let countQuery = 'SELECT COUNT(*) AS TOTAL FROM '+config.adminDb.views.INSTANCE_DATABASE + additionalJoin;
 
     countQuery += query;
 
     if( opts.orderBy ) {
-      params.push(opts.orderBy);
-      query += ' ORDER BY $'+(params.length);
+      query += ' ORDER BY '+opts.orderBy;
+      query += ' '+opts.orderDirection;
     }
     if( opts.limit ) {
       params.push(opts.limit);
@@ -289,7 +381,6 @@ class Database {
 
     // console.log(countQuery, countParams);
     let count = await client.query(countQuery, countParams);
-
     return {
       items : results.rows,
       total : parseInt(count.rows[0].total),
@@ -315,7 +406,7 @@ class Database {
         delete uaccess.role_name;
         delete uaccess.database_name;
         uaccess = Object.values(uaccess).filter(v => v);
-        
+
         let obj = {name: user, pgPrivileges: uaccess};
 
         let farmUser = pgFarmUsers.find(u => u.username === user);
@@ -347,7 +438,7 @@ class Database {
   async getTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
     let resp = await pgInstClient.getTableAccess(con, con.database, schemaName, tableName);
-    
+
     let userMap = {};
     for( let row of resp.rows ) {
       if( !userMap[row.grantee] ) {
@@ -355,14 +446,14 @@ class Database {
       }
       userMap[row.grantee].push(row.privilege_type);
     }
-    
+
     return userMap;
   }
 
   async getTableAccessByUser(orgNameOrId, dbNameOrId, schemaName, username) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
     let resp = await pgInstClient.getTableAccessByUser(con, con.database, schemaName, username);
-    
+
     let tableMap = {};
     for( let row of resp.rows ) {
       if( !tableMap[row.table_name] ) {

@@ -1,0 +1,36 @@
+.page-header {
+  padding: var(--spacer--medium-2x, 3rem) 0;
+  border-bottom: 2px solid var(--ucd-black-20, #E5E5E5);
+}
+.page-header__wrapper {
+  width: 92%;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .page-header__wrapper {
+    width: 86%;
+  }
+}
+.page-header__title {
+  display: flex;
+  align-items: center;
+}
+.page-header__title h1 {
+  margin: 0;
+}
+.page-header__title app-icon {
+  margin-right: var(--spacer--medium, 1.5rem);
+  --app-icon-size: var(--spacer--medium-2x, 3rem);
+}
+.page-header__title + .page-header__description {
+  margin-top: var(--spacer--medium, 1.5rem);
+}
+.page-header__title + .page-header__subtitle {
+  margin-top: var(--spacer, 1rem);
+}
+.page-header__subtitle + .page-header__description {
+  margin-top: var(--spacer, 1rem);
+}
+.page-header__links {
+  margin-top: var(--spacer--medium, 1.5rem);
+}

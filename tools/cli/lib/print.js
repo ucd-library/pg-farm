@@ -23,7 +23,7 @@ class Print {
       }
       if( payload.error.details instanceof Error ) {
         payload.error.details = {
-          message: payload.error.details.message, 
+          message: payload.error.details.message,
           stack: payload.error.details.stack
         };
       }
@@ -39,7 +39,7 @@ class Print {
     if( format === 'quiet' ) {
       return;
     }
-    
+
     if( payload.payload ) {
       payload = payload.payload;
     }
@@ -94,6 +94,22 @@ class Print {
       if( db.description ) console.log(`Description: ${db.description}`);
       if( db.url ) console.log(`URL: ${db.url}`);
       if( db.tags ) console.log(`Tags: ${db.tags.join(', ')}`);
+      console.log('----');
+    });
+  }
+
+  dbFeatured(results){
+    if ( !results.length ) {
+      console.log('No featured databases found');
+      return;
+    }
+
+    console.log(`Found ${results.length} featured database(s)`);
+    console.log('----');
+    results.forEach(db => {
+      console.log(`Name: ${db.organization.name}/${db.name}`);
+      console.log(`Title: ${db.title}`);
+      if( db.url ) console.log(`URL: ${db.url}`);
       console.log('----');
     });
   }
@@ -161,7 +177,7 @@ class Print {
   }
 
   connections(connections) {
-    
+
   }
 
 }

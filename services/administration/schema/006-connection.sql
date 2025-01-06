@@ -89,9 +89,9 @@ BEGIN
     END;
 
 
-    INSERT INTO 
+    INSERT INTO
       pgfarm.connection(session_id, database_id, user_id, ip_address, connection_data, gateway_id, opened_at)
-    VALUES 
+    VALUES
       (ses_id_in, db_id, user_id, ip_in, data_in, gateway_id_in, opened_at_in);
 END;
 $$ LANGUAGE plpgsql;

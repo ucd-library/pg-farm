@@ -71,7 +71,7 @@ class PgFarmAdminClient {
   /**
    * @method getOrganization
    * @description get organization by name or ID
-   * 
+   *
    * @param {String} nameOrId organization name or ID
    * @returns {Promise<Object>}
    */
@@ -91,9 +91,9 @@ class PgFarmAdminClient {
   /**
    * @method isOrganizationAdmin
    * @description check if a user is an admin for an organization
-   * 
-   * @param {String} username 
-   * @param {String} orgName 
+   *
+   * @param {String} username
+   * @param {String} orgName
    * @returns {Promise<Boolean>}
    */
   async isOrganizationAdmin(username, orgName) {
@@ -107,7 +107,7 @@ class PgFarmAdminClient {
   /**
    * @method getOrganizationUsers
    * @description get all users for an organization
-   * 
+   *
    * @param {String} nameOrId organization name or ID
    * @returns {Promise<Array>}
    **/
@@ -123,7 +123,7 @@ class PgFarmAdminClient {
   /**
    * @method getOrganizationUser
    * @description get all users for an organization
-   * 
+   *
    * @param {String} nameOrId organization name or ID
    * @returns {Promise<Array>}
    **/
@@ -140,13 +140,13 @@ class PgFarmAdminClient {
   /**
    * @method createOrganization
    * @description create a new organization
-   * 
-   * @param {String} title long name of the organization 
+   *
+   * @param {String} title long name of the organization
    * @param {Object} opts
    * @param {String} opts.name short name of the organization
    * @param {String} opts.description description of the organization
    * @param {String} opts.url url of the organization
-   *  
+   *
    * @returns {Promise<Object>}
    */
   async createOrganization(title, opts) {
@@ -162,17 +162,17 @@ class PgFarmAdminClient {
   /**
    * @method getInstance
    * @description get instance by name or ID
-   * 
+   *
    * @param {String} nameOrId instance name or ID
    * @param {String} orgNameOrId organization name or ID, can be null
-   * @returns 
+   * @returns
    */
   async getInstance(nameOrId='', orgNameOrId=null, useView=false) {
     let table = useView ? config.adminDb.views.INSTANCE : config.adminDb.tables.INSTANCE;
 
     let res = await client.query(
-      `SELECT * FROM ${table} 
-       WHERE instance_id = ${this.schema}.get_instance_id($1, $2)`, 
+      `SELECT * FROM ${table}
+       WHERE instance_id = ${this.schema}.get_instance_id($1, $2)`,
       [nameOrId, orgNameOrId]
     );
 
@@ -186,14 +186,14 @@ class PgFarmAdminClient {
   /**
    * @method getInstanceByHostname
    * @description get instance by hostname
-   * 
+   *
    * @param {String} hostname
-   * 
+   *
    * @returns {Promise<Object>}
    **/
   async getInstanceByHostname(hostname) {
     let res = await client.query(
-      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE} WHERE instance_hostname = $1`, 
+      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE} WHERE instance_hostname = $1`,
       [hostname]
     );
 
@@ -207,7 +207,7 @@ class PgFarmAdminClient {
   /**
    * @method getInstances
    * @description get all instances
-   * 
+   *
    * @returns {Promise<Array>}
    */
   async getInstances(opts={}) {
@@ -223,10 +223,10 @@ class PgFarmAdminClient {
       params.push(opts.organization);
       where.push(`organization_id = ${this.schema}.get_organization_id($${params.length})`);
     }
-    
+
     params.push(opts.limit);
     paging = `LIMIT $${params.length}`;
-    
+
     params.push(opts.offset);
     paging += ` OFFSET $${params.length}`;
 
@@ -257,16 +257,16 @@ class PgFarmAdminClient {
   /**
    * @method getInstanceDatabases
    * @description get all databases for an instance
-   * 
-   * @param {*} nameOrId 
-   * @param {*} orgNameOrId 
-   * @returns 
+   *
+   * @param {*} nameOrId
+   * @param {*} orgNameOrId
+   * @returns
    */
   async getInstanceDatabases(nameOrId='', orgNameOrId=null) {
     let instance = await this.getInstance(nameOrId, orgNameOrId);
 
     let res = await client.query(
-      `select * from ${config.adminDb.views.INSTANCE_DATABASE} where instance_id = $1;`, 
+      `select * from ${config.adminDb.views.INSTANCE_DATABASE} where instance_id = $1;`,
       [instance.instance_id]
     );
 
@@ -276,15 +276,15 @@ class PgFarmAdminClient {
   /**
    * @method createInstance
    * @description create a new instance
-   * 
+   *
    * @param {String} name Instance name
-   * @param {Object} opts  
+   * @param {Object} opts
    * @param {String} opts.hostname hostname of the instance.
    * @param {String} opts.description description of the instance
    * @param {String} opts.port port of the instance
    * @param {String} opts.organization Optional. name or ID of the organization
-   * 
-   * @returns 
+   *
+   * @returns
    */
   async createInstance(name, opts) {
     if( opts.organization ) {
@@ -310,7 +310,7 @@ class PgFarmAdminClient {
   /**
    * @method updateInstanceProperty
    * @description update instance property
-   * 
+   *
    * @param {String} nameOrId instance name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {String} property property to update
@@ -332,12 +332,12 @@ class PgFarmAdminClient {
   /**
    * @method setInstancek8sConfig
    * @description set k8s config for an instance
-   * 
+   *
    * @param {String} nameOrId name or ID of the instance
    * @param {String} orgNameOrId name or ID of the organization
    * @param {String} property property to set
    * @param {String} value value to set
-   * 
+   *
    * @returns {Promise<Object>}
    */
   async setInstanceConfig(nameOrId, orgNameOrId, property, value) {
@@ -353,10 +353,10 @@ class PgFarmAdminClient {
   /**
    * @method getInstanceConfig
    * @description get instance config, all properties
-   * 
+   *
    * @param {String} nameOrId instance name or ID
    * @param {String} orgNameOrId organization name or ID
-   * 
+   *
    * @returns {Promise<Object>}
    */
   async getInstanceConfig(nameOrId, orgNameOrId) {
@@ -373,13 +373,73 @@ class PgFarmAdminClient {
     return iconfig;
   }
 
+  async getFeaturedDatabases(orgNameOrId){
+    const values = [];
+    let sql = `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_FEATURED}`;
+    if( orgNameOrId ) {
+      sql += ` WHERE featured_organization_id = ${this.schema}.get_organization_id($1)`;
+      values.push(orgNameOrId);
+    } else {
+      sql += ` WHERE featured_organization_id IS NULL`;
+    }
+    sql += ' ORDER BY order_index ASC';
+    let resp = await client.query(sql, values);
+    return resp.rows;
+  }
+
+  /**
+   * @description add a database to the featured list for an organization or globally
+   * @param {String} nameOrId - database name or ID
+   * @param {String} orgNameOrId - organization name or ID
+   * @param {Object} opts - options
+   * @param {Number} opts.orderIndex - order index for the database in the featured list
+   * @param {Boolean} opts.organizationList - if true, database will be featured for the organization. Otherwise, it will be featured globally
+   * @returns {Promise<Object>}
+   */
+  async addFeaturedDatabase(nameOrId, orgNameOrId, opts) {
+    const orderIndex = opts?.orderIndex || 0;
+    const values = [nameOrId, orgNameOrId, orderIndex];
+    let sql = `
+      INSERT INTO ${config.adminDb.tables.DATABASE_FEATURED}
+      (database_id, order_index, organization_id)
+      VALUES (${this.schema}.get_database_id($1, $2), $3, ${opts?.organizationList ? `${this.schema}.get_organization_id($2)` : 'NULL'})
+    `;
+    return client.query(sql, values);
+  }
+
+  /**
+   * @description Update the order index of a featured database.
+   * @param {String} featuredId - database featured ID
+   * @param {Number} orderIndex - new order index
+   * @returns {Promise<Object>}
+   */
+  async setFeaturedDatabaseOrder(featuredId, orderIndex) {
+    return client.query(`
+      UPDATE ${config.adminDb.tables.DATABASE_FEATURED}
+      SET order_index = $1
+      WHERE database_featured_id = $2
+    `, [orderIndex, featuredId]);
+  }
+
+  /**
+   * @description Remove a database from the featured list
+   * @param {String} featuredId - database featured ID
+   * @returns
+   */
+  async removeFeaturedDatabase(featuredId) {
+    return client.query(`
+      DELETE FROM ${config.adminDb.tables.DATABASE_FEATURED}
+      WHERE database_featured_id = $1
+    `, [featuredId]);
+  }
+
   /**
    * @method getDatabase
    * @description get database by name or ID
-   * 
+   *
    * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId organization name or ID
-   * 
+   *
    * @returns {Promise<Object>}
    */
   async getDatabase(nameOrId, orgNameOrId, columns=null) {
@@ -407,7 +467,7 @@ class PgFarmAdminClient {
   /**
    * @method createDatabase
    * @description create a new database
-   * 
+   *
    * @param {String} title long name of the database
    * @param {Object} opts
    * @param {String} opts.name short name of the database
@@ -416,7 +476,7 @@ class PgFarmAdminClient {
    * @param {String} opts.short_description short description of the database
    * @param {String} opts.description description of the database, can include markdown
    * @param {String} opts.tags tags for the database
-   * 
+   *
    * @returns {Promise<Object>}
    **/
   async createDatabase(title, opts) {
@@ -434,11 +494,11 @@ class PgFarmAdminClient {
   /**
    * @method setDatabaseMetadata
    * @description update database metadata properties
-   * 
+   *
    * @param {String} nameOrId database name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {Object} metadata properties to update
-   * 
+   *
    * @returns {Promise<Object>}
    */
   setDatabaseMetadata(dbId, metadata) {
@@ -446,15 +506,18 @@ class PgFarmAdminClient {
     let values = [];
     let templateParams = [];
     for( let key in metadata ) {
+      let columnName = key;
       if( key === 'shortDescription' ) {
-        key = 'short_description';
+        columnName = 'short_description';
+      } else if( key === 'brandColor' ) {
+        columnName = 'brand_color';
       }
-      keys.push(key);
+      keys.push(columnName);
       values.push(metadata[key]);
       templateParams.push('$'+values.length);
     }
     values.push(dbId);
-    
+
     let setClause;
     if ( keys.length === 1 ) {
       setClause = `${keys[0]} = $1`;
@@ -472,13 +535,13 @@ class PgFarmAdminClient {
   /**
    * @method setOrganizationMetadata
    * @description update organization metadata properties
-   * 
+   *
    * @param {String} orgId organization ID
    * @param {Object} metadata properties to update
    * @param {String} metadata.title optional.  The human title of the organization
    * @param {String} metadata.description optional.  A description of the organization.  Markdown is supported.
    * @param {String} metadata.url optional.  A website for more information about the organization
-   * 
+   *
    * @returns {Promise<Object>}
    */
   setOrganizationMetadata(orgId, metadata) {
@@ -491,7 +554,7 @@ class PgFarmAdminClient {
       templateParams.push('$'+values.length);
     }
     values.push(orgId);
-    
+
     let setClause;
     if ( keys.length === 1 ) {
       setClause = `${keys[0]} = $1`;
@@ -505,7 +568,7 @@ class PgFarmAdminClient {
       WHERE organization_id = $${templateParams.length+1}
     `, values);
   }
-  
+
   setOrganizationRole(orgNameOrId, username, role) {
     return client.query(`
       SELECT * FROM ${this.schema}.add_organization_role($1, $2, $3)
@@ -515,7 +578,7 @@ class PgFarmAdminClient {
   /**
    * @method createInstanceUser
    * @description create a new database instance user
-   * 
+   *
    * @param {String} instNameOrId instance name or ID
    * @param {String} orgNameOrId organization name or ID
    * @param {String} username username of the user.  will be added to the pgfarm.users table if not exists
@@ -525,35 +588,35 @@ class PgFarmAdminClient {
    * @returns {Promise<Object>}
    */
   async createInstanceUser(instNameOrId, orgNameOrId, username, password, type, parent) {
-    return client.query(`SELECT * FROM ${this.schema}.add_instance_user($1, $2, $3, $4, $5, $6)`, 
+    return client.query(`SELECT * FROM ${this.schema}.add_instance_user($1, $2, $3, $4, $5, $6)`,
     [instNameOrId, orgNameOrId, username, password, type, parent]);
   }
 
   /**
    * @method deleteInstanceUser
    * @description delete a user from an instance
-   * 
-   * @param {String} instNameOrId 
-   * @param {String} orgNameOrId 
-   * @param {String} username 
-   * @returns 
+   *
+   * @param {String} instNameOrId
+   * @param {String} orgNameOrId
+   * @param {String} username
+   * @returns
    */
   async deleteInstanceUser(instNameOrId, orgNameOrId, username) {
     return client.query(`
-      DELETE FROM 
-        ${this.schema}.instance_user 
-      WHERE 
-        instance_user_id = (SELECT * FROM ${this.schema}.get_instance_user_id($1, $2, $3))`, 
+      DELETE FROM
+        ${this.schema}.instance_user
+      WHERE
+        instance_user_id = (SELECT * FROM ${this.schema}.get_instance_user_id($1, $2, $3))`,
     [username, instNameOrId, orgNameOrId]);
   }
 
   /**
    * @method getInstanceUser
-   * @description get instance user by instance name/id or database name/id. 
-   * 
+   * @description get instance user by instance name/id or database name/id.
+   *
    * @param {String} nameOrId instance or database, name or ID
    * @param {String} orgNameOrId organization name or ID
-   * @param {String} username 
+   * @param {String} username
    * @returns {Promise<Object>}
    */
   async getInstanceUser(nameOrId, orgNameOrId=null, username) {
@@ -568,18 +631,18 @@ class PgFarmAdminClient {
 
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
-      WHERE 
+      WHERE
         (organization_name = $2 OR organization_id=try_cast_uuid($2)) AND
         (
           (instance_name = $1 OR instance_id=try_cast_uuid($1)) OR
           (database_name = $1 OR database_id=try_cast_uuid($1))
-        ) AND 
+        ) AND
         username = $3
     `, [nameOrId, orgNameOrId, username]);
 
     if( resp.rows.length === 0 ) {
       throw new Error('User not found: '+username);
-    } 
+    }
 
     return resp.rows[0];
   }
@@ -587,9 +650,9 @@ class PgFarmAdminClient {
   /**
    * @method getInstanceUsers
    * @description get all users for instance.
-   * 
+   *
    * @param {String} instId instance id
-   * 
+   *
    * @returns {Promise<Object>}
    */
   async getInstanceUsers(instId, columns='*') {
@@ -597,8 +660,8 @@ class PgFarmAdminClient {
       columns = columns.split(',');
     }
     let resp = await client.query(`
-      select ${columns.join(', ')} from pgfarm.instance_user iu 
-      left join pgfarm.user u on iu.user_id = u.user_id 
+      select ${columns.join(', ')} from pgfarm.instance_user iu
+      left join pgfarm.user u on iu.user_id = u.user_id
       where iu.instance_id = $1;
     `, [instId]);
 
@@ -608,10 +671,10 @@ class PgFarmAdminClient {
   /**
    * @method getInstanceUserForDb
    * @description get instance user given a specific database and organization
-   * 
+   *
    * @param {String} dbNameOrId database name or ID
    * @param {String} orgNameOrId organization name or ID
-   * @param {String} username 
+   * @param {String} username
    * @returns {Promise<Object>}
    */
   async getInstanceUserForDb(dbNameOrId, orgNameOrId, username) {
@@ -631,7 +694,7 @@ class PgFarmAdminClient {
     let username = opts.username || config.pgInstance.publicRole.username;
 
     let resp = await client.query(
-      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS} WHERE username = $1`, 
+      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS} WHERE username = $1`,
       [username]
     );
 
@@ -644,9 +707,9 @@ class PgFarmAdminClient {
    * method does not verify the token.  It will parse the body and store the expires time as well
    * as username and token hash.  The token hash is the md5 hash of the token.  It's shorter and
    * can be used in place of the full JWT token.  Returns the md5 hash token.
-   * 
+   *
    * @param {String} token JWT token to store
-   * @returns {Promise<String>} 
+   * @returns {Promise<String>}
    */
   async setUserToken(token) {
     const hash = 'urn:md5:'+crypto.createHash('md5').update(token).digest('base64');
@@ -664,7 +727,7 @@ class PgFarmAdminClient {
   /**
    * @method getUserTokenFromHash
    * @description get the full JWT token from the md5 hash of the token
-   * 
+   *
    * @param {String} hash md5 hash of the
    * @returns {Promise<String>}
    */
@@ -685,7 +748,7 @@ class PgFarmAdminClient {
    * @method updateDatabaseLastEvent
    * @description update the last event for a database, example
    * last time a user queried the database
-   * 
+   *
    * @param {String} dbId uuid of the database
    * @param {String} event database_event_type
    * @returns {Promise<Object>}
@@ -699,8 +762,8 @@ class PgFarmAdminClient {
   /**
    * @method onConnectionOpen
    * @description record a connection open event
-   * 
-   * @param {Object} args 
+   *
+   * @param {Object} args
    * @param {String} args.sessionId session ID of the connection
    * @param {String} args.databaseName database name
    * @param {String} args.orgName organization name
@@ -708,14 +771,14 @@ class PgFarmAdminClient {
    * @param {String} args.remoteAddress ip address of the client
    * @param {Object} args.data additional connection data
    * @param {String} args.timestamp time of the connection
-   * 
-   * @returns 
+   *
+   * @returns
    */
   onConnectionOpen(args={}) {
     return client.query(`
         SELECT * FROM ${this.schema}.connection_open($1, $2, $3, $4, $5, $6, $7, $8)
-      `, 
-      [args.sessionId, args.databaseName, args.orgName, args.userName, 
+      `,
+      [args.sessionId, args.databaseName, args.orgName, args.userName,
         args.remoteAddress, args.data, args.gatewayId, args.timestamp]
     );
   }
@@ -723,7 +786,7 @@ class PgFarmAdminClient {
   logProxyConnectionEvent(sessionId, type, message) {
     return client.query(`
       INSERT INTO ${this.schema}.connection_event (session_id, type, message) VALUES ($1, $2, $3)
-    `, 
+    `,
       [sessionId, type, message]
     );
   }
@@ -731,16 +794,16 @@ class PgFarmAdminClient {
   /**
    * @method onConnectionClose
    * @description record a connection close event
-   * 
+   *
    * @param {String} sessionId session ID of the connection
    * @param {String} timestamp time of the connection
-   * 
+   *
    * @returns Promise<Object>
    */
   onConnectionClose(sessionId, timestamp) {
     return client.query(`
       SELECT * FROM ${this.schema}.connection_close($1, $2)
-    `, 
+    `,
     [sessionId, timestamp]);
   }
 

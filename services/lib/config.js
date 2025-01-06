@@ -78,7 +78,7 @@ const config = {
     port : parseInt(clientPort),
     assets : (clientEnv === 'prod') ? 'dist' : 'dev',
     title : 'PG Farm',
-    appRoutes : ['search', 'db'],
+    appRoutes : ['search', 'db', 'features', 'contact', 'org'],
     staticAssetsBaseUrl : env.CLIENT_STATIC_ASSETS_BASE_URL || 'https://storage.googleapis.com/application-static-assets',
     logger : {
       logLevel : env.CLIENT_LOG_LEVEL || 'info',
@@ -89,6 +89,15 @@ const config = {
         key : env.CLIENT_ERROR_REPORTING_KEY || '',
         sourceMapExtension : '.map'
       }
+    },
+    buildInfo: {
+      remote: BUILD_INFO.remote,
+      commit: BUILD_INFO.commit,
+      tag: BUILD_INFO.tag,
+      branch: BUILD_INFO.branch,
+      name: BUILD_INFO.name,
+      date: BUILD_INFO.date,
+      imageTag: BUILD_INFO.imageTag
     }
   },
 
@@ -127,7 +136,9 @@ const config = {
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',
     scopes : env.OIDC_SCOPES || 'roles openid profile email',
-    roleIgnoreList : []
+    roleIgnoreList : [],
+    loginPath : env.PGFARM_LOGIN_PATH || '/login',
+    logoutPath : env.PGFARM_LOGOUT_PATH || '/auth/logout'
   },
 
   gc : {
@@ -150,12 +161,12 @@ const config = {
     host : env.ADMIN_HOST || 'admin',
     port : env.ADMIN_PORT || 3000
   },
-  
+
   adminDb : {
     username : env.PG_USERNAME || 'postgres',
     password : env.PG_PASSWORD || 'postgres',
     database : env.PG_DATABASE || 'postgres',
-    schema : env.PG_SCHEMA || 'pgfarm', 
+    schema : env.PG_SCHEMA || 'pgfarm',
     port : env.PG_PORT || 5432,
     host : env.PG_HOST || 'admin-db',
 
@@ -163,6 +174,7 @@ const config = {
       get ORGANIZATION() { return config.adminDb.schema+'.organization' },
       get INSTANCE() { return config.adminDb.schema+'.instance' },
       get DATABASE() { return config.adminDb.schema+'.database' },
+      get DATABASE_FEATURED() { return config.adminDb.schema+'.database_featured' },
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_USER() { return config.adminDb.schema+'.instance_user' },
       get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' }
@@ -170,6 +182,7 @@ const config = {
     views : {
       get INSTANCE() { return config.adminDb.schema+'.instance_view' },
       get INSTANCE_DATABASE() { return config.adminDb.schema+'.instance_database' },
+      get INSTANCE_DATABASE_FEATURED() { return config.adminDb.schema+'.instance_database_featured' },
       get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' },
       get DATABASE_EVENT() { return config.adminDb.schema+'.database_last_event_view' },
       get ORGANIZATION_USER() { return config.adminDb.schema+'.organization_user' },

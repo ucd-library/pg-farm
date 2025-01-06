@@ -20,6 +20,7 @@
   "author": "jrmerz@ucdavis.edu",
   "license": "MIT",
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.1",
     "@google-cloud/logging-bunyan": "^5.0.1",
     "@google-cloud/opentelemetry-cloud-monitoring-exporter": "^0.17.0",
     "@google-cloud/opentelemetry-resource-util": "^2.1.0",

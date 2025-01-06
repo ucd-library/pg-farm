@@ -11,7 +11,7 @@ function save() {
   }
 
   fs.writeFileSync(
-    config.configFile, 
+    config.configFile,
     JSON.stringify(config, null, 2)
   );
 }
@@ -38,11 +38,12 @@ if( typeof window === 'undefined' ) {
 } else {
   config = window.APP_CONFIG || {};
   config.host = '/';
-  config.loginPath = '/login';
+  config.loginPath = config.loginPath || '/login';
+  config.logoutPath = config.logoutPath || '/auth/logout';
 }
 
 
 export {
-  save, 
+  save,
   config
 };
