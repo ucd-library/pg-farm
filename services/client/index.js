@@ -1,5 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 import keycloak from '../lib/keycloak.js';
@@ -7,6 +8,7 @@ import staticController from './controllers/static.js';
 
 const app = express();
 
+app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(keycloak.setUser);
 

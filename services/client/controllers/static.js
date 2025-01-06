@@ -24,18 +24,18 @@ async function setup(app) {
     isRoot : true,
     appRoutes : config.client.appRoutes,
     getConfig : async (req, res, next) => {
-      let user = req.user;
-
-      if( user ) {
-        if( !user.roles ) user.roles = [];
-        if( user.roles.includes('admin') ) user.admin = true;
-        user.loggedIn = true;
-      } else {
-        user = {loggedIn: false};
-      }
-
+      let user = {loggedIn: false};
+      try {
+        if( req.cookies[config.jwt.cookieName] ) {
+          user.token = req.cookies[config.jwt.cookieName];
+          user.tokenParsed = JSON.parse(Buffer.from(user.token.split('.')[1], 'base64').toString('utf8'));
+          user.loggedIn = true;
+        }
+      } catch(e) {}
       next({
         user,
+        loginPath : config.oidc.loginPath,
+        logoutPath : config.oidc.logoutPath,
         appRoutes : config.client.appRoutes,
         env : config.client.env,
         grants : pgInstClient.GRANTS,

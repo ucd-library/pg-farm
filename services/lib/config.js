@@ -136,7 +136,9 @@ const config = {
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',
     scopes : env.OIDC_SCOPES || 'roles openid profile email',
-    roleIgnoreList : []
+    roleIgnoreList : [],
+    loginPath : env.PGFARM_LOGIN_PATH || '/login',
+    logoutPath : env.PGFARM_LOGOUT_PATH || '/auth/logout'
   },
 
   gc : {

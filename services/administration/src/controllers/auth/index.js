@@ -42,7 +42,7 @@ function register(app) {
     routes : {
       callback : '/auth/callback',
       login : false,
-      logout : '/auth/logout',
+      logout : config.oidc.logoutPath,
       postLogoutRedirect : '/auth/postLogoutRedirect'
     },
     authorizationParams: {
@@ -53,13 +53,13 @@ function register(app) {
     authRequired: false
   }));
 
-  app.get('/login', (req, res) => { 
-    res.oidc.login({ 
+  app.get(config.oidc.loginPath, (req, res) => {
+    res.oidc.login({
       returnTo: '/auth/success'+(req.query.redirect ? '?redirect='+req.query.redirect : '')
     });
   });
 
-  app.get('/auth/success', async (req, res) => { 
+  app.get('/auth/success', async (req, res) => {
     let jwt = req.oidc.accessToken.access_token;
 
     await pgAdminClient.setUserToken(jwt);
@@ -79,6 +79,11 @@ function register(app) {
       res.cookie(config.jwt.cookieName, jwt, {httpOnly: true});
       res.redirect('/');
     }
+  });
+
+  app.get('/auth/postLogoutRedirect', (req, res) => {
+    res.clearCookie(config.jwt.cookieName);
+    res.redirect('/');
   });
 
 }
