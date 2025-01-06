@@ -21,6 +21,10 @@ class AdminModel extends BaseModel {
     return this.service.getConnectionLog(sessionId);
   }
 
+  sleep(ms) {
+    return this.service.sleep(ms);
+  }
+
 }
 
 const model = new AdminModel();

@@ -3,7 +3,8 @@ import {config} from '../lib/config.js';
 import yaml from 'js-yaml';
 
 
-const ALLOWED_TYPES = ['psql', 'psql-full', 'json', 'yaml', 'nodejs', 'python', 'r'];
+const ALLOWED_TYPES = ['psql', 'psql-full', 'json', 'yaml', 'nodejs', 'python', 'r', 'http'];
+const BASE_PATH = `${config.host}/api/query`;
 
 program
   .description('Show various connection examples')
@@ -81,7 +82,7 @@ cur.execute('SELECT NOW()')
 print(cur.fetchone())
 cur.close()
 `);
-    } else if( type === 'r' ) {
+  } else if( type === 'r' ) {
     console.log(`
 # https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
 library(DBI)
@@ -97,6 +98,9 @@ con <- dbConnect(
 dbGetQuery(con, 'SELECT NOW()')
 dbDisconnect(con)
 `);
+  } else if( type === 'http' ) {
+    console.log('# docs: https://docs.postgrest.org/en/stable/references/api/tables_views.html');
+    console.log(`curl ${BASE_PATH}/${orgDatabase}`);
   }
 }
 

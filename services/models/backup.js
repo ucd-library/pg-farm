@@ -168,7 +168,11 @@ class BackupModel {
       await this.runPgRestore(hostname, database);
     }
 
-    await this.models.admin.startInstance(instNameOrId, orgNameOrId, {startPgRest:true});
+    let startResp = await this.models.admin.startInstance(instNameOrId, orgNameOrId);
+    if( startResp.starting ) {
+      await startResp.instance;
+      await startResp.pgrest;
+    }
   }
 
   async archive(instNameOrId, orgNameOrId) {
