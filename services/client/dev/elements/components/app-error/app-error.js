@@ -42,8 +42,6 @@ export default class AppError extends Mixin(LitElement)
     } else {
       this.errors = [];
     }
-
-    console.log(opts.errors);
   }
 
   hide(){
@@ -61,13 +59,15 @@ export default class AppError extends Mixin(LitElement)
 
   formatError(error){
     const payload = error?.response?.value?.error?.payload || {};
-    console.log(payload);
+    console.log(error);
+    const url = error?.response?.value?.error?.response?.url ||
+      error?.response?.value?.response?.url || '';
 
     const out = {
       heading: 'Unknown error',
       message: payload.message || '',
       stack: payload.stack || '',
-      url: error?.response?.value?.error?.response?.url || '',
+      url,
       showDetails: false
     };
 

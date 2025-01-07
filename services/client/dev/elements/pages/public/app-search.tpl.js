@@ -2,6 +2,7 @@ import { html, css } from 'lit';
 import '../../components/app-search-input/app-search-input.js';
 import '../../components/database-teaser/database-teaser.js';
 import '../../components/app-no-results/app-no-results.js';
+import '../../components/app-search-filter/app-search-filter.js';
 
 export function styles() {
   const elementStyles = css`
@@ -85,7 +86,15 @@ return html`
         </div>
       </div>
       <div class="l-sidebar-first">
-        <div class="u-space-mt">Filters</div>
+        <div class="u-space-mt">
+          <app-search-filter
+            name='Organization'
+            search-placeholder='Search Organizations'
+            >
+          </app-search-filter>
+          <app-search-filter name='Access Level'></app-search-filter>
+          <app-search-filter name='Tags'></app-search-filter>
+        </div>
       </div>
     </div>
   </div>

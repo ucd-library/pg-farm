@@ -15,19 +15,21 @@ export function styles() {
       width: 100%;
       height: auto;
     }
+    [hidden] {
+      display: none !important;
+    }
   `;
 
   return [elementStyles];
 }
 
 export function render() {
-  const makeSquare = !this.autoHeight || (!this.svg && this.invisibleIfEmpty);
   return html`
     ${this.size ? html`
       <style>:host { --app-icon-size: var(--spacer--${this.size}); }</style>` : ''}
-    ${makeSquare ? html`
+    ${!this.autoHeight ? html`
       <style>:host .container {height: var(--app-icon-size, var(--spacer, 1rem));}</style>` : ''}
-    <div class='container'>
+    <div class='container' ?hidden=${this.invisibleIfEmpty && !this.svg}>
       ${unsafeHTML(this.svg)}
     </div>
 `;}
