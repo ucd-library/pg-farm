@@ -53,6 +53,27 @@ class AdminService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  async sleep() {
+    let ido = {action: 'sleep-instances'};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${config.host}/api/instance/sleep`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onSleepUpdate(ido, {request}),
+          onLoad: payload => this.store.onSleepUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onSleepUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
 }
 
 const service = new AdminService();

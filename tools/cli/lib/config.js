@@ -22,6 +22,10 @@ const config = {
   tokenHash : localFile.tokenHash || null
 }
 
+if( !fs.existsSync(configFilePath) ) {
+  save();
+}
+
 function save() {
   let tmp = Object.assign({}, config);
   delete tmp.configFile;

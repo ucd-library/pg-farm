@@ -4,13 +4,30 @@ import colors from 'colors';
 const program = new Command();
 
 const SKIP_CONFIG = ['configFile', 'token', 'loginPath'];
+const DEFAULT_HOST = 'https://pgfarm.library.ucdavis.edu';
 
 program.command('set <key> <value>')
   .description('set a config value')
   .action((key, value) => {
     config[key] = value;
+    if( key === 'host' && config[key] !== value ) {
+      config.token = null;
+      config.tokenHash = null;
+    }
     save();
   });
+
+program.command('default-host')
+  .description(`set the host to the production PG Farm (${DEFAULT_HOST})`)
+  .action((key, value) => {
+    if( config.host != DEFAULT_HOST ) {
+      config.host = DEFAULT_HOST;
+      config.token = null;
+      config.tokenHash = null;
+    }
+    save();
+  });
+
 
 program.command('show')
   .alias('list')

@@ -99,7 +99,7 @@ class ProxyMonitor {
         sessionId: proxyConnection.sessionId,
         databaseName: proxyConnection.pgFarmUser.database_name,
         orgName: proxyConnection.pgFarmUser.organization_name,
-        userName: proxyConnection.pgFarmUser.username,
+        userName: proxyConnection.pgFarmUser?.username,
         remoteAddress: proxyConnection.clientSocket.remoteAddress,
         gatewayId: proxyConnection.server.id,
         data : {
@@ -122,7 +122,7 @@ class ProxyMonitor {
       logger.error('Error logging client disconnect to pg: ', e);
     }
 
-    this.logProxyConnectionEvent(proxyConnection, this.PROXY_EVENTS.CLIENT_CLOSE, proxyConnection.pgFarmUser.username);
+    this.logProxyConnectionEvent(proxyConnection, this.PROXY_EVENTS.CLIENT_CLOSE, proxyConnection.pgFarmUser?.username);
   }
 
   async logProxyConnectionEvent(proxyConnection, event, message) {

@@ -96,15 +96,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- CREATE OR REPLACE FUNCTION pgfarm.cleanup_closed_connections() RETURNS void AS $$
--- BEGIN
---     UPDATE
---       pgfarm.connection SET closed_at = now()
---     WHERE
---       alive_at < now() - INTERVAL '15 minutes';
--- END;
--- $$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION pgfarm.connection_close(
     ses_id_in TEXT,
     closed_at_in timestamp

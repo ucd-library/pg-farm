@@ -39,7 +39,7 @@ program.command('connections')
     process.exit(0);
   });
 
-  program.command('connection-log')
+program.command('connection-log')
   .description('Show connection status')
   .argument('<sessionId>', 'Session ID')
   .action(async (sessionsId, opts) => {
@@ -59,6 +59,15 @@ program.command('connections')
       return row;
     });
     
+    print.display(resp, opts.output);
+    process.exit(0);
+  });
+
+
+program.command('sleep')
+  .description('run the cron to sleep instances now')
+  .action(async (opts) => {
+    let resp = await adminModel.sleep();
     print.display(resp, opts.output);
     process.exit(0);
   });

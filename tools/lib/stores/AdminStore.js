@@ -31,6 +31,14 @@ class AdminStore extends BaseStore {
     );
   }
 
+  onSleepUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.CONNECTION_LOG_UPDATE
+    );
+  }
+
   _set(payload, store, event) {
     store.set(payload.id, payload);
     this.emit(event, payload);
