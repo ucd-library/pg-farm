@@ -11,6 +11,7 @@ class DatabaseService extends BaseService {
     this.store = DatabaseStore;
     this.basePath = `${serviceUtils.host}/api/db`;
     this.searchId = 0;
+    this.aggsId = 0;
   }
 
   async get(org, db) {
@@ -134,6 +135,28 @@ class DatabaseService extends BaseService {
       onLoading: request => this.store.onSearchUpdate({id, searchParams, request}),
       onLoad: payload => this.store.onSearchUpdate({id, searchParams, payload: payload.body}),
       onError: error => this.store.onSearchUpdate({id, searchParams, error})
+    });
+
+    return {
+      id,
+      request
+    }
+  }
+
+  aggs(aggs, searchParams) {
+    let id = this.aggsId++;
+
+    let request = this.request({
+      url: `${this.basePath}/aggregations`,
+      fetchOptions: {
+        method : 'POST',
+        body: {...searchParams, aggs},
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onAggsUpdate({id, aggs, searchParams, request}),
+      onLoad: payload => this.store.onAggsUpdate({id, aggs, searchParams, payload: payload.body}),
+      onError: error => this.store.onAggsUpdate({id, aggs, searchParams, error})
     });
 
     return {

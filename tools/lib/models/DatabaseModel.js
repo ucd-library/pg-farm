@@ -84,6 +84,14 @@ class DatabaseModel extends BaseModel {
     return this.store.data.search.get(id);
   }
 
+  aggs(aggs, opts) {
+    return this.service.aggs(aggs, opts);
+  }
+
+  getAggResult(id) {
+    return this.store.data.aggs.get(id);
+  }
+
   /**
    * @method getUsers
    * @description get list of users for a database

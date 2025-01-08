@@ -58,8 +58,7 @@ export default class AppError extends Mixin(LitElement)
   }
 
   formatError(error){
-    const payload = error?.response?.value?.error?.payload || {};
-    console.log(error);
+    const payload = error?.response?.value?.error?.payload || error?.response?.value?.payload || {};
     const url = error?.response?.value?.error?.response?.url ||
       error?.response?.value?.response?.url || '';
 

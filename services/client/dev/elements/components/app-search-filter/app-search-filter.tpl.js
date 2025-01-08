@@ -67,6 +67,9 @@ export function styles() {
       max-height: var(--ucd-search-filter-max-height, 140px);
       overflow-y: scroll;
     }
+    .options.scroll {
+      padding-right: .75rem;
+    }
     .option {
       cursor: pointer;
       display: flex;
@@ -116,7 +119,7 @@ return html`
           placeholder=${this.searchPlaceholder}>
         <app-icon slug='fa.solid.magnifying-glass'></app-icon>
       </div>
-      <div class='options'>
+      <div class='options ${this._hasScroll ? 'scroll' : 'no-scroll'}'>
         ${this._options.filter(opt => opt.selected).map(opt => _renderOption.call(this, opt))}
         ${this._options.filter(opt => !opt.selected).map(opt => _renderOption.call(this, opt))}
       </div>

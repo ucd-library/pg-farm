@@ -16,7 +16,8 @@ export default class AppSearchFilter extends LitElement {
       searchValue: { type: String, attribute: 'search-value' },
       queryParam: {type: String, attribute: 'query-param'},
       _options: { state: true },
-      _hideSearch: { state: true }
+      _hideSearch: { state: true },
+      _hasScroll: { state: true }
     }
   }
 
@@ -35,6 +36,7 @@ export default class AppSearchFilter extends LitElement {
     this.searchPlaceholder = '';
     this.searchThreshold = 10;
     this.hideSearch = false;
+    this._hasScroll = false;
   }
 
   willUpdate(props){
@@ -42,6 +44,11 @@ export default class AppSearchFilter extends LitElement {
     if ( p.some(prop => props.has(prop)) ) {
       this.reset();
     }
+  }
+
+  updated(){
+    const ele = this.renderRoot.querySelector('.options');
+    this._hasScroll = ele.scrollHeight > ele.clientHeight;
   }
 
   async reset(){

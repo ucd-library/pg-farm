@@ -12,6 +12,7 @@ class DatabaseStore extends BaseStore {
       update : new LruStore({name: 'database.update'}),
       users : new LruStore({name: 'database.users'}),
       search : new LruStore({name: 'database.search', max: 20}),
+      aggs : new LruStore({name: 'database.aggs'}, {max: 20}),
       schemas : new LruStore({name: 'database.schemas'}),
       schemaTables : new LruStore({name: 'database.schemaTables'}),
       schemaUserAccess : new LruStore({name: 'database.schemaUserAccess'}),
@@ -27,6 +28,7 @@ class DatabaseStore extends BaseStore {
       DATABASE_UPDATE_UPDATE : 'database-update-update',
       DATABASE_USERS_UPDATE : 'database-users-update',
       DATABASE_SEARCH_UPDATE : 'database-search-update',
+      DATABASE_AGGS_UPDATE : 'database-aggs-update',
       DATABASE_SCHEMAS_UPDATE : 'database-schemas-update',
       DATABASE_SCHEMA_TABLES_UPDATE : 'database-schema-tables-update',
       DATABASE_SCHEMA_USER_ACCESS_UPDATE : 'database-schema-user-access-update',
@@ -70,6 +72,14 @@ class DatabaseStore extends BaseStore {
       payload,
       this.data.search,
       this.events.DATABASE_SEARCH_UPDATE
+    );
+  }
+
+  onAggsUpdate(payload) {
+    this._set(
+      payload,
+      this.data.aggs,
+      this.events.DATABASE_AGGS_UPDATE
     );
   }
 
