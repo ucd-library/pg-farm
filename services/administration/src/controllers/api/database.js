@@ -73,7 +73,6 @@ async function search(req, res) {
 /**
  * Aggregations for search
  */
-
 router.get('/aggregations', aggregations);
 router.post('/aggregations', aggregations);
 async function aggregations(req, res) {

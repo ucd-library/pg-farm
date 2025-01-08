@@ -5,6 +5,13 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
 import QueryParamController from '../../../controllers/QueryParamController.js';
 
+/**
+ * @description Component that displays filter badge(s) from a query parameter.
+ * @property {String} queryParam - The url query parameter to use for the filter.
+ * @property {Boolean} multiple - Whether the url query parameter can have multiple comma separated values.
+ * @property {Array} labels - List of objects with value and label properties to use for display. Optional.
+ * @property {Boolean} active - Whether the filter is being displayed.
+ */
 export default class AppSearchBadgeFilter extends Mixin(LitElement)
   .with(LitCorkUtils) {
 
@@ -13,8 +20,8 @@ export default class AppSearchBadgeFilter extends Mixin(LitElement)
       queryParam: {type: String, attribute: 'query-param'},
       multiple: { type: Boolean },
       labels: { type: Array },
-      filters: {state: true},
-      active: {type: Boolean, reflect: true}
+      active: {type: Boolean, reflect: true},
+      filters: {state: true}
     }
   }
 

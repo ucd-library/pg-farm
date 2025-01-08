@@ -3,6 +3,17 @@ import {render, styles} from "./app-search-filter.tpl.js";
 
 import QueryParamController from '../../../controllers/QueryParamController.js';
 
+/**
+ * @description Component that allows users to filter search results by a list of options.
+ * @property {String} name - The name of the filter. Will be used as label.
+ * @property {Boolean} expanded - Whether the options are visible.
+ * @property {Array} options - List of options to filter by. Can be a list of strings or objects with value and label properties.
+ * @property {Boolean} multiple - Whether multiple options can be selected at once.
+ * @property {String} searchPlaceholder - Placeholder text for the search input if search threshold is met.
+ * @property {Number} searchThreshold - Number of options required to show search input.
+ * @property {String} searchValue - Value of the search input.
+ * @property {String} queryParam - Name of the query parameter to use for determining selected options. Defaults to name property.
+ */
 export default class AppSearchFilter extends LitElement {
 
   static get properties() {

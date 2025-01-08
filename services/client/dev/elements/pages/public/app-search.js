@@ -7,6 +7,14 @@ import QueryParamsController from '../../../controllers/QueryParamsController.js
 import PageDataController from '../../../controllers/PageDataController.js';
 import IdGenerator from '../../../utils/IdGenerator.js';
 
+/**
+ * @description - Page for searching databases
+ * @property {String} pageId - The id of the page.
+ * @property {Number} total - The total number of search results.
+ * @property {Array} results - The search results.
+ * @property {Array} organizations - The list of organizations for filtering.
+ * @property {Array} tags - The list of tags for filtering.
+ */
 export default class AppSearch extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 

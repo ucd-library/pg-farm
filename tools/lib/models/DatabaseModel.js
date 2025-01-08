@@ -84,10 +84,21 @@ class DatabaseModel extends BaseModel {
     return this.store.data.search.get(id);
   }
 
+  /**
+   * @description Get aggregations for a search.  Returns object with id and request promise.
+   * @param {Array} aggs - list of aggregations to get (e.g. ['organization', 'tag'])
+   * @param {Object} opts - search options
+   * @returns
+   */
   aggs(aggs, opts) {
     return this.service.aggs(aggs, opts);
   }
 
+  /**
+   * @description Get aggregation result by id returned from aggs method
+   * @param {*} id
+   * @returns  {Object}
+   */
   getAggResult(id) {
     return this.store.data.aggs.get(id);
   }
