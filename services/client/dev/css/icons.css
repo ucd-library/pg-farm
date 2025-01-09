@@ -7,7 +7,3 @@ a.prefixed-icon app-icon {
   --app-icon-size: var(--font-size, 1rem);
   color: var(--ucd-blue-70, #73ABDD);
 }
-
-.user-logged-out ucd-theme-quick-links {
-  --ucd-theme-quick-links-icon-bg-color: var(--ucd-blue-70, #73ABDD);
-}

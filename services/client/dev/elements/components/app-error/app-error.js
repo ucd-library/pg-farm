@@ -39,6 +39,8 @@ export default class AppError extends Mixin(LitElement)
     this.heading = opts.heading || this.getDefaultHeading();
     if ( opts.errors ) {
       this.errors = opts.errors.map(error => this.formatError(error));
+    } else if ( opts.error ) {
+      this.errors = [this.formatError({errorMessage: opts.message, response: {value: opts.error}})];
     } else {
       this.errors = [];
     }

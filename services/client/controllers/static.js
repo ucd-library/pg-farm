@@ -40,7 +40,11 @@ async function setup(app) {
         env : config.client.env,
         grants : pgInstClient.GRANTS,
         logger : config.client.logger,
-        buildInfo: config.client.buildInfo
+        buildInfo: config.client.buildInfo,
+        recaptcha: {
+          disabled: config.client.recaptcha.disabled,
+          siteKey: config.client.recaptcha.siteKey
+        }
       });
     },
     template : async (req, res, next) => {

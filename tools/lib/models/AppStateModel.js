@@ -42,6 +42,13 @@ class AppStateModelImpl extends AppStateModel {
     this.store.emit(this.store.events.APP_LOADING_UPDATE, {show: false});
   }
 
+  /**
+   * @description show an error message
+   * @param {Object} opts - error message options
+   * @param {String} opts.errors - array of errors with expected format from PageDataController
+   * @param {String} opts.error - A single cork-app-utils error object if only one error
+   * @param {String} opts.message - A single error message if only one error. Optional.
+   */
   showError(opts){
     this.store.emit(this.store.events.APP_ERROR_UPDATE, {show: true, opts});
   }
