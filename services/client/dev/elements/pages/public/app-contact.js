@@ -49,8 +49,6 @@ export default class AppContact extends Mixin(LitElement)
     this.failedValidations = [];
     e.preventDefault();
     this.data._recaptchaToken = await recaptcha.execute();
-    console.log(this.data);
-
     this.AppStateModel.showLoading();
     const r = await this.ContactModel.submit(this.data);
     if ( r.error ){
@@ -71,11 +69,8 @@ export default class AppContact extends Mixin(LitElement)
     } else {
       this._showSuccess = true;
     }
-    console.log(r);
     this.AppStateModel.hideLoading();
     window.scrollTo(0,0);
-
-
   }
 
   /**
@@ -89,6 +84,7 @@ export default class AppContact extends Mixin(LitElement)
     this._recaptchaDisabled = recaptcha.disabled;
     this._showSuccess = false;
     this.failedValidations = [];
+    this.data = {};
 
     this.AppStateModel.hideLoading();
   }

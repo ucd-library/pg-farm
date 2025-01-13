@@ -41,6 +41,9 @@ return html`
       </div>
     </div>
     <div class='l-container--narrow-desktop u-space-mt--large'>
+      <div ?hidden=${!this.failedValidations.length} class='alert alert--error'>
+        Submission failed. Please correct the following errors and try again.
+      </div>
       ${_renderForm.call(this)}
     </div>
   </div>

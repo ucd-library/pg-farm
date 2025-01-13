@@ -91,8 +91,7 @@ const config = {
       }
     },
     recaptcha : {
-      //disabled : env.CLIENT_RECAPTCHA_DISABLED === 'true',
-      disabled: true,
+      disabled : env.CLIENT_RECAPTCHA_DISABLED === 'true',
       siteKey : env.CLIENT_RECAPTCHA_SITE_KEY || '',
       secretKey : env.CLIENT_RECAPTCHA_SECRET_KEY || ''
     },
@@ -111,8 +110,8 @@ const config = {
     host : env.SMTP_HOST || 'smtp.lib.ucdavis.edu',
     port : env.SMTP_PORT || 25,
     secure : env.SMTP_SECURE === 'true',
-    adminEmail : env.SMTP_ADMIN_EMAIL || '',
-    fromEmail : env.SMTP_FROM_EMAIL || 'no-reply@pgfarm.library.ucdavis.edu'
+    adminEmail : env.SMTP_ADMIN_EMAIL,
+    fromEmail : env.SMTP_FROM_EMAIL || 'no-reply@library.ucdavis.edu'
   },
 
   gateway : {

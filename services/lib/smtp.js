@@ -11,7 +11,8 @@ class Smtp {
       secure: config.smtp.secure,
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 10000
     });
   }
 
@@ -21,7 +22,7 @@ class Smtp {
       opts.from = config.smtp.fromEmail;
     }
     try {
-      await this.transporter.sendMail(opts);
+      out.info = await this.transporter.sendMail(opts);
       out.success = true;
     } catch(e) {
       logger.error('Error sending email', e);

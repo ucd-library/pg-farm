@@ -35,7 +35,7 @@ router.post('/', async (req, res) => {
       if( !recaptchaResp.success ) {
         return res.status(400).json({
           message : 'Recaptcha failed',
-          details : {validationFailed: true, recaptchaFailed: true}
+          details : {recaptchaFailed: true}
         });
       }
     }
