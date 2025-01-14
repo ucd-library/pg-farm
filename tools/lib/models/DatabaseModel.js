@@ -132,6 +132,16 @@ class DatabaseModel extends BaseModel {
   }
 
   /**
+   * @description Simple check to see if current user is an admin for a database
+   * @param {*} org
+   * @param {*} db
+   * @returns
+   */
+  isAdmin(org, db) {
+    return this.service.isAdmin(org, db);
+  }
+
+  /**
    * @method setUserAccess
    * @description set access for a user on a database, schema or table.
    * For a database, schemaTable should be null.  For a table, the schemaTable

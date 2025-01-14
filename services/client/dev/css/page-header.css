@@ -6,6 +6,10 @@
   width: 92%;
   margin: 0 auto;
 }
+.page-header__wrapper--flex {
+  display: flex;
+  justify-content: space-between;
+}
 @media (min-width: 768px) {
   .page-header__wrapper {
     width: 86%;

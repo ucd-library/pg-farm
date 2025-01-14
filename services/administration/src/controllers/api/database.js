@@ -262,6 +262,11 @@ router.post('/:organization/:database/init', keycloak.protect('admin'), async (r
   }
 });
 
+/** Check if admin */
+router.get('/:organization/:database/is-admin', keycloak.protect('instance-admin'), async (req, res) => {
+  return res.json({isAdmin: true});
+});
+
 /** Get Users **/
 router.get('/:organization/:database/users',
   keycloak.protect('instance-admin'),
