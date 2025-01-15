@@ -53,6 +53,8 @@ function _renderMainContent(){
       <app-organizations page-id="org"></app-organizations>
       <app-organization page-id="org-single"></app-organization>
       <app-database page-id="db"></app-database>
+
+      <app-admin-database-overview page-id="admin-db-overview"></app-admin-database-overview>
     </ucdlib-pages>
   </div>
   `;

@@ -23,6 +23,10 @@ class AppStateModelImpl extends AppStateModel {
         page = 'org-single';
       }
 
+      if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
+        page = 'admin-db-overview';
+      }
+
       update.page = page;
     }
 
