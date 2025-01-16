@@ -13,6 +13,7 @@ export default class AppIconButton extends LitElement {
   static get properties() {
     return {
       color: { type: String },
+      basic: { type: Boolean },
       icon: { type: String },
       href: { type: String },
       disabled: { type: Boolean }
@@ -27,6 +28,7 @@ export default class AppIconButton extends LitElement {
     super();
     this.render = render.bind(this);
     this.color = '';
+    this.basic = false;
     this.icon = '';
     this.href = '';
     this.disabled = false;
