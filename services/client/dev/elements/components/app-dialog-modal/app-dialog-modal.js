@@ -4,6 +4,11 @@ import { LitCorkUtils, Mixin } from '@ucd-lib/cork-app-utils';
 import { createRef } from 'lit/directives/ref.js';
 import { MainDomElement } from "@ucd-lib/theme-elements/utils/mixins/main-dom-element.js";
 
+/**
+ * @description A dialog modal component that can be used to display a dialog with a title, content, and actions.
+ * Use AppStateModel showDialogModal modal to open the dialog.
+ * Listen for AppStateModel app-dialog-action event to handle dialog actions.
+ */
 export default class AppDialogModal extends Mixin(LitElement)
 .with(LitCorkUtils, MainDomElement) {
 
@@ -13,7 +18,8 @@ export default class AppDialogModal extends Mixin(LitElement)
       modalContent: {type: String},
       actions: {type: Array},
       data: {type: Object},
-      actionCallback: {state: true}
+      actionCallback: {state: true},
+      contentMaxHeight: {type: String}
     }
   }
 
@@ -30,10 +36,47 @@ export default class AppDialogModal extends Mixin(LitElement)
     this.actions = [];
     this.data = {};
     this.actionCallback = null;
+    this.contentMaxHeight = '';
 
     this.dialogRef = createRef();
 
     this._injectModel('AppStateModel');
+  }
+
+  connectedCallback(){
+    super.connectedCallback();
+    window.addEventListener('resize', this.setMaxHeight.bind(this));
+  }
+
+  disconnectedCallback(){
+    super.disconnectedCallback();
+    window.removeEventListener('resize', this.setMaxHeight.bind(this));
+  }
+
+  updated(){
+    this.setMaxHeight();
+  }
+
+  /**
+   * @description Sets max height of dialog content area based on viewport height.
+   * So that modal header and buttons always remain visible.
+   * @returns
+   */
+  setMaxHeight(){
+    if ( !this.dialogRef.value.open ){
+      return;
+    }
+    const viewportHeight = window.innerHeight;
+    const dialogComputedStyle = window.getComputedStyle(this.dialogRef.value);
+    const dialogMargin = parseInt(dialogComputedStyle.marginTop) + parseInt(dialogComputedStyle.marginBottom);
+    const dialogPadding = parseInt(dialogComputedStyle.paddingTop) + parseInt(dialogComputedStyle.paddingBottom);
+    const headingHeight = this.renderRoot.querySelector('.heading-wrapper').offsetHeight;
+    const buttonsHeight = this.renderRoot.querySelector('.buttons-wrapper').offsetHeight;
+
+    let maxHeight = viewportHeight - dialogMargin - dialogPadding - headingHeight - buttonsHeight;
+    // round down to nearest 5px to prevent scrollbar flicker
+    maxHeight = Math.floor(maxHeight / 5) * 5 + 'px';
+    this.contentMaxHeight = maxHeight;
   }
 
   /**

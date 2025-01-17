@@ -15,6 +15,8 @@ export function styles() {
       padding: 1rem 0;
       border-radius: 1rem;
       animation: dialog-fade-out 0.5s ease-out;
+      margin: 1rem;
+      overflow-y: hidden;
     }
     app-dialog-modal dialog[open] {
       animation: dialog-fade-in 0.5s ease-out;
@@ -64,7 +66,6 @@ export function styles() {
     }
     app-dialog-modal .heading-wrapper {
       padding-bottom: 1rem;
-      margin-bottom: 1rem;
       border-bottom: 1px solid var(--ucd-black-20, #E5E5E5);
     }
     app-dialog-modal .heading {
@@ -77,11 +78,11 @@ export function styles() {
       margin: 0;
     }
     app-dialog-modal .buttons-wrapper {
-      margin-top: 1rem;
       border-top: 1px solid var(--ucd-black-20, #E5E5E5);
     }
     app-dialog-modal .modal-content {
-      padding: 0 2rem;
+      padding: 1rem 2rem;
+      overflow-y: scroll;
     }
   `;
 
@@ -97,7 +98,7 @@ return html`
         <app-icon-button icon='fa.solid.xmark' @click=${() => this._onButtonClick('dismiss')} basic></app-icon-button>
       </div>
     </div>
-    <div class='modal-content'>
+    <div class='modal-content' style='max-height: ${this.contentMaxHeight || 'none'}'>
       ${this.modalContent}
     </div>
     <div class='buttons-wrapper'>

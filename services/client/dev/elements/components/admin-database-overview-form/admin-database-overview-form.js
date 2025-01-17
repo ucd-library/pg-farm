@@ -51,9 +51,17 @@ export default class AdminDatabaseOverviewForm extends Mixin(LitElement)
     if ( prop === 'brandColor' && value === 'secondary' ) {
       value = '';
     }
+    if ( prop === 'icon' ){
+      if ( value.iconExists || !value.value ){
+        value = value.value;
+      } else {
+        return;
+      }
+    }
     if ( prop === 'tags' ) {
       value = value.split(',').map(tag => tag.trim());
     }
+
     this.payload[prop] = value;
     this.requestUpdate();
   }

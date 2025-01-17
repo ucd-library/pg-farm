@@ -11,6 +11,11 @@ export function styles() {
       margin-top: 1rem;
       margin-bottom: 1.5rem;
     }
+    admin-database-overview-form .field-description {
+      margin-bottom: var(--spacer--small, 0.5rem);
+      color: var(--gray, #4c4c4c);
+      font-size: var(--font-size--small, 0.875rem);
+    }
   `;
 
   return [elementStyles];
@@ -24,7 +29,7 @@ return html`
         <label for=${this.idGen.get('title')} class='u-space-mr--small u-space-pb--flush'>Title</label>
         <div class='gray font-size--small'>(required)</div>
       </div>
-      <div class='gray font-size--small u-space-mb--small'>Limited to 100 characters.</div>
+      <div class='field-description'>Limited to 100 characters.</div>
       <input
         id=${this.idGen.get('title')}
         .value=${this.payload.title}
@@ -37,7 +42,7 @@ return html`
         <label for=${this.idGen.get('shortDescription')} class='u-space-mr--small u-space-pb--flush'>Short Description</label>
         <div class='gray font-size--small'>(required)</div>
       </div>
-      <div class='gray font-size--small u-space-mb--small'>Appears on database listing and search results. Limited to 250 characters.</div>
+      <div class='field-description'>Appears on database listing and search results. Limited to 250 characters.</div>
       <textarea
         id=${this.idGen.get('shortDescription')}
         .value=${this.payload.shortDescription}
@@ -48,10 +53,57 @@ return html`
       </textarea>
     </div>
     <div class='field-container'>
+      <label for=${this.idGen.get('description')}>Detailed Description</label>
+      <div class='field-description'>Appears on the dedicated information page for the database. </div>
+      <textarea
+        id=${this.idGen.get('description')}
+        .value=${this.payload.description}
+        @input=${e => this._onInput('description', e.target.value)}
+        rows='5'>
+      </textarea>
+    </div>
+    <div class='field-container'>
+      <label>Highlight as Featured</label>
+      <div class='field-description'>Highlighted databases appear first on your organization page with colored background. For multiple highlights, most recently selected highlight will show first. </div>
+      <ul class="list--reset radio">
+        <li>
+          <input
+            id=${this.idGen.get('isFeatured.false')}
+            name='isFeatured'
+            type='radio'
+            @input=${e => this._onInput('isFeatured', false)}
+            .checked=${this.payload.isFeatured === false} />
+          <label for=${this.idGen.get('isFeatured.false')}>No</label>
+        </li>
+        <li>
+          <input
+            id=${this.idGen.get('isFeatured.true')}
+            name='isFeatured'
+            type='radio'
+            @input=${e => this._onInput('isFeatured', true)}
+            .checked=${this.payload.isFeatured === true} />
+          <label for=${this.idGen.get('isFeatured.true')}>Yes</label>
+        </li>
+      </ul>
+    </div>
+    <div class='field-container'>
       <label>Font Awesome Icon</label>
-      <div class='gray font-size--small u-space-mb--small'>Enter a <a href='https://fontawesome.com/v6/search?ic=free' target='_blank'>Font Awesome icon name</a> (link opens in new tab) to change the icon. If left blank, the icon “database” will display by default.</div>
-      <app-brand-color-picker .selectedColor=${this.payload.brandColor || 'secondary'} @select=${e => this._onInput('brandColor', e.detail.color.id)}></app-brand-color-picker>
-      <app-icon-picker value=${this.payload.icon} default='database' icon-set='fa.solid'></app-icon-picker>
+      <div class='field-description'>Enter a <a href='https://fontawesome.com/v6/search?ic=free' target='_blank'>Font Awesome icon name</a> (link opens in new tab) to change the icon. If left blank, the icon “database” will display by default.</div>
+      <app-brand-color-picker .value=${this.payload.brandColor || 'secondary'} @select=${e => this._onInput('brandColor', e.detail.color.id)}></app-brand-color-picker>
+      <app-icon-picker
+        value=${this.payload.icon}
+        default='database'
+        brand-color=${this.payload.brandColor || 'secondary'}
+        icon-set='fa.solid'
+        @change=${e => this._onInput('icon', e.detail)}></app-icon-picker>
+    </div>
+    <div class='field-container'>
+      <label for=${this.idGen.get('tags')}>Tags</label>
+      <div class='field-description'>Separate tags with a comma. Tags are used to organize and aid search results.</div>
+      <input
+        id=${this.idGen.get('tags')}
+        .value=${this.payload.tags.join(', ')}
+        @input=${e => this._onInput('tags', e.target.value)}>
     </div>
   </form>
 `;}
