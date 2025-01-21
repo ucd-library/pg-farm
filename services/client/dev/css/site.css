@@ -1,0 +1,4 @@
+.grecaptcha-badge { visibility: hidden; }
+.user-logged-out ucd-theme-quick-links {
+  --ucd-theme-quick-links-icon-bg-color: var(--ucd-blue-70, #73ABDD);
+}

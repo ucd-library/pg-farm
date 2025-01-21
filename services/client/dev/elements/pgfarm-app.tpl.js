@@ -41,6 +41,7 @@ function _renderMainContent(){
   return html`
   <app-loader></app-loader>
   <app-error></app-error>
+  <app-dialog-modal></app-dialog-modal>
   <div class="main-content">
     <ucdlib-pages
       id='app-pages'
@@ -53,6 +54,8 @@ function _renderMainContent(){
       <app-organizations page-id="org"></app-organizations>
       <app-organization page-id="org-single"></app-organization>
       <app-database page-id="db"></app-database>
+
+      <app-admin-database-overview page-id="admin-db-overview"></app-admin-database-overview>
     </ucdlib-pages>
   </div>
   `;

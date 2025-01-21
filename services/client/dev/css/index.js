@@ -9,6 +9,7 @@ import headings from './headings.css';
 import icons from './icons.css';
 import layout from './layout.css';
 import pageHeader from './page-header.css';
+import site from './site.css';
 import spacing from './spacing.css';
 import text from './text.css';
 
@@ -23,6 +24,7 @@ const styles = `
   ${icons}
   ${layout}
   ${pageHeader}
+  ${site}
   ${spacing}
   ${text}
 `;

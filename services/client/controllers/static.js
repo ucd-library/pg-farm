@@ -27,9 +27,13 @@ async function setup(app) {
       let user = {loggedIn: false};
       try {
         if( req.cookies[config.jwt.cookieName] ) {
-          user.token = req.cookies[config.jwt.cookieName];
-          user.tokenParsed = JSON.parse(Buffer.from(user.token.split('.')[1], 'base64').toString('utf8'));
-          user.loggedIn = true;
+          const token = req.cookies[config.jwt.cookieName];
+          const tokenParsed = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
+          if ( tokenParsed.exp > Date.now() / 1000 ) {
+            user.token = token;
+            user.tokenParsed = tokenParsed;
+            user.loggedIn = true;
+          }
         }
       } catch(e) {}
       next({
@@ -40,7 +44,11 @@ async function setup(app) {
         env : config.client.env,
         grants : pgInstClient.GRANTS,
         logger : config.client.logger,
-        buildInfo: config.client.buildInfo
+        buildInfo: config.client.buildInfo,
+        recaptcha: {
+          disabled: config.client.recaptcha.disabled,
+          siteKey: config.client.recaptcha.siteKey
+        }
       });
     },
     template : async (req, res, next) => {

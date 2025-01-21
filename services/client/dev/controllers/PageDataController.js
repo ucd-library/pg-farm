@@ -74,7 +74,9 @@ export default class PageDataController {
   }
 
   _requestIsError(request) {
-    return request.response.status === 'rejected' || request.response?.value?.state === 'error';
+    return request.response.status === 'rejected' ||
+    request.response?.value?.state === 'error' ||
+    request.response?.value?.error;
   }
 
   _formatRequests(requests) {

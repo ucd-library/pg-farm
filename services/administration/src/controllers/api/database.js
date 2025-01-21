@@ -71,6 +71,34 @@ async function search(req, res) {
 }
 
 /**
+ * Aggregations for search
+ */
+router.get('/aggregations', aggregations);
+router.post('/aggregations', aggregations);
+async function aggregations(req, res) {
+  try {
+    let input = Object.assign({}, req.query, req.body);
+
+    let opts = {
+      text : input.text,
+      tags : input.tags,
+      organization : input.organization,
+      excludeFeatured : input.excludeFeatured
+    };
+
+    if( input.onlyMine && req.user ) {
+      opts.user = req.user.id;
+    }
+    const aggs = Array.isArray(input.aggs) ? input.aggs : (input.aggs || '').split(',');
+
+    let result = await database.aggregations(aggs, opts);
+    res.json(result);
+  } catch(e) {
+    handleError(res, e);
+  }
+};
+
+/**
  * Manage featured database lists
  */
 router.patch('/featured', keycloak.protect('admin'), async (req, res) => patchFeatured(req, res));
@@ -232,6 +260,11 @@ router.post('/:organization/:database/init', keycloak.protect('admin'), async (r
   } catch(e) {
     handleError(res, e);
   }
+});
+
+/** Check if admin */
+router.get('/:organization/:database/is-admin', keycloak.protect('instance-admin'), async (req, res) => {
+  return res.json({isAdmin: true});
 });
 
 /** Get Users **/

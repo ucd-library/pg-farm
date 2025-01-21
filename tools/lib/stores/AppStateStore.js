@@ -6,6 +6,8 @@ class AppStateStoreImpl extends AppStateStore {
 
     this.events.APP_LOADING_UPDATE = 'app-loading-update';
     this.events.APP_ERROR_UPDATE = 'app-error-update';
+    this.events.APP_DIALOG_OPEN = 'app-dialog-open';
+    this.events.APP_DIALOG_ACTION = 'app-dialog-action';
   }
 }
 

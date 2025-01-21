@@ -7,6 +7,14 @@ import QueryParamsController from '../../../controllers/QueryParamsController.js
 import PageDataController from '../../../controllers/PageDataController.js';
 import IdGenerator from '../../../utils/IdGenerator.js';
 
+/**
+ * @description - Page for searching databases
+ * @property {String} pageId - The id of the page.
+ * @property {Number} total - The total number of search results.
+ * @property {Array} results - The search results.
+ * @property {Array} organizations - The list of organizations for filtering.
+ * @property {Array} tags - The list of tags for filtering.
+ */
 export default class AppSearch extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 
@@ -15,6 +23,8 @@ export default class AppSearch extends Mixin(LitElement)
       pageId: { type: String, attribute: 'page-id' },
       total: { type: Number },
       results: { type: Array },
+      organizations: { type: Array },
+      tags: { type: Array },
     }
   }
 
@@ -34,6 +44,8 @@ export default class AppSearch extends Mixin(LitElement)
     ]);
     this.total = 0;
     this.results = [];
+    this.organizations = [];
+    this.tags = [];
 
     this._injectModel('AppStateModel', 'DatabaseModel');
   }
@@ -47,6 +59,12 @@ export default class AppSearch extends Mixin(LitElement)
         hostCallback: '_onSearchSuccess',
         returnedResponse: 'request',
         errorMessage: 'Error when performing database search'
+      },
+      {
+        request: this.DatabaseModel.aggs(['organization', 'tag'], e.location.query),
+        hostCallback: '_onAggsSuccess',
+        returnedResponse: 'request',
+        errorMessage: 'Error when retrieving database search aggregations'
       }
     ])
   }
@@ -55,7 +73,12 @@ export default class AppSearch extends Mixin(LitElement)
     const data = this.DatabaseModel.getSearchResult(e.id).payload;
     this.total = data.total;
     this.results = data.items;
+  }
 
+  _onAggsSuccess(e){
+    const data = this.DatabaseModel.getAggResult(e.id).payload;
+    this.organizations = data.find(agg => agg.key === 'organization')?.items || [];
+    this.tags = data.find(agg => agg.key === 'tag')?.items || [];
   }
 
 }

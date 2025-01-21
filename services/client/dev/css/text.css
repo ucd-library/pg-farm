@@ -4,3 +4,15 @@
 .bold {
   font-weight: 700;
 }
+a.bold-link {
+  color: var(--ucd-blue-80, #13639E);
+  text-decoration: none;
+  font-weight: var(--font-weight--bold, 700);
+}
+a.bold-link:hover {
+  text-decoration: underline;
+  color: var(--ucd-blue-80, #13639E);
+}
+.font-size--small {
+  font-size: var(--font-size--small, 0.875rem);
+}

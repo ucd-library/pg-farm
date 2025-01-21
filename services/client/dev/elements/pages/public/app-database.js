@@ -41,9 +41,16 @@ export default class AppDatabase extends Mixin(LitElement)
     if ( e.page !== this.pageId ) return;
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
+    this.dataCtl.isAdmin = false;
     await this.dataCtl.get([
-      {request: this.DatabaseModel.get(this.orgName, this.dbName), ctlProp: 'db', errorMessage: 'Unable to load database'}
+      {request: this.DatabaseModel.get(this.orgName, this.dbName), ctlProp: 'db', errorMessage: 'Unable to load database'},
+      {request: this.DatabaseModel.isAdmin(this.orgName, this.dbName), ignoreError: true, hostCallback: '_onAdminCheck'}
     ]);
+  }
+
+  _onAdminCheck(e){
+    this.dataCtl.isAdmin = e.isAdmin;
+    this.requestUpdate();
   }
 
 }

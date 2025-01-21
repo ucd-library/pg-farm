@@ -39,11 +39,11 @@ export default class AppError extends Mixin(LitElement)
     this.heading = opts.heading || this.getDefaultHeading();
     if ( opts.errors ) {
       this.errors = opts.errors.map(error => this.formatError(error));
+    } else if ( opts.error ) {
+      this.errors = [this.formatError({errorMessage: opts.message, response: {value: opts.error}})];
     } else {
       this.errors = [];
     }
-
-    console.log(opts.errors);
   }
 
   hide(){
@@ -60,14 +60,15 @@ export default class AppError extends Mixin(LitElement)
   }
 
   formatError(error){
-    const payload = error?.response?.value?.error?.payload || {};
-    console.log(payload);
+    const payload = error?.response?.value?.error?.payload || error?.response?.value?.payload || {};
+    const url = error?.response?.value?.error?.response?.url ||
+      error?.response?.value?.response?.url || '';
 
     const out = {
       heading: 'Unknown error',
       message: payload.message || '',
       stack: payload.stack || '',
-      url: error?.response?.value?.error?.response?.url || '',
+      url,
       showDetails: false
     };
 

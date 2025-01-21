@@ -38,7 +38,10 @@ class IconModel extends BaseModel {
     })
 
     if ( opts?.noDebounce ) {
-      return this.service.get([...slugSet]);
+      if ( slugSet.size ) {
+        await this.service.get([...slugSet]);
+      }
+      return this.getFromCache(iconSlugs);
     }
 
     // add new slugs to batch

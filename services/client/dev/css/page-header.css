@@ -2,13 +2,23 @@
   padding: var(--spacer--medium-2x, 3rem) 0;
   border-bottom: 2px solid var(--ucd-black-20, #E5E5E5);
 }
+.page-header--mb {
+  margin-bottom: 1rem;
+}
 .page-header__wrapper {
   width: 92%;
   margin: 0 auto;
 }
+.page-header__wrapper--flex {
+  display: flex;
+  justify-content: space-between;
+}
 @media (min-width: 768px) {
   .page-header__wrapper {
     width: 86%;
+  }
+  .page-header--mb {
+    margin-bottom: 2.5rem;
   }
 }
 .page-header__title {

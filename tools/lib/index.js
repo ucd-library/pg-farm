@@ -1,4 +1,5 @@
 import appStateModel from './models/AppStateModel.js';
+import contactModel from './models/ContactModel.js';
 import databaseModel from './models/DatabaseModel.js';
 import iconModel from './models/IconModel.js';
 import instanceModel from './models/InstanceModel.js';
@@ -9,6 +10,7 @@ import utils from './utils.js';
 
 export {
   appStateModel,
+  contactModel,
   databaseModel,
   iconModel,
   instanceModel,

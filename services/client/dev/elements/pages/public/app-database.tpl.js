@@ -9,15 +9,6 @@ export function styles() {
       font-size: 1.2rem;
       line-height: 1.5rem;
     }
-    app-database .page-header__subtitle a {
-      color: var(--ucd-blue-80, #13639E);
-      text-decoration: none;
-      font-weight: var(--font-weight--bold, 700);
-    }
-    app-database .page-header__subtitle a:hover {
-      text-decoration: underline;
-      color: var(--ucd-blue-80, #13639E);
-    }
     app-database .details > div {
       margin-top: 2rem;
     }
@@ -33,17 +24,25 @@ export function render() {
   const db = this.dataCtl?.db;
   return html`
     <div class='page-header'>
-      <div class='page-header__wrapper'>
-        <div class='page-header__title'>
-          <app-icon class='${db?.brandColor || 'secondary'}' slug=${db?.icon || 'fa.solid.database'}></app-icon>
-          <h1>${db?.title || ''}</h1>
+      <div class='page-header__wrapper page-header__wrapper--flex'>
+        <div>
+          <div class='page-header__title'>
+            <app-icon class='${db?.brandColor || 'secondary'}' slug=${db?.icon || 'fa.solid.database'}></app-icon>
+            <h1>${db?.title || ''}</h1>
+          </div>
+          <div class='page-header__subtitle' ?hidden=${!db?.organization?.name}>
+            via <a class='bold-link' href='/org/${db?.organization?.name}'>${db?.organization?.title}</a>
+          </div>
+          <div class='page-header__description' ?hidden=${!db?.shortDescription}>
+            ${db?.shortDescription}
+          </div>
         </div>
-        <div class='page-header__subtitle' ?hidden=${!db?.organization?.name}>
-          via <a href='/org/${db?.organization?.name}'>${db?.organization?.title}</a>
+        <div>
+          <div ?hidden=${!this.dataCtl.isAdmin}>
+            <app-icon-button icon='fa.solid.pen' href='/db/${this.orgName}/${this.dbName}/edit'></app-icon-button>
+          </div>
         </div>
-        <div class='page-header__description' ?hidden=${!db?.shortDescription}>
-          ${db?.shortDescription}
-        </div>
+
       </div>
     </div>
     <div class='l-container--narrow-desktop u-space-mt--large'>

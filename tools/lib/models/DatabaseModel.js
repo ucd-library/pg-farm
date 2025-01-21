@@ -40,19 +40,51 @@ class DatabaseModel extends BaseModel {
   }
 
   async update(org, db, opts) {
-    return this.service.update(org, db, opts);
+    const r = await this.service.update(org, db, opts);
+    if ( r.state === 'loaded' ){
+      this.purgeCache('public');
+    }
+    return r;
+  }
+
+  purgeCache(cacheGroup){
+    if ( cacheGroup === 'public' ) {
+      cacheGroup = ['metadata', 'search', 'aggs', 'getFeaturedList', 'isAdmin'];
+    }
+
+    if ( !cacheGroup) {
+      for (let key in this.store.data) {
+        this.store.data[key].purge();
+      }
+    } else if ( Array.isArray(cacheGroup) ) {
+      cacheGroup.forEach(group => {
+        if( this.store.data[group] ) {
+          this.store.data[group].purge();
+        }
+      });
+    } else if ( this.store.data[cacheGroup] ) {
+      this.store.data[cacheGroup].purge();
+    }
   }
 
   async addToFeaturedList(org, db, opts={}) {
     opts.action = 'add';
-    return this.service.updateFeaturedList(org, db, opts);
+    const r = await this.service.updateFeaturedList(org, db, opts);
+    if ( r.state === 'loaded' ){
+      this.purgeCache('getFeaturedList');
+    }
+    return r;
   }
 
   async removeFromFeaturedList(org, db, organizationList) {
-    return this.service.updateFeaturedList(org, db, {
+    const r = await this.service.updateFeaturedList(org, db, {
       action: 'remove',
       organizationList
     });
+    if ( r.state === 'loaded' ){
+      this.purgeCache('getFeaturedList');
+    }
+    return r;
   }
 
   async getFeaturedList(org) {
@@ -85,6 +117,25 @@ class DatabaseModel extends BaseModel {
   }
 
   /**
+   * @description Get aggregations for a search.  Returns object with id and request promise.
+   * @param {Array} aggs - list of aggregations to get (e.g. ['organization', 'tag'])
+   * @param {Object} opts - search options
+   * @returns
+   */
+  aggs(aggs, opts) {
+    return this.service.aggs(aggs, opts);
+  }
+
+  /**
+   * @description Get aggregation result by id returned from aggs method
+   * @param {*} id
+   * @returns  {Object}
+   */
+  getAggResult(id) {
+    return this.store.data.aggs.get(id);
+  }
+
+  /**
    * @method getUsers
    * @description get list of users for a database
    *
@@ -110,6 +161,16 @@ class DatabaseModel extends BaseModel {
 
   getSchemaTableAccess(org, db, schema, table) {
     return this.service.getSchemaTableAccess(org, db, schema, table);
+  }
+
+  /**
+   * @description Simple check to see if current user is an admin for a database
+   * @param {*} org
+   * @param {*} db
+   * @returns
+   */
+  isAdmin(org, db) {
+    return this.service.isAdmin(org, db);
   }
 
   /**

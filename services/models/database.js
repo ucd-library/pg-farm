@@ -299,7 +299,7 @@ class Database {
     await pgInstClient.importForeignSchema(con, dbName, {localSchema, remoteSchema});
   }
 
-  async search(opts) {
+  getSearchQueries(opts){
     let query = '';
 
     if( opts.tags && !Array.isArray(opts.tags) ) {
@@ -375,6 +375,73 @@ class Database {
     }
 
     itemQuery += query;
+
+    return {
+      itemQuery,
+      countQuery,
+      params,
+      countParams
+    };
+  }
+
+  async aggregations(aggs, searchOpts={}) {
+    if ( !Array.isArray(aggs) ) {
+      aggs = [aggs];
+    }
+
+    const formatItems = (items, value, label) => {
+      return items.map(item => {
+        return {
+          value: item[value],
+          label: item[label],
+          count: parseInt(item.total)
+        };
+      });
+    }
+
+    const results = [];
+    let {countQuery, countParams} = this.getSearchQueries(searchOpts);
+
+    if ( aggs.includes('organization') ) {
+      let query = countQuery.split(config.adminDb.views.INSTANCE_DATABASE).slice(1).join(config.adminDb.views.INSTANCE_DATABASE);
+      query = `
+      SELECT organization_name, organization_title, COUNT(*) AS total
+      FROM ${config.adminDb.views.INSTANCE_DATABASE} ${query}
+      GROUP BY organization_name, organization_title
+      ORDER BY organization_title
+      `;
+
+      let res = await client.query(query, countParams);
+      results.push({
+        key: 'organization',
+        items: formatItems(res.rows, 'organization_name', 'organization_title')
+      });
+    }
+
+    if ( aggs.includes('tag') ){
+      let query = countQuery.split(config.adminDb.views.INSTANCE_DATABASE).slice(1).join(config.adminDb.views.INSTANCE_DATABASE);
+      query = `
+        SELECT unnest(database_tags) AS tag, COUNT(*) AS total
+        FROM ${config.adminDb.views.INSTANCE_DATABASE} ${query}
+        GROUP BY tag
+        ORDER BY tag
+      `;
+      let res = await client.query(query, countParams);
+      results.push({
+        key: 'tag',
+        items: formatItems(res.rows, 'tag', 'tag')
+      });
+    }
+
+    if ( !results.length ) {
+      throw new Error('No aggregations requested');
+    }
+
+    return results;
+  }
+
+  async search(opts) {
+    let {itemQuery, countQuery, params, countParams} = this.getSearchQueries(opts);
 
     // console.log(itemQuery, params);
     let results = await client.query(itemQuery, params);

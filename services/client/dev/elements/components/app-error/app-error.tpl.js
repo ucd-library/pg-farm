@@ -111,7 +111,7 @@ return html`
   <div class="container">
     <div class='content'>
     <div class='icon'>
-      <app-icon slug='fa.solid.plug-circle-exclamation'></app-icon>
+      <app-icon slug='fa.solid.plug-circle-exclamation' invisible-if-empty></app-icon>
     </div>
     <div class='heading' ?hidden=${!this.heading}>${this.heading}</div>
     <div ?hidden=${!this.errors.length} class='errors'>

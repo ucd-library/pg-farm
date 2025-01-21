@@ -16,8 +16,20 @@ export default class QueryParamController {
     this.queryParam = queryParam;
     this.hostProperty = opts.hostProperty;
     this.value = '';
-    this.defaultValue = opts.defaultValue === undefined ? '' : opts.defaultValue;
     this.valueType = opts.type || 'string';
+    this.isArray = opts.isArray || false;
+
+    if ( opts.defaultValue === undefined ) {
+      if ( this.valueType === 'number' ) {
+        this.defaultValue = 0;
+      } else if ( this.isArray ) {
+        this.defaultValue = [];
+      } else {
+        this.defaultValue = '';
+      }
+    } else {
+      this.defaultValue = opts.defaultValue;
+    }
   }
 
   /**
@@ -39,7 +51,7 @@ export default class QueryParamController {
     let appState = await this.AppStateModel.get();
     const queryParams = new URLSearchParams(appState?.location?.query);
     const value = this.getProperty();
-    if ( value === this.defaultValue ) {
+    if ( value === this.defaultValue || this.isArray && !value?.length ) {
       queryParams.delete(this.queryParam);
     } else {
       queryParams.set(this.queryParam, value);
@@ -71,12 +83,17 @@ export default class QueryParamController {
    */
   setProperty(value, setLocation=false){
     if ( !this.queryParam ) return;
+
     value = value || this.defaultValue;
-    if ( this.valueType === 'number' ) {
-      value = Number(value);
-    } else if ( this.valueType === 'string') {
-      value = String(value);
+    if ( this.isArray ) {
+      value = Array.isArray(value) ? value : value.split(',');
     }
+    if ( this.valueType === 'number' ) {
+      value = this.isArray ? value.map(v => Number(v)) : Number(value);
+    } else if ( this.valueType === 'string') {
+      value = this.isArray ? value.map(v => String(v)) : String(value);
+    }
+
     if ( this.hostProperty ) {
       this.host[this.hostProperty] = value;
     } else {
@@ -84,6 +101,24 @@ export default class QueryParamController {
       this.host.requestUpdate();
     }
     if ( setLocation ) this.setLocation();
+  }
+
+  /**
+   * @description Add/remove value from array property
+   * @param {*} value - the value to toggle
+   * @param {Boolean} setLocation - whether to set the app location based on the new value
+   * @returns
+   */
+  toggleArrayValue(value, setLocation=true){
+    if ( !this.queryParam || !this.isArray ) return;
+    let current = this.getProperty();
+    if ( !Array.isArray(current) ) current = [];
+    if ( current.includes(value) ) {
+      current = current.filter(v => v !== value);
+    } else {
+      current.push(value);
+    }
+    this.setProperty(current, setLocation);
   }
 
   equals(value){

@@ -2,6 +2,8 @@ import { html, css } from 'lit';
 import '../../components/app-search-input/app-search-input.js';
 import '../../components/database-teaser/database-teaser.js';
 import '../../components/app-no-results/app-no-results.js';
+import '../../components/app-search-filter/app-search-filter.js';
+import '../../components/app-search-badge-filter/app-search-badge-filter.js';
 
 export function styles() {
   const elementStyles = css`
@@ -9,11 +11,11 @@ export function styles() {
       display: block;
     }
     app-search .search-form-wrapper {
-      margin-top: var(--spacer--medium, 2rem);
+      margin-top: var(--spacer--medium, 1.5rem);
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: var(--spacer--medium, 2rem);
+      gap: var(--spacer--medium, 1.5rem);
       max-width: 900px;
     }
     app-search .search-form-wrapper app-search-input {
@@ -29,6 +31,14 @@ export function styles() {
     }
     app-search database-teaser {
       margin-bottom: var(--spacer, 1rem);
+    }
+    app-search .badge-filters {
+      display: flex;
+      gap: var(--spacer--small, .5rem);
+      flex-wrap: wrap;
+    }
+    app-search .badge-filters:has(app-search-badge-filter[active]) {
+      margin-top: var(--spacer--medium, 1.5rem);
     }
   `;
 
@@ -53,6 +63,10 @@ return html`
               <option value="database_title" ?selected=${this.queryCtl.orderBy.equals('database_title')}>Title</option>
             </select>
           </div>
+        </div>
+        <div class='badge-filters'>
+          <app-search-badge-filter query-param='organization' .labels=${this.organizations}></app-search-badge-filter>
+          <app-search-badge-filter query-param='tags' .labels=${this.tags} multiple></app-search-badge-filter>
         </div>
       </div>
     </div>
@@ -85,7 +99,22 @@ return html`
         </div>
       </div>
       <div class="l-sidebar-first">
-        <div class="u-space-mt">Filters</div>
+        <div class="u-space-mt">
+          <app-search-filter
+            name='Organization'
+            search-placeholder='Search Organizations'
+            .options=${this.organizations}
+            >
+          </app-search-filter>
+          <app-search-filter name='Access Level'></app-search-filter>
+          <app-search-filter
+            name='Tags'
+            search-placeholder='Search Tags'
+            multiple
+            .options=${this.tags}
+            >
+          </app-search-filter>
+        </div>
       </div>
     </div>
   </div>

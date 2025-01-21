@@ -90,6 +90,11 @@ const config = {
         sourceMapExtension : '.map'
       }
     },
+    recaptcha : {
+      disabled : env.CLIENT_RECAPTCHA_DISABLED === 'true',
+      siteKey : env.CLIENT_RECAPTCHA_SITE_KEY || '',
+      secretKey : env.CLIENT_RECAPTCHA_SECRET_KEY || ''
+    },
     buildInfo: {
       remote: BUILD_INFO.remote,
       commit: BUILD_INFO.commit,
@@ -99,6 +104,14 @@ const config = {
       date: BUILD_INFO.date,
       imageTag: BUILD_INFO.imageTag
     }
+  },
+
+  smtp: {
+    host : env.SMTP_HOST || 'smtp.lib.ucdavis.edu',
+    port : env.SMTP_PORT || 25,
+    secure : env.SMTP_SECURE === 'true',
+    adminEmail : env.SMTP_ADMIN_EMAIL,
+    fromEmail : env.SMTP_FROM_EMAIL || 'no-reply@library.ucdavis.edu'
   },
 
   gateway : {

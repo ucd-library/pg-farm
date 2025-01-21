@@ -11,6 +11,7 @@ class DatabaseService extends BaseService {
     this.store = DatabaseStore;
     this.basePath = `${serviceUtils.host}/api/db`;
     this.searchId = 0;
+    this.aggsId = 0;
   }
 
   async get(org, db) {
@@ -142,6 +143,28 @@ class DatabaseService extends BaseService {
     }
   }
 
+  aggs(aggs, searchParams) {
+    let id = this.aggsId++;
+
+    let request = this.request({
+      url: `${this.basePath}/aggregations`,
+      fetchOptions: {
+        method : 'POST',
+        body: {...searchParams, aggs},
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onAggsUpdate({id, aggs, searchParams, request}),
+      onLoad: payload => this.store.onAggsUpdate({id, aggs, searchParams, payload: payload.body}),
+      onError: error => this.store.onAggsUpdate({id, aggs, searchParams, error})
+    });
+
+    return {
+      id,
+      request
+    }
+  }
+
   async getUsers(org, db) {
     let id = payload.getKey({org, db});
 
@@ -159,6 +182,25 @@ class DatabaseService extends BaseService {
     );
 
     return this.store.data.users.get(id);
+  }
+
+  async isAdmin(org, db){
+    let id = payload.getKey({org, db});
+
+    await this.checkRequesting(
+      id, this.store.data.isAdmin,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/is-admin`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onIsAdminUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onIsAdminUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onIsAdminUpdate({org, db}, {error})
+        })
+    );
+
+    return this.store.data.isAdmin.get(id);
   }
 
   async getSchemas(org, db) {
