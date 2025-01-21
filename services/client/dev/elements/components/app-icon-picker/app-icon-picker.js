@@ -50,6 +50,10 @@ export default class AppIconPicker extends Mixin(LitElement)
   async willUpdate(props){
     if ( props.has('value') ){
       this._value = this.iconSet ? this.value.replace(this.iconSet+'.', '') : this.value;
+      if ( this._value ) {
+        const r = await this.IconModel.get(this.value);
+        this._iconExists = r?.[this.value] ? true : false;
+      }
     }
     if ( props.has('default') ){
       this._default = this.iconSet && !this.default.includes(this.iconSet) ? this.iconSet+'.'+this.default : this.default;

@@ -5,6 +5,14 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
 import IdGenerator from '../../../utils/IdGenerator.js';
 
+/**
+ * @description A form component for editing database overview (metadata) information.
+ * Does not fetch data, must be passed in as a prop.
+ * @prop {Object} db - database object
+ * @prop {Boolean} isFeatured - whether or not the database is featured by organization
+ * @prop {Object} payload - the current form data
+ * @prop {Boolean} _loading - whether or not the form is loading
+ */
 export default class AdminDatabaseOverviewForm extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 
@@ -12,7 +20,8 @@ export default class AdminDatabaseOverviewForm extends Mixin(LitElement)
     return {
       db: {type: Object},
       isFeatured: {type: Boolean},
-      payload: {state: true}
+      payload: {state: true},
+      _loading: {type: Boolean}
     }
   }
 
@@ -27,6 +36,7 @@ export default class AdminDatabaseOverviewForm extends Mixin(LitElement)
     this.isFeatured = false;
 
     this.idGen = new IdGenerator({randomPrefix: true});
+    this._injectModel('DatabaseModel', 'AppStateModel');
   }
 
   willUpdate(props){
@@ -45,6 +55,46 @@ export default class AdminDatabaseOverviewForm extends Mixin(LitElement)
 
   _onSubmit(e){
     e.preventDefault();
+    this.submit();
+  }
+
+  async submit(){
+    this._loading = true;
+    const makeFeatured = this.payload.isFeatured && !this.isFeatured;
+    const removeFeatured = !this.payload.isFeatured && this.isFeatured;
+    delete this.payload.isFeatured;
+
+    const update = await this.DatabaseModel.update(this.db.organization.name, this.db.name, this.payload);
+    if ( update.state === 'error' ){
+      this._loading = false;
+      return this.AppStateModel.showError({
+        message: 'Unable to update database',
+        error: update.error
+      });
+    }
+
+    if ( makeFeatured ) {
+      const r = await this.DatabaseModel.addToFeaturedList(this.db.organization.name, this.db.name, {organizationList: true});
+      if( r.state === 'error' ){
+        this._loading = false;
+        return this.AppStateModel.showError({
+          message: 'Unable to add database to featured list',
+          error: r.error
+        });
+      }
+    } else if ( removeFeatured ) {
+      const r = await this.DatabaseModel.removeFromFeaturedList(this.db.organization.name, this.db.name, true);
+      if( r.state === 'error' ){
+        this._loading = false;
+        return this.AppStateModel.showError({
+          message: 'Unable to remove database from featured list',
+          error: r.error
+        });
+      }
+    }
+
+    this._loading = false;
+    return true;
   }
 
   _onInput(prop, value){

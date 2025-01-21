@@ -19,7 +19,8 @@ export default class AppDialogModal extends Mixin(LitElement)
       actions: {type: Array},
       data: {type: Object},
       actionCallback: {state: true},
-      contentMaxHeight: {type: String}
+      contentMaxHeight: {type: String},
+      _loading: {type: Boolean}
     }
   }
 
@@ -37,6 +38,7 @@ export default class AppDialogModal extends Mixin(LitElement)
     this.data = {};
     this.actionCallback = null;
     this.contentMaxHeight = '';
+    this._loading = false;
 
     this.dialogRef = createRef();
 
@@ -89,9 +91,11 @@ export default class AppDialogModal extends Mixin(LitElement)
     this.actions = e.actions;
     this.data = e.data;
     this.actionCallback = e.actionCallback;
+    this._loading = false;
 
     this.logger.info('Opening dialog modal', e);
     this.dialogRef.value.showModal();
+    this.dialogRef.value.querySelector('.modal-content').scrollTop = 0;
     document.body.style.overflow = 'hidden';
   }
 
@@ -100,14 +104,19 @@ export default class AppDialogModal extends Mixin(LitElement)
    * Will emit a dialog-action AppStateModel event with the action value and data
    * @param {String} action - The action value to emit
    */
-  _onButtonClick(action){
+  _onButtonClick(actionValue){
+    const action = this.actions.find(a => a.value === actionValue);
+    if ( !action ) return;
+    if ( action.disableOnLoading && this._loading ){
+      return;
+    }
     if ( this.actionCallback ){
-      const cb = this.actionCallback(action, this);
+      const cb = this.actionCallback(actionValue, this);
       if ( cb?.abortModalAction ) return;
     }
     this.dialogRef.value.close();
     document.body.style.overflow = '';
-    this.logger.info(`Dialog action: ${action}`, this.data);
+    this.logger.info(`Dialog action: ${actionValue}`, this.data);
     this.AppStateModel.emit('app-dialog-action', {action, data: this.data});
   }
 

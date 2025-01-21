@@ -40,19 +40,51 @@ class DatabaseModel extends BaseModel {
   }
 
   async update(org, db, opts) {
-    return this.service.update(org, db, opts);
+    const r = await this.service.update(org, db, opts);
+    if ( r.state === 'loaded' ){
+      this.purgeCache('public');
+    }
+    return r;
+  }
+
+  purgeCache(cacheGroup){
+    if ( cacheGroup === 'public' ) {
+      cacheGroup = ['metadata', 'search', 'aggs', 'getFeaturedList', 'isAdmin'];
+    }
+
+    if ( !cacheGroup) {
+      for (let key in this.store.data) {
+        this.store.data[key].purge();
+      }
+    } else if ( Array.isArray(cacheGroup) ) {
+      cacheGroup.forEach(group => {
+        if( this.store.data[group] ) {
+          this.store.data[group].purge();
+        }
+      });
+    } else if ( this.store.data[cacheGroup] ) {
+      this.store.data[cacheGroup].purge();
+    }
   }
 
   async addToFeaturedList(org, db, opts={}) {
     opts.action = 'add';
-    return this.service.updateFeaturedList(org, db, opts);
+    const r = await this.service.updateFeaturedList(org, db, opts);
+    if ( r.state === 'loaded' ){
+      this.purgeCache('getFeaturedList');
+    }
+    return r;
   }
 
   async removeFromFeaturedList(org, db, organizationList) {
-    return this.service.updateFeaturedList(org, db, {
+    const r = await this.service.updateFeaturedList(org, db, {
       action: 'remove',
       organizationList
     });
+    if ( r.state === 'loaded' ){
+      this.purgeCache('getFeaturedList');
+    }
+    return r;
   }
 
   async getFeaturedList(org) {

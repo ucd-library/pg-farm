@@ -6,6 +6,13 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import PageDataController from '../../../controllers/PageDataController.js';
 import '../../components/admin-database-overview-form/admin-database-overview-form.js';
 
+/**
+ * @class AppAdminDatabaseOverview
+ * @description Admin page for viewing and editing database overview (metadata) information
+ * @prop {String} pageId - unique id for this page
+ * @prop {String} orgName - organization name. Passed in from app state
+ * @prop {String} dbName - database name. Passed in from app state
+ */
 export default class AppAdminDatabaseOverview extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 
@@ -56,27 +63,43 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     ]);
   }
 
+  /**
+   * @description Show a modal with the database overview form, so user can edit the database metadata
+   */
   showEditModal(){
     this.AppStateModel.showDialogModal({
       title: `Edit Database: ${this.dataCtl.db?.title}`,
       actions: [
         {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
-        {text: 'Save Changes', value: 'db-overview-save', color: 'secondary'}
+        {text: 'Save Changes', value: 'db-overview-save', color: 'secondary', disableOnLoading: true}
       ],
       content: html`<admin-database-overview-form .db=${this.dataCtl?.db} .isFeatured=${this.dataCtl.isFeatured}></admin-database-overview-form>`,
       actionCallback: this._onModalAction
     });
   }
 
-  _onModalAction(action, modalEle){
+  /**
+   * @description Handle app modal actions. Save the database metadata if the user clicks the save button
+   * @param {String} action - action keyword value from the app modal
+   * @param {Element} modalEle - the app modal element
+   * @returns
+   */
+  async _onModalAction(action, modalEle){
     if ( action === 'db-overview-save' ) {
       const form = modalEle.renderRoot.querySelector('admin-database-overview-form');
       if ( !form.reportValidity() ) return {abortModalAction: true};
-      console.log(form.payload);
+      modalEle._loading = true;
+      const r = await form.submit();
+      modalEle._loading = false;
       form.db = {};
+      if ( r ) this.AppStateModel.refresh();
     }
   }
 
+  /**
+   * @description Callback for when the featured database list is loaded. Set the isFeatured flag if this database is in the list
+   * @param {Array} e - Array of database objects
+   */
   _onFeaturedList(e){
     this.dataCtl.isFeatured = e.some(db => `${db?.organization?.name}/${db?.name}` === `${this.orgName}/${this.dbName}`);
   }

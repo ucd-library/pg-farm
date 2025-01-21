@@ -72,6 +72,7 @@ class AppStateModelImpl extends AppStateModel {
    *  - value {String} - The action slug that is emitted when button is clicked
    *  - invert {Boolean} - Invert the button color (optional)
    *  - color {String} - The brand color string of the button (optional)
+   *  - disableOnLoading {Boolean} - Disable the button when the modal is in a loading state (optional)
    * - data {Object} - Any data to pass along in the action event (optional)
    * - actionCallback {Function} - A callback function to run when the action is clicked (optional).
    *     The function will be passed the action object and the modal element instance.

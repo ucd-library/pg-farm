@@ -84,6 +84,15 @@ export function styles() {
       padding: 1rem 2rem;
       overflow-y: scroll;
     }
+    @keyframes spin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    app-dialog-modal .btn app-icon {
+      animation: spin 3s linear infinite;
+      margin-right: 0.5rem;
+    }
   `;
 
   return [elementStyles];
@@ -106,8 +115,13 @@ return html`
         ${this.actions.map(action => html`
           <div class=${action.color ? 'category-brand--' + action.color : ''}>
             <button
+              ?disabled=${action.disableOnLoading && this._loading}
               @click=${e => this._onButtonClick(action.value)}
-              class='btn btn--${action.invert ? 'invert' : 'primary'}'>${action.text}
+              class='btn btn--${action.invert ? 'invert' : 'primary'}'>
+              <span ?hidden=${!(action.disableOnLoading && this._loading)}>
+                <app-icon slug='fa.solid.circle-notch'></app-icon>
+              </span>
+              <span>${action.text}</span>
             </button>
           </div>
         `)}
