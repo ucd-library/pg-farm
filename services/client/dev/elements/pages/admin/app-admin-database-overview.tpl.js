@@ -1,6 +1,7 @@
 import { html, css } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import '../../components/admin-database-subnav/admin-database-subnav.js';
+import '../../components/app-statistic-button/app-statistic-button.js';
 
 export function styles() {
   const elementStyles = css`
@@ -19,6 +20,17 @@ export function styles() {
     }
     app-admin-database-overview section {
       margin-bottom: var(--spacer--large, 2rem);
+    }
+    app-admin-database-overview .stat-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    @media (min-width: 768px) {
+      app-admin-database-overview .stat-buttons {
+        flex-direction: row;
+        gap: 2rem;
+      }
     }
   `;
 
@@ -45,9 +57,14 @@ export function render() {
       </div>
       <div class='l-content'>
         <div class='heading'>
-          <h2>Overview</h2>
+          <h2>Database Overview</h2>
           <app-icon-button icon='fa.solid.pen' @click=${() => this.showEditModal()}></app-icon-button>
         </div>
+        <section class='stat-buttons'>
+          <app-statistic-button href=${`${window.location.pathname}/schemas`} icon='fa.solid.diagram-project' text='# schemas' subtext='# public'></app-statistic-button>
+          <app-statistic-button icon='fa.solid.table' text='# tables' subtext='# public'></app-statistic-button>
+          <app-statistic-button icon='fa.solid.users' text='# users' subtext='# public'></app-statistic-button>
+        </section>
         <section>
           <h3>Short Description</h3>
           <div ?hidden=${!db?.shortDescription}>${db?.shortDescription}</div>
