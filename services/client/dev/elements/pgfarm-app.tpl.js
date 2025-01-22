@@ -81,6 +81,7 @@ function _renderHeader(){
       <ucd-theme-search-popup>
         <ucd-theme-search-form
         @search=${this._onSearch}
+        .value=${this.siteSearchValue}
         >
         </ucd-theme-search-form>
       </ucd-theme-search-popup>

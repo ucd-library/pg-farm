@@ -41,6 +41,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     return {
       page : {type: String},
       pathInfo: { type: String },
+      siteSearchValue: { type: String },
       _firstAppStateUpdate : { state: true }
     }
   }
@@ -58,6 +59,7 @@ export default class PgfarmApp extends Mixin(LitElement)
 
     this.page = 'home';
     this.pathInfo = '';
+    this.siteSearchValue = '';
 
     this._injectModel('AppStateModel');
     this.AppStateModel.showLoading();
@@ -94,6 +96,8 @@ export default class PgfarmApp extends Mixin(LitElement)
       this.AppStateModel.refresh();
       return;
     }
+
+    this.siteSearchValue = page === 'search' ? location.query.text || '' : '';
 
     // timeout to allow page element to render
     setTimeout(() => {
