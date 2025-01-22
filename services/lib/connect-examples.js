@@ -8,22 +8,27 @@ export default class ConnectExamples {
     this.registry = [
       {
         name: 'psql',
+        prismLang: 'bash',
         template: () => `PGSERVICE=pgfarm psql ${this.opts.database}`
       },
       {
         name: 'psql-full',
+        prismLang: 'bash',
         template: () => `PGPASSWORD=$(pgfarm auth token) psql -U ${this.opts.user} -h ${this.opts.host} -p ${this.opts.port} ${this.opts.database}`
       },
       {
         name: 'json',
+        prismLang: 'json',
         template: () => JSON.stringify(this.opts, null, 2)
       },
       {
         name: 'yaml',
+        prismLang: 'yaml',
         template: () => yaml.dump(this.opts)
       },
       {
         name: 'nodejs',
+        prismLang: 'javascript',
         template: () =>`
 /* https://node-postgres.com/features/connecting */
 const {Pool} = require('pg');
@@ -43,6 +48,7 @@ await client.query('SELECT NOW()', (err, res) => {
       },
       {
         name: 'python',
+        prismLang: 'python',
         template: () => `
 # https://www.psycopg.org/docs/usage.html
 import psycopg2
@@ -62,6 +68,7 @@ cur.close()`
       },
       {
         name: 'r',
+        prismLang: 'r',
         template: () => `
 # https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
 library(DBI)
@@ -79,6 +86,7 @@ dbDisconnect(con)`
       },
       {
         name: 'http',
+        prismLang: 'bash',
         template: () => `
 # docs: https://docs.postgrest.org/en/stable/references/api/tables_views.html
 curl ${this.opts.queryPath}/${this.opts.database}
@@ -92,10 +100,7 @@ curl ${this.opts.queryPath}/${this.opts.database}
   }
 
   getTemplate(connectionType) {
-    let item = this.registry.find( item => item.name === connectionType );
-    if ( !item ) {
-      throw new Error(`Unknown connection type: ${connectionType}`);
-    }
+    const item = this.getConnectionType(connectionType);
     if ( typeof item.template === 'function' ) {
       return item.template();
     }
@@ -104,6 +109,18 @@ curl ${this.opts.queryPath}/${this.opts.database}
 
   logTemplate(connectionType) {
     console.log(this.getTemplate(connectionType));
+  }
+
+  getConnectionType(connectionType) {
+    const item = this.registry.find( item => item.name === connectionType );
+    if ( !item ) {
+      throw new Error(`Unknown connection type: ${connectionType}`);
+    }
+    return item;
+  }
+
+  getPrismLang(connectionType) {
+    return this.getConnectionType(connectionType).prismLang;
   }
 
   setOpts(opts={}) {
