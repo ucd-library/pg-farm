@@ -14,7 +14,7 @@ export function styles() {
     pre {
       overflow-x: scroll;
       padding: 1rem;
-      background-color: #f4f4f4;
+      background-color: var(--ucd-blue-30, #ebf3fa);
       font-size: .875rem;
     }
     .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string {

@@ -48,9 +48,14 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
   }
 
   setExampleOptions(){
-    const opts = {};
+    const opts = {
+      host: window.location.hostname
+    };
     if ( this.db?.name ){
       opts.database = `${this.db?.organization?.name}/${this.db.name}`;
+    }
+    if ( window.APP_CONFIG?.user?.tokenParsed?.preferred_username ) {
+      opts.user = window.APP_CONFIG.user.tokenParsed.preferred_username;
     }
     this.examples.setOpts(opts);
   }
