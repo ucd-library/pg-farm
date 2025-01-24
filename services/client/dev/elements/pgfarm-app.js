@@ -29,6 +29,7 @@ import './components/app-icon-button/app-icon-button.js';
 import './components/app-loader/app-loader.js';
 import './components/app-error/app-error.js';
 import './components/app-dialog-modal/app-dialog-modal.js';
+import './components/app-toast/app-toast.js';
 
 import bundles from './pages/bundles/index.js';
 

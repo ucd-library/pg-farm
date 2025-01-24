@@ -9,8 +9,10 @@ class InstanceModel extends BaseModel {
 
     this.store = InstanceStore;
     this.service = InstanceService;
-      
+
     this.register('InstanceModel');
+
+    this.inject('DatabaseModel');
   }
 
   formatName(name) {
@@ -58,9 +60,13 @@ class InstanceModel extends BaseModel {
     return this.service.deleteUser(org, instance, user, opts);
   }
 
-  start(org, instance, opts) {
+  async start(org, instance, opts) {
     instance = this.formatName(instance);
-    return this.service.start(org, instance, opts);
+    const r = await this.service.start(org, instance, opts);
+    if ( r.state === 'loaded' ){
+      this.DatabaseModel.purgeCache('public');
+    }
+    return r;
   }
 
   stop(org, instance, opts) {

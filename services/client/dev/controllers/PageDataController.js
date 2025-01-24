@@ -17,7 +17,9 @@ export default class PageDataController {
   }
 
   async get(requests, opts={}){
-    this.AppStateModel.showLoading();
+    if ( !opts.ignoreLoading ){
+      this.AppStateModel.showLoading();
+    }
 
     requests = this._formatRequests(requests);
     await this._allSettled(requests);
@@ -52,7 +54,10 @@ export default class PageDataController {
 
     this.wait.waitForUpdate();
     this.wait.waitForFrames(3);
-    this.AppStateModel.hideLoading();
+
+    if ( !opts.ignoreLoading ) {
+      this.AppStateModel.hideLoading();
+    }
 
     return requests;
 

@@ -1,3 +1,5 @@
+import { Registry } from '@ucd-lib/cork-app-utils';
+
 import appStateModel from './models/AppStateModel.js';
 import contactModel from './models/ContactModel.js';
 import databaseModel from './models/DatabaseModel.js';
@@ -7,6 +9,8 @@ import organizationModel from './models/OrganizationModel.js';
 import adminModel from './models/AdminModel.js';
 import {config} from './config.js';
 import utils from './utils.js';
+
+Registry.ready();
 
 export {
   appStateModel,

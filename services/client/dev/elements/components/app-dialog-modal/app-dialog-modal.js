@@ -104,14 +104,17 @@ export default class AppDialogModal extends Mixin(LitElement)
    * Will emit a dialog-action AppStateModel event with the action value and data
    * @param {String} action - The action value to emit
    */
-  _onButtonClick(actionValue){
+  async _onButtonClick(actionValue){
     const action = this.actions.find(a => a.value === actionValue);
     if ( !action ) return;
     if ( action.disableOnLoading && this._loading ){
       return;
     }
     if ( this.actionCallback ){
-      const cb = this.actionCallback(actionValue, this);
+      let cb = this.actionCallback(actionValue, this);
+      if ( cb instanceof Promise ) {
+        cb = await cb;
+      }
       if ( cb?.abortModalAction ) return;
     }
     this.dialogRef.value.close();

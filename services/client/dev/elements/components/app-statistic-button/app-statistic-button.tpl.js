@@ -19,11 +19,13 @@ export function styles() {
       border: none;
       width: 100%;
       box-sizing: border-box;
+      transition: background-color .2s ease;
     }
     .container app-icon {
       margin-bottom: var(--spacer, 1rem);
       --app-icon-size: 2.5rem;
       color: var(--ucd-blue-70, #73ABDD);
+      transition: color .2s ease;
     }
     .container:hover {
       background: var(--ucd-gold-50, #FDE9AC);

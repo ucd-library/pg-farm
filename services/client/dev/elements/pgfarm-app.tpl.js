@@ -42,6 +42,7 @@ function _renderMainContent(){
   <app-loader></app-loader>
   <app-error></app-error>
   <app-dialog-modal></app-dialog-modal>
+  <app-toast></app-toast>
   <div class="main-content">
     <ucdlib-pages
       id='app-pages'
