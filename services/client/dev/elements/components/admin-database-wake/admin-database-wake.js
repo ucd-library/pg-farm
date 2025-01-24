@@ -64,7 +64,7 @@ export default class AdminDatabaseWake extends Mixin(LitElement)
       this._isWakingUp = false;
       return;
     }
-    await this.wait.wait(2000);
+    await this.wait.wait(3000);
     this._isWakingUp = false;
     this.AppStateModel.showToast({text: `${this.orgName}/${this.dbName} has been woken up successfully`, type: 'success'});
     this.dispatchEvent(new CustomEvent('wake-up-successful', {detail: {org: this.orgName, db: this.dbName}}));

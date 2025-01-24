@@ -15,8 +15,23 @@ export function styles() {
       padding: 1rem 0;
       border-radius: 1rem;
       animation: dialog-fade-out 0.5s ease-out;
-      margin: 1rem;
+      margin: 0;
       overflow-y: hidden;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 95%;
+    }
+    @media (min-width: 768px) {
+      app-dialog-modal dialog {
+        width: 75%;
+      }
+    }
+    @media (min-width: 992px) {
+      app-dialog-modal dialog {
+        width: auto;
+      }
     }
     app-dialog-modal dialog[open] {
       animation: dialog-fade-in 0.5s ease-out;

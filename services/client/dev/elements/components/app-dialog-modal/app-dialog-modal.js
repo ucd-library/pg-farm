@@ -70,7 +70,8 @@ export default class AppDialogModal extends Mixin(LitElement)
     }
     const viewportHeight = window.innerHeight;
     const dialogComputedStyle = window.getComputedStyle(this.dialogRef.value);
-    const dialogMargin = parseInt(dialogComputedStyle.marginTop) + parseInt(dialogComputedStyle.marginBottom);
+    //const dialogMargin = parseInt(dialogComputedStyle.marginTop) + parseInt(dialogComputedStyle.marginBottom);
+    const dialogMargin = 30;
     const dialogPadding = parseInt(dialogComputedStyle.paddingTop) + parseInt(dialogComputedStyle.paddingBottom);
     const headingHeight = this.renderRoot.querySelector('.heading-wrapper').offsetHeight;
     const buttonsHeight = this.renderRoot.querySelector('.buttons-wrapper').offsetHeight;

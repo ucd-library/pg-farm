@@ -1,5 +1,6 @@
 import { html, css } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import adminDatabaseHeader from '../../templates/admin-database-header.js';
 import '../../components/admin-database-subnav/admin-database-subnav.js';
 import '../../components/app-statistic-button/app-statistic-button.js';
 import '../../components/admin-database-wake/admin-database-wake.js';
@@ -41,17 +42,7 @@ export function styles() {
 export function render() {
   const db = this.dataCtl?.db;
   return html`
-    <div class='page-header page-header--mb'>
-      <div class='page-header__wrapper'>
-        <div class='page-header__title'>
-          <app-icon class='${db?.brandColor || 'secondary'}' slug=${db?.icon || 'fa.solid.database'}></app-icon>
-          <h1>${db?.title || ''}</h1>
-        </div>
-        <div class='page-header__subtitle' ?hidden=${!db?.organization?.name}>
-          via <a class='bold-link' href='/org/${db?.organization?.name}'>${db?.organization?.title}</a>
-        </div>
-      </div>
-    </div>
+    ${adminDatabaseHeader(db)}
     <div class='l-basic l-container'>
       <div class='l-sidebar-first'>
         <admin-database-subnav></admin-database-subnav>
