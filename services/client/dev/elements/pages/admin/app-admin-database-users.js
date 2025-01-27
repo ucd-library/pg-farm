@@ -4,6 +4,7 @@ import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
 import PageDataController from '../../../controllers/PageDataController.js';
+import '../../components/admin-instance-user-form/admin-instance-user-form.js';
 
 export default class AppAdminDatabaseUsers extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -83,12 +84,27 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
         {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
         {text: 'Add User', value: 'db-add-user', color: 'secondary', disableOnLoading: true}
       ],
-      content: html`<p>A form element will go here</p>`,
+      content: html`
+        <admin-instance-user-form
+          .orgName=${this.orgName}
+          .dbName=${this.dbName}
+          .instanceName=${this.dataCtl?.db?.instance?.name}>
+        </admin-instance-user-form>`,
       actionCallback: this._onAddUserModalAction
     });
   }
 
-  _onAddUserModalAction(e) {}
+  async _onAddUserModalAction(action, modalEle) {
+    if ( action === 'db-add-user' ) {
+      const form = modalEle.renderRoot.querySelector('admin-instance-user-form');
+      if ( !form.reportValidity() ) return {abortModalAction: true};
+      modalEle._loading = true;
+      const r = await form.submit();
+      modalEle._loading = false;
+      form.payload = {};
+      if ( r ) this.AppStateModel.refresh();
+    }
+  }
 
 }
 

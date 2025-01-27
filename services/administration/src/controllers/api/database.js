@@ -354,7 +354,6 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
       resp = await user.grantDatabaseAccess(
         req.params.database,
         organization,
-        req.params.schema,
         req.params.user,
         req.params.permission
       );

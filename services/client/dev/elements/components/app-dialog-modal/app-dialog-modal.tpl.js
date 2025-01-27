@@ -22,6 +22,7 @@ export function styles() {
       left: 50%;
       transform: translate(-50%, -50%);
       width: 95%;
+      z-index: 1000;
     }
     @media (min-width: 768px) {
       app-dialog-modal dialog {

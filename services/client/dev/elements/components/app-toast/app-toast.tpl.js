@@ -8,7 +8,7 @@ export function styles() {
       position: fixed;
       bottom: 2rem;
       left: 2rem;
-      z-index: 1000;
+      z-index: 1001;
       margin-right: 2rem;
       max-width: 600px;
     }
