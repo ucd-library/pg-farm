@@ -10,6 +10,7 @@ spec:
   template:
     metadata:
       labels:
+        pgfarm-type: database
         app:  
     spec:
       containers:
