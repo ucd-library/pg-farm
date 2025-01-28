@@ -1,8 +1,8 @@
 import { html, css } from 'lit';
 
-import '../../components/database-teaser/database-teaser.js';
-import '../../components/app-search-input/app-search-input.js';
-import '../../components/app-no-results/app-no-results.js';
+import '@ucd-lib/pgfarm-client/elements/components/database-teaser/database-teaser.js';
+import '@ucd-lib/pgfarm-client/elements/components/app-search-input/app-search-input.js';
+import '@ucd-lib/pgfarm-client/elements/components/app-no-results/app-no-results.js';
 
 export function styles() {
   const elementStyles = css`

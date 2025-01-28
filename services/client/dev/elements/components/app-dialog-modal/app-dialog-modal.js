@@ -3,6 +3,7 @@ import {render, styles} from "./app-dialog-modal.tpl.js";
 import { LitCorkUtils, Mixin } from '@ucd-lib/cork-app-utils';
 import { createRef } from 'lit/directives/ref.js';
 import { MainDomElement } from "@ucd-lib/theme-elements/utils/mixins/main-dom-element.js";
+import { WaitController } from "@ucd-lib/theme-elements/utils/controllers/wait.js";
 
 /**
  * @description A dialog modal component that can be used to display a dialog with a title, content, and actions.
@@ -41,6 +42,7 @@ export default class AppDialogModal extends Mixin(LitElement)
     this.contentMaxHeight = '';
     this._loading = false;
     this._isOpen = false;
+    this.wait = new WaitController(this);
 
     this.dialogRef = createRef();
 
@@ -57,7 +59,8 @@ export default class AppDialogModal extends Mixin(LitElement)
     window.removeEventListener('resize', this.setMaxHeight.bind(this));
   }
 
-  updated(){
+  async updated(){
+    await this.wait.waitForFrames(2);
     this.setMaxHeight();
   }
 

@@ -1,9 +1,9 @@
 import { html, css } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import adminDatabaseHeader from '../../templates/admin-database-header.js';
-import '../../components/admin-database-subnav/admin-database-subnav.js';
-import '../../components/app-statistic-button/app-statistic-button.js';
-import '../../components/admin-database-wake/admin-database-wake.js';
+import adminDatabaseHeader from '@ucd-lib/pgfarm-client/elements/templates/admin-database-header.js';
+import '@ucd-lib/pgfarm-client/elements/components/admin-database-subnav/admin-database-subnav.js';
+import '@ucd-lib/pgfarm-client/elements/components/app-statistic-button/app-statistic-button.js';
+import '@ucd-lib/pgfarm-client/elements/components/admin-database-wake/admin-database-wake.js';
 
 export function styles() {
   const elementStyles = css`
@@ -83,7 +83,7 @@ export function render() {
         </section>
         <section>
           <h3>Tags</h3>
-          <div ?hidden=${!db?.tags?.length}>${db?.tags.join(', ')}</div>
+          <div ?hidden=${!db?.tags?.length}>${db?.tags?.join(', ')}</div>
           <div ?hidden=${db?.tags?.length}>No tags provided</div>
         </section>
         <section>

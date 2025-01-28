@@ -3,8 +3,8 @@ import {render, styles} from "./app-admin-database-users.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import PageDataController from '../../../controllers/PageDataController.js';
-import '../../components/admin-instance-user-form/admin-instance-user-form.js';
+import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
+import '@ucd-lib/pgfarm-client/elements/components/admin-instance-user-form/admin-instance-user-form.js';
 
 export default class AppAdminDatabaseUsers extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
