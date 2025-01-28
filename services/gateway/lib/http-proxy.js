@@ -59,7 +59,8 @@ async function middleware(req, res) {
     let db = await database.get(dbName, orgName);
     host = 'http://'+db.pgrest_hostname+':'+config.pgRest.port;
 
-    
+    // if the instance is marked as RUN in the db but is actually down,
+    // it's up the the health service to start it.
     if( db.instance_state === 'ARCHIVE' ) {
       res.status(503).send('Database is archived.  Please reachout to PG Farm support for assistance.');
     } else if( db.instance_state !== 'RUN' ) {

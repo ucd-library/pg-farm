@@ -409,7 +409,7 @@ class AdminModel {
 
     // check if pgRest services are alive
     let dbRestTcpAlive = true;
-    for( let db in health.tcpStatus.pgRest ) {
+    for( let db in health?.tcpStatus?.pgRest ) {
       if( !health.tcpStatus.pgRest[db].isAlive ) {
         dbRestTcpAlive = false;
         break;

@@ -8,23 +8,8 @@ import remoteExec from '../lib/pg-helper-remote-exec.js';
 class Instance {
 
   constructor() {
-    this.STATES = {
-      CREATING : 'CREATING',
-      RUN : 'RUN',
-      STOPPING : 'STOPPING',
-      SLEEP : 'SLEEP',
-      ARCHIVE : 'ARCHIVE',
-      ARCHIVING : 'ARCHIVING',
-      RESTORING : 'RESTORING'
-    };
-
-    this.AVAILABLE_STATES = {
-      'ALWAYS' : -1,
-      'HIGH' : (1000 * 60 * 60 * 24 * 30), // 30 days
-      'MEDIUM' : (1000 * 60 * 60 * 24 * 7), // 7 days
-      'LOW' : (1000 * 60 * 60 * 12) // 12 hours
-    };
-
+    this.STATES = config.pgInstance.states;
+    this.AVAILABLE_STATES = config.pgInstance.availableStates;
   }
 
   /**

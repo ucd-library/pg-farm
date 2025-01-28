@@ -33,8 +33,8 @@ class HealthProbe {
    * and run it at the interval specified in the config.
    */
   start() {
-    this.checkAlive();
-    setInterval(() => this.checkAlive(), config.healthProbe.interval);
+    this.checkAlive({fixIssues: true});
+    setInterval(() => this.checkAlive({fixIssues: true}), config.healthProbe.interval);
     
     if( !metrics.meterProvider ) {
       return;
@@ -168,7 +168,7 @@ class HealthProbe {
    * 
    * @returns {Promise<Object>}
    */
-  async checkAlive() {
+  async checkAlive(opts={}) {
     let services = await this.getServices();
 
     let promises = [];
