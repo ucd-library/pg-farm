@@ -8,7 +8,7 @@ import 'prismjs/components/prism-python.js';
 import 'prismjs/components/prism-r.js';
 import 'prismjs/components/prism-yaml.js';
 
-import ConnectExamples from '../../../../../lib/connect-examples.js';
+import { ConnectExamples } from '../../../utils/service-lib.js';
 import IdGenerator from '../../../utils/IdGenerator.js';
 
 export default class DatabaseConnectInfo  extends Mixin(LitElement)

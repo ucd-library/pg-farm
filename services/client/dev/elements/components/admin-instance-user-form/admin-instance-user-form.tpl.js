@@ -1,5 +1,5 @@
 import { html, css } from 'lit';
-import grantDefinitions from '../../../../../lib/grant-definitions.js';
+import { grantDefinitions } from '../../../utils/service-lib.js';
 
 export function styles() {
   const elementStyles = css`
