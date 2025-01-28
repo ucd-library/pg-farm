@@ -24,7 +24,11 @@ class AppStateModelImpl extends AppStateModel {
       }
 
       if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
-        page = 'admin-db-overview';
+        if ( update.location.path?.[4]){
+          page = `admin-db-${update.location.path[4]}`;
+        } else {
+          page = 'admin-db-overview';
+        }
       }
 
       update.page = page;
@@ -94,6 +98,18 @@ class AppStateModelImpl extends AppStateModel {
       options.content = '';
     }
     this.store.emit('app-dialog-open', options);
+  }
+
+  /**
+   * @description Show a toast message
+   * @param {Object} opts - toast options
+   * @param {String} opts.text - The text of the toast
+   * @param {String} opts.type - Optional. The type of toast. Options are 'basic' 'success', 'error'
+   * @param {Number} opts.displayTime - Optional. The time in ms to display the toast.
+   * @param {Number} opts.animationTime - Optional. The time in ms to do enter/exit animations
+   */
+  showToast(opts={}){
+    this.store.emit(this.store.events.APP_TOAST_SHOW, opts);
   }
 
 }

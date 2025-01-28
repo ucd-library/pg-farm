@@ -49,7 +49,13 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
     this.dataCtl.isFeatured = false;
-    await this.dataCtl.get([
+    this.AppStateModel.showLoading();
+    let r = await this.dataCtl.get([
+      {
+        request: this.DatabaseModel.isAdmin(this.orgName, this.dbName),
+        ctlProp: 'isAdmin',
+        errorMessage: 'You do not have permission to view this page'
+      },
       {
         request: this.DatabaseModel.get(this.orgName, this.dbName),
         ctlProp: 'db',
@@ -59,6 +65,26 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
         request: this.DatabaseModel.getFeaturedList(this.orgName),
         hostCallback: '_onFeaturedList',
         errorMessage: 'Unable to load featured databases'
+      },
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+
+    if ( this.dataCtl?.db?.instance?.state === 'SLEEP' ) {
+      this.AppStateModel.hideLoading();
+      return;
+    }
+
+    // get data that requires the database to be awake
+    r = await this.dataCtl.get([
+      {
+        request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
+        hostCallback: '_onGetUsers',
+        errorMessage: 'Unable to get database users'
+      },
+      {
+        request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
+        ctlProp: 'schemas',
+        errorMessage: 'Unable to load schemas'
       },
     ]);
   }
@@ -98,10 +124,19 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
 
   /**
    * @description Callback for when the featured database list is loaded. Set the isFeatured flag if this database is in the list
-   * @param {Array} e - Array of database objects
+   * @param {Array} payload - Array of database objects
    */
-  _onFeaturedList(e){
-    this.dataCtl.isFeatured = e.some(db => `${db?.organization?.name}/${db?.name}` === `${this.orgName}/${this.dbName}`);
+  _onFeaturedList(payload){
+    this.dataCtl.isFeatured = payload.some(db => `${db?.organization?.name}/${db?.name}` === `${this.orgName}/${this.dbName}`);
+  }
+
+  _onGetUsers(payload){
+    this.dataCtl.users = {
+      list: payload,
+      total: payload.length,
+      totalPublic: payload.filter(u => u.pgFarmUser?.type === 'PUBLIC').length
+    };
+    this.requestUpdate();
   }
 
 }

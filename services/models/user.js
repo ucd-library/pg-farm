@@ -10,20 +10,20 @@ class User {
   constructor() {
     this.schema = config.adminDb.schema;
   }
- 
+
   /**
    * @method addUser
    * @description Adds a user to a postgres instance
-   * 
-   * @param {String} nameOrId  PG Farm instance name or ID 
+   *
+   * @param {String} nameOrId  PG Farm instance name or ID
    * @param {String} orgNameOrId Organization name or ID. Can be null.
-   * @param {String} username username 
-   * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER. 
-   * @param {String} password optional.  defined password.  If not 
+   * @param {String} username username
+   * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER.
+   * @param {String} password optional.  defined password.  If not
    * provided, a random password will be generated.
    * @param {Boolean} noinherit optional.  Defaults to false.
    * @param {String} parent optional.  Parent user.  Only used for 'SERVICE_ACCOUNT' type
-   * 
+   *
    * @returns {Promise}
    */
   async create(nameOrId, orgNameOrId=null, username, type='USER', password, noinherit=false, parent=null) {
@@ -32,7 +32,7 @@ class User {
       let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
       if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
       instance = await this.models.instance.get(db.instance_id);
-    } 
+    }
 
     // check for reserved users
     if( username === config.pgInstance.publicRole.username ) {
@@ -85,9 +85,9 @@ class User {
 
   updateType(nameOrId, orgNameOrId=null, username, type) {
     return client.query(
-      `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
-      SET type = $4 
-      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
+      `UPDATE ${config.adminDb.tables.INSTANCE_USER}
+      SET type = $4
+      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
       [username, nameOrId, orgNameOrId, type]
     );
   }
@@ -98,7 +98,7 @@ class User {
       let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
       if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
       instance = await this.models.instance.get(db.instance_id);
-    } 
+    }
 
     // get instance connection information
     let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
@@ -143,9 +143,9 @@ class User {
    * @method get
    * @description Returns a user.  Provide either instance or database plus
    * the organization.
-   * 
-   * @param {String} nameOrId can be name or id of the database or instance 
-   * @param {String} orgNameOrId organization name or id 
+   *
+   * @param {String} nameOrId can be name or id of the database or instance
+   * @param {String} orgNameOrId organization name or id
    * @param {String} username username
    * @returns {Promise<Object>}
    */
@@ -165,12 +165,12 @@ class User {
   /**
    * @method resetUserPassword
    * @description Resets a user's password to a random password
-   * 
+   *
    * @param {String} instNameOrId PG Farm instance name or ID
    * @param {String} orgNameOrId PG Farm organization name or ID
-   * @param {String} username 
-   * @param {String} password 
-   * 
+   * @param {String} username
+   * @param {String} password
+   *
    * @returns {Promise}
    */
   async resetPassword(instNameOrId, orgNameOrId=null, username, password) {
@@ -184,9 +184,9 @@ class User {
 
     // update database
     await client.query(
-      `UPDATE ${config.adminDb.tables.INSTANCE_USER} 
-      SET password = $4 
-      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`, 
+      `UPDATE ${config.adminDb.tables.INSTANCE_USER}
+      SET password = $4
+      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
       [username, instNameOrId, orgNameOrId, password]
     );
   }
@@ -203,7 +203,8 @@ class User {
     let database = await this.models.database.get(dbNameOrId, orgNameOrId);
 
     if( permission === 'WRITE' ) {
-      permission = pgInstClient.ALL_PRIVILEGE;
+      //permission = pgInstClient.ALL_PRIVILEGE;
+      permission = pgInstClient.GRANTS.DATABASE.WRITE;
     } else {
       permission = pgInstClient.GRANTS.DATABASE.READ;
     }
@@ -219,7 +220,7 @@ class User {
       database.organization_name
     );
 
-    return pgInstClient.grantDatabaseAccess(con, database.database_name, roleName, pgInstClient.GRANTS.DATABASE[permission]);
+    return pgInstClient.grantDatabaseAccess(con, database.database_name, roleName, permission);
   }
 
   async revokeDatabaseAccess(dbNameOrId, orgNameOrId, roleName, permission='READ') {
@@ -244,21 +245,21 @@ class User {
       database.organization_name
     );
 
-    return pgInstClient.revokeDatabaseAccess(con, database.database_name, roleName, pgInstClient.GRANTS.DATABASE[permission]);
+    return pgInstClient.revokeDatabaseAccess(con, database.database_name, roleName, permission);
   }
 
   /**
    * @method grant
    * @description Simplified helper to grant a user access to a schema or table.
-   * 
+   *
    * @param {String} dbNameOrId name or id of the database
    * @param {String} orgNameOrId name or id of the organization
-   * @param {String} schemaName can include table name 
-   * @param {String} roleName username to give access 
+   * @param {String} schemaName can include table name
+   * @param {String} roleName username to give access
    * @param {String} permission must be one of 'READ' or 'WRITE'.
-   * 
-   * 
-   * @returns 
+   *
+   *
+   * @returns
    */
   async grant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
     permission = permission.toUpperCase();
@@ -324,7 +325,7 @@ class User {
 
   async revoke(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
     let con;
-  
+
     if ( typeof dbNameOrId === 'object' ) {
       con = dbNameOrId;
     } else {
@@ -359,7 +360,7 @@ class User {
         await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName, 'TABLE');
       }
 
-      
+
       let tableSeqs = await pgInstClient.getTableSequenceNames(con, schemaName, tableName);
       for( let seq of tableSeqs ) {
         if( permission === 'READ' ) {

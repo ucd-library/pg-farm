@@ -48,7 +48,8 @@ export default class AdminDatabaseOverviewForm extends Mixin(LitElement)
         isFeatured: this.isFeatured || false,
         brandColor: this.db?.brandColor || '',
         icon: this.db?.icon || '',
-        tags: Array.isArray(this.db?.tags) ? [...this.db.tags] : []
+        tags: Array.isArray(this.db?.tags) ? [...this.db.tags] : [],
+        url: this.db?.url || ''
       };
     }
   }

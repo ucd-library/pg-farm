@@ -105,5 +105,13 @@ return html`
         .value=${this.payload.tags.join(', ')}
         @input=${e => this._onInput('tags', e.target.value)}>
     </div>
+    <div class='field-container'>
+      <label for=${this.idGen.get('url')}>Website</label>
+      <div class='field-description'>Enter a URL for more information about the database.</div>
+      <input
+        id=${this.idGen.get('url')}
+        .value=${this.payload.url}
+        @input=${e => this._onInput('url', e.target.value)}>
+    </div>
   </form>
 `;}

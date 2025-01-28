@@ -9,7 +9,7 @@ class InstanceService extends BaseService {
   constructor() {
     super();
     this.store = InstanceStore;
-    this.basePath = `${config.host}/api/instance`;
+    this.basePath = `${serviceUtils.host}/api/instance`;
   }
 
   async create(opts) {
@@ -137,7 +137,7 @@ class InstanceService extends BaseService {
     });
 
     return this.store.data.actions.get(id);
-  }  
+  }
 
   async start(org, instance, opts) {
     let id = payload.getKey({org, instance});

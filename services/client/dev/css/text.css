@@ -16,3 +16,8 @@ a.bold-link:hover {
 .font-size--small {
   font-size: var(--font-size--small, 0.875rem);
 }
+.caption {
+  font-size: var(--font-size--small, 0.875rem);
+  color: var(--ucd-black-70, #4C4C4C);
+  font-weight: 400;
+}

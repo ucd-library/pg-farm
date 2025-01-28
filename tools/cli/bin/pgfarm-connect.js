@@ -1,9 +1,9 @@
 import {Command, program} from 'commander';
 import {config} from '../lib/config.js';
-import yaml from 'js-yaml';
+import ConnectExamples from '../../../services/lib/connect-examples.js';
 
-
-const ALLOWED_TYPES = ['psql', 'psql-full', 'json', 'yaml', 'nodejs', 'python', 'r', 'http'];
+const connectExamples = new ConnectExamples();
+const ALLOWED_TYPES = connectExamples.getConnectionTypes();
 const BASE_PATH = `${config.host}/api/query`;
 
 program
@@ -35,73 +35,11 @@ function run(orgDatabase, type) {
     port: port,
     database: orgDatabase,
     password: config.tokenHash,
-    ssl: true
+    ssl: true,
+    queryPath: BASE_PATH
   };
-
-  if( type === 'psql-full' ) {
-    console.log(`PGPASSWORD=$(pgfarm auth token) psql -U ${username} -h ${host} -p ${port} ${orgDatabase}`);
-  } else if( type === 'psql' ) {
-    console.log(`PGSERVICE=pgfarm psql ${orgDatabase}`);
-  } else if( type === 'json' ) {
-    console.log(JSON.stringify(obj, null, 2));
-  } else if( type === 'yaml' ) {
-    console.log(yaml.dump(obj));
-  } else if( type === 'nodejs' ) {
-    console.log(`
-/* https://node-postgres.com/features/connecting */
-const {Pool} = require('pg');
-const client = new Pool({
-  user: '${obj.user}',
-  host: '${obj.host}',
-  port: ${obj.port},
-  database: '${obj.database}',
-  password: process.env.PGPASSWORD,
-  ssl: ${obj.ssl}
-});
-
-await client.query('SELECT NOW()', (err, res) => {
-  console.log(err, res);
-  client.end();
-});
-`);
-  } else if( type === 'python' ) {
-    console.log(`
-# https://www.psycopg.org/docs/usage.html
-import psycopg2
-conn = psycopg2.connect(
-  user='${obj.user}',
-  host='${obj.host}',
-  port=${obj.port},
-  database='${obj.database}',
-  password=os.environ['PGPASSWORD'],
-  sslmode='require'
-)
-
-cur = conn.cursor()
-cur.execute('SELECT NOW()') 
-print(cur.fetchone())
-cur.close()
-`);
-  } else if( type === 'r' ) {
-    console.log(`
-# https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
-library(DBI)
-con <- dbConnect(
-  RPostgres::Postgres(),
-  user='${obj.user}',
-  host='${obj.host}',
-  port=${obj.port},
-  dbname='${obj.database}',
-  password=Sys.getenv('PGPASSWORD')
-)
-
-dbGetQuery(con, 'SELECT NOW()')
-dbDisconnect(con)
-`);
-  } else if( type === 'http' ) {
-    console.log('# docs: https://docs.postgrest.org/en/stable/references/api/tables_views.html');
-    console.log(`curl ${BASE_PATH}/${orgDatabase}`);
-  }
+  connectExamples.setOpts(obj);
+  connectExamples.logTemplate(type);
 }
 
 program.parse(process.argv);

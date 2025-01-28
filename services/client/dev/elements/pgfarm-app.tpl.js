@@ -42,6 +42,7 @@ function _renderMainContent(){
   <app-loader></app-loader>
   <app-error></app-error>
   <app-dialog-modal></app-dialog-modal>
+  <app-toast></app-toast>
   <div class="main-content">
     <ucdlib-pages
       id='app-pages'
@@ -56,6 +57,7 @@ function _renderMainContent(){
       <app-database page-id="db"></app-database>
 
       <app-admin-database-overview page-id="admin-db-overview"></app-admin-database-overview>
+      <app-admin-database-users page-id="admin-db-users"></app-admin-database-users>
     </ucdlib-pages>
   </div>
   `;
@@ -81,6 +83,7 @@ function _renderHeader(){
       <ucd-theme-search-popup>
         <ucd-theme-search-form
         @search=${this._onSearch}
+        .value=${this.siteSearchValue}
         >
         </ucd-theme-search-form>
       </ucd-theme-search-popup>

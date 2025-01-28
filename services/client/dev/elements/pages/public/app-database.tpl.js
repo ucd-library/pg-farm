@@ -1,5 +1,7 @@
 import { html, css } from 'lit';
 
+import '../../components/database-connect-info/database-connect-info.js';
+
 export function styles() {
   const elementStyles = css`
     app-database {
@@ -53,7 +55,7 @@ export function render() {
         </div>
         <div>
           <h2 class='h4'>Access</h2>
-          <div>Todo: not sure where to get this info</div>
+          <div><database-connect-info .db=${db}></database-connect-info></div>
         </div>
         <div ?hidden=${ !db?.url }>
           <h2 class='h4'>Webpage</h2>

@@ -9,7 +9,7 @@ const defs = {
     'home', 'features', 'contact', 'search', 'org', 'db', 'org-single'
   ],
   admin: [
-    'admin-db-overview'
+    'admin-db-overview', 'admin-db-users'
   ]
 };
 

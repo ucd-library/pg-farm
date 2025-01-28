@@ -1,6 +1,9 @@
 import { html, css } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import adminDatabaseHeader from '../../templates/admin-database-header.js';
 import '../../components/admin-database-subnav/admin-database-subnav.js';
+import '../../components/app-statistic-button/app-statistic-button.js';
+import '../../components/admin-database-wake/admin-database-wake.js';
 
 export function styles() {
   const elementStyles = css`
@@ -20,6 +23,17 @@ export function styles() {
     app-admin-database-overview section {
       margin-bottom: var(--spacer--large, 2rem);
     }
+    app-admin-database-overview .stat-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    @media (min-width: 768px) {
+      app-admin-database-overview .stat-buttons {
+        flex-direction: row;
+        gap: 2rem;
+      }
+    }
   `;
 
   return [elementStyles];
@@ -28,26 +42,24 @@ export function styles() {
 export function render() {
   const db = this.dataCtl?.db;
   return html`
-    <div class='page-header page-header--mb'>
-      <div class='page-header__wrapper'>
-        <div class='page-header__title'>
-          <app-icon class='${db?.brandColor || 'secondary'}' slug=${db?.icon || 'fa.solid.database'}></app-icon>
-          <h1>${db?.title || ''}</h1>
-        </div>
-        <div class='page-header__subtitle' ?hidden=${!db?.organization?.name}>
-          via <a class='bold-link' href='/org/${db?.organization?.name}'>${db?.organization?.title}</a>
-        </div>
-      </div>
-    </div>
+    ${adminDatabaseHeader(db)}
     <div class='l-basic l-container'>
       <div class='l-sidebar-first'>
         <admin-database-subnav></admin-database-subnav>
       </div>
       <div class='l-content'>
         <div class='heading'>
-          <h2>Overview</h2>
+          <h2>Database Overview</h2>
           <app-icon-button icon='fa.solid.pen' @click=${() => this.showEditModal()}></app-icon-button>
         </div>
+        <section>
+          <admin-database-wake orgName=${this.orgName} dbName=${this.dbName} @wake-up-successful=${() => this.AppStateModel.refresh()}></admin-database-wake>
+          <div class='stat-buttons' ?hidden=${this.dataCtl?.db?.instance?.state === 'SLEEP'}>
+            <app-statistic-button href='${window.location.pathname}/schemas' icon='fa.solid.diagram-project' text='${this.dataCtl.schemas?.length} schemas'></app-statistic-button>
+            <app-statistic-button href='${window.location.pathname}/users' icon='fa.solid.users' text='${this.dataCtl.users?.total} users' subtext='${this.dataCtl.users?.totalPublic} public'></app-statistic-button>
+            <app-statistic-button href='${window.location.pathname}/tables' icon='fa.solid.table' text='# tables' subtext='# public'></app-statistic-button>
+          </div>
+        </section>
         <section>
           <h3>Short Description</h3>
           <div ?hidden=${!db?.shortDescription}>${db?.shortDescription}</div>
@@ -72,8 +84,14 @@ export function render() {
         <section>
           <h3>Tags</h3>
           <div ?hidden=${!db?.tags?.length}>${db?.tags.join(', ')}</div>
-          <div ?hidden=${db?.tags?.length}>No detailed description provided</div>
+          <div ?hidden=${db?.tags?.length}>No tags provided</div>
         </section>
+        <section>
+          <h3>Website</h3>
+          <div ?hidden=${!db?.url}>${db?.url}</div>
+          <div ?hidden=${db?.url}>No website provided</div>
+        </section>
+
       </div>
     </div>
 `;}

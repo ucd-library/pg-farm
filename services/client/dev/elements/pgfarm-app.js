@@ -26,9 +26,11 @@ console.log(appStateModel);
 import './components/app-build-info/app-build-info.js';
 import './components/app-icon/app-icon.js';
 import './components/app-icon-button/app-icon-button.js';
+import './components/app-prefixed-icon-button/app-prefixed-icon-button.js';
 import './components/app-loader/app-loader.js';
 import './components/app-error/app-error.js';
 import './components/app-dialog-modal/app-dialog-modal.js';
+import './components/app-toast/app-toast.js';
 
 import bundles from './pages/bundles/index.js';
 
@@ -41,6 +43,7 @@ export default class PgfarmApp extends Mixin(LitElement)
     return {
       page : {type: String},
       pathInfo: { type: String },
+      siteSearchValue: { type: String },
       _firstAppStateUpdate : { state: true }
     }
   }
@@ -58,6 +61,7 @@ export default class PgfarmApp extends Mixin(LitElement)
 
     this.page = 'home';
     this.pathInfo = '';
+    this.siteSearchValue = '';
 
     this._injectModel('AppStateModel');
     this.AppStateModel.showLoading();
@@ -94,6 +98,8 @@ export default class PgfarmApp extends Mixin(LitElement)
       this.AppStateModel.refresh();
       return;
     }
+
+    this.siteSearchValue = page === 'search' ? location.query.text || '' : '';
 
     // timeout to allow page element to render
     setTimeout(() => {

@@ -3,6 +3,7 @@ import pgFormat from 'pg-format';
 import logger from './logger.js';
 import config from './config.js';
 import pgAdminClient from './pg-admin-client.js';
+import grantDefinitions from './grant-definitions.js';
 
 /**
  * @class PGInstance
@@ -12,7 +13,7 @@ import pgAdminClient from './pg-admin-client.js';
 class PGInstance {
 
   constructor() {
-    // https://www.postgresql.org/docs/current/ddl-priv.html 
+    // https://www.postgresql.org/docs/current/ddl-priv.html
     this.ALL_PRIVILEGE = 'ALL';
     this.ALL_PRIVILEGES = 'ALL PRIVILEGES';
 
@@ -24,30 +25,7 @@ class PGInstance {
     }
     this.ALL_KEYWORD_ARRAY = Object.values(this.ALL);
 
-    this.GRANTS = {
-      DATABASE : {
-        READ : ['CONNECT'],
-        WRITE : ['CREATE', 'TEMPORARY']
-      },
-      SCHEMA : {
-        READ : ['USAGE'],
-        WRITE : ['CREATE']
-      },
-      TABLE : {
-        READ : ['SELECT'],
-        WRITE : ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']
-      },
-      FUNCTION : {
-        EXECUTE : ['EXECUTE']
-      },
-      SEQUENCE : {
-        READ : ['SELECT'],
-        WRITE : ['UPDATE', 'USAGE']
-      },
-      TYPE : {
-        WRITE : ['USAGE']
-      }
-    }
+    this.GRANTS = grantDefinitions.GRANTS;
   }
 
   async getConnection(opts={}, attempts=3) {
@@ -75,7 +53,7 @@ class PGInstance {
 
   async query(connection, query, args) {
     const client = await this.getConnection(connection);
-    
+
     try {
       let result = await client.query(query, args);
       await client.end();
@@ -123,12 +101,12 @@ class PGInstance {
 
   /**
    * @method deletePgUser
-   * @description Delete a user from the database.  This will also reassign any objects owned by 
+   * @description Delete a user from the database.  This will also reassign any objects owned by
    * the user to the admin role.
-   * 
+   *
    * @param {Object} connection connection object
    * @param {Object} opts
-   * @param {String} opts.username username to delete 
+   * @param {String} opts.username username to delete
    * @returns {Promise<Array>} array of responses from the queries
    */
   async deletePgUser(connection, opts={}) {
@@ -173,13 +151,13 @@ class PGInstance {
 
   /**
    * @method grantSchemaObjectAccess
-   * 
+   *
    * @param {*} connection connection object
    * @param {*} schemaName schema name
    * @param {*} roleName username
    * @param {*} permission pg privileges.  Can be an array of privileges or ALL
    * @param {*} objectName can be a table, function, sequence, or type or ALL TABLES, ALL FUNCTIONS, ALL SEQUENCES, ALL TYPES
-   * 
+   *
    * @returns {Promise}
    */
   grantSchemaObjectAccess(connection, schemaName, roleName, permission, objectName, type) {
@@ -190,19 +168,19 @@ class PGInstance {
 
     // there is no revoke ALL TYPES in postgres so we have to do it manually :(
     if( objectName === this.ALL.TYPES ) {
-      let query = pgFormat(`DO $$ 
-        DECLARE 
+      let query = pgFormat(`DO $$
+        DECLARE
             r RECORD;
-        BEGIN 
-            FOR r IN 
-                SELECT n.nspname as schema_name, t.typname as type_name 
-                FROM pg_type t 
-                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace 
+        BEGIN
+            FOR r IN
+                SELECT n.nspname as schema_name, t.typname as type_name
+                FROM pg_type t
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                 WHERE n.nspname = %L AND
                 t.typtype = 'e'
-            LOOP 
+            LOOP
                 EXECUTE 'GRANT ${permission} ON TYPE ' || quote_ident(r.schema_name) || '.' || quote_ident(r.type_name) || ' TO "${roleName}"';
-            END LOOP; 
+            END LOOP;
         END $$;`, schemaName);
       logger.info('Running revoke all types query', query);
       return this.query(connection, query);
@@ -213,7 +191,7 @@ class PGInstance {
     }
 
 
-    if( Array.isArray(permission) ) { 
+    if( Array.isArray(permission) ) {
       permission = permission.join(', ');
     }
 
@@ -231,19 +209,19 @@ class PGInstance {
 
     // there is no revoke ALL TYPES in postgres so we have to do it manually :(
     if( objectName === this.ALL.TYPES ) {
-      let query = pgFormat(`DO $$ 
-        DECLARE 
+      let query = pgFormat(`DO $$
+        DECLARE
             r RECORD;
-        BEGIN 
-            FOR r IN 
-                SELECT n.nspname as schema_name, t.typname as type_name 
-                FROM pg_type t 
-                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace 
+        BEGIN
+            FOR r IN
+                SELECT n.nspname as schema_name, t.typname as type_name
+                FROM pg_type t
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                 WHERE n.nspname = %L AND
                 t.typtype = 'e'
-            LOOP 
+            LOOP
                 EXECUTE 'REVOKE ${permission} ON TYPE ' || quote_ident(r.schema_name) || '.' || quote_ident(r.type_name) || ' FROM "${roleName}"';
-            END LOOP; 
+            END LOOP;
         END $$;`, schemaName);
       logger.info('Running revoke all types query', query);
       return this.query(connection, query);
@@ -264,12 +242,12 @@ class PGInstance {
 
   /**
    * @method grantSchemaAccess
-   * 
-   * @param {*} connection 
-   * @param {*} schemaName 
-   * @param {*} roleName 
-   * @param {*} permission 
-   * @returns 
+   *
+   * @param {*} connection
+   * @param {*} schemaName
+   * @param {*} roleName
+   * @param {*} permission
+   * @returns
    */
   grantSchemaAccess(connection, schemaName, roleName, permission) {
     if( Array.isArray(permission) ) {
@@ -299,12 +277,12 @@ class PGInstance {
     if( Array.isArray(permission) ) {
       permission = permission.join(', ');
     }
-    let query = pgFormat(`REVOKE ${permission} ON DATABASE "%s" TO "%s"`, dbName, roleName);
+    let query = pgFormat(`REVOKE ${permission} ON DATABASE "%s" FROM "%s"`, dbName, roleName);
     return this.query(connection, query);
   }
 
   async dropUser(connection, username) {
-    let query = pgFormat(`REASSIGN OWNED BY %I to ${config.pgInstance.adminRole}`, username); 
+    let query = pgFormat(`REASSIGN OWNED BY %I to ${config.pgInstance.adminRole}`, username);
     await this.query(connection, query);
 
     query = pgFormat(`DROP USER %I`, username);
@@ -344,11 +322,11 @@ class PGInstance {
 
   /**
    * @method listSchema
-   * 
+   *
    * @description List all schemas in the database
-   * 
+   *
    * @param {Object} connection
-   * 
+   *
    * @returns {Promise}
    **/
   listSchema(connection) {
@@ -360,13 +338,13 @@ class PGInstance {
     let query = pgFormat(`SELECT
           n.nspname AS schema_name,
           r.rolname AS role_name,
-          CASE 
-            WHEN has_schema_privilege(r.rolname, n.nspname, 'USAGE') THEN 'USAGE' 
-            ELSE NULL 
+          CASE
+            WHEN has_schema_privilege(r.rolname, n.nspname, 'USAGE') THEN 'USAGE'
+            ELSE NULL
           END AS usage_priv,
-          CASE 
-            WHEN has_schema_privilege(r.rolname, n.nspname, 'CREATE') THEN 'CREATE' 
-            ELSE NULL 
+          CASE
+            WHEN has_schema_privilege(r.rolname, n.nspname, 'CREATE') THEN 'CREATE'
+            ELSE NULL
           END AS create_priv
       FROM
           pg_namespace n
@@ -379,11 +357,11 @@ class PGInstance {
 
   /**
    * @method listTables
-   * 
+   *
    * @description List all tables in the schema
-   * 
+   *
    * @param {Object} connection
-   * 
+   *
    * @returns {Promise}
    **/
   listTables(connection, schemaName) {
@@ -399,21 +377,21 @@ class PGInstance {
   /**
    * @method getTableAccess
    * @description Get the access for a table
-   * 
-   * @param {Object} connection 
+   *
+   * @param {Object} connection
    * @param {String} databaseName
-   * @param {String} schemaName 
-   * @param {String} tableName 
-   * @returns 
+   * @param {String} schemaName
+   * @param {String} tableName
+   * @returns
    */
   getTableAccess(connection, databaseName, schemaName, tableName) {
     let query = pgFormat(`
-      SELECT * FROM 
-        information_schema.role_table_grants 
-      WHERE 
+      SELECT * FROM
+        information_schema.role_table_grants
+      WHERE
         table_catalog = %L and
-        table_schema = %L and 
-        table_name = %L`, 
+        table_schema = %L and
+        table_name = %L`,
       databaseName, schemaName, tableName);
     return this.query(connection, query);
   }
@@ -421,22 +399,22 @@ class PGInstance {
   /**
    * @method getTableAccessByUser
    * @description Get the access for a table by user
-   * 
+   *
    * @param {Object} connection
    * @param {String} databaseName
    * @param {String} schemaName
    * @param {String} username
-   * 
+   *
    * @returns {Promise}
    */
   getTableAccessByUser(connection, databaseName, schemaName, username) {
     let query = pgFormat(`
-      SELECT * FROM 
-        information_schema.role_table_grants 
-      WHERE 
+      SELECT * FROM
+        information_schema.role_table_grants
+      WHERE
         table_catalog = %L AND
-        table_schema = %L AND 
-        grantee = %L`, 
+        table_schema = %L AND
+        grantee = %L`,
       databaseName, schemaName, username);
     return this.query(connection, query);
   }
@@ -450,17 +428,17 @@ class PGInstance {
     let query = pgFormat(`SELECT
         r.rolname AS role_name,
         d.datname AS database_name,
-        CASE 
-            WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') THEN 'CONNECT' 
-            ELSE NULL 
+        CASE
+            WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') THEN 'CONNECT'
+            ELSE NULL
         END AS connect_priv,
-        CASE 
-            WHEN has_database_privilege(r.rolname, d.datname, 'CREATE') THEN 'CREATE' 
-            ELSE NULL 
+        CASE
+            WHEN has_database_privilege(r.rolname, d.datname, 'CREATE') THEN 'CREATE'
+            ELSE NULL
         END AS create_priv,
-        CASE 
-            WHEN has_database_privilege(r.rolname, d.datname, 'TEMPORARY') THEN 'TEMPORARY' 
-            ELSE NULL 
+        CASE
+            WHEN has_database_privilege(r.rolname, d.datname, 'TEMPORARY') THEN 'TEMPORARY'
+            ELSE NULL
         END AS temporary_priv
     FROM
         pg_database d,

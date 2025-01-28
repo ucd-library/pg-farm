@@ -20,7 +20,8 @@ export default class AppDialogModal extends Mixin(LitElement)
       data: {type: Object},
       actionCallback: {state: true},
       contentMaxHeight: {type: String},
-      _loading: {type: Boolean}
+      _loading: {type: Boolean},
+      _isOpen: {type: Boolean}
     }
   }
 
@@ -39,6 +40,7 @@ export default class AppDialogModal extends Mixin(LitElement)
     this.actionCallback = null;
     this.contentMaxHeight = '';
     this._loading = false;
+    this._isOpen = false;
 
     this.dialogRef = createRef();
 
@@ -70,7 +72,8 @@ export default class AppDialogModal extends Mixin(LitElement)
     }
     const viewportHeight = window.innerHeight;
     const dialogComputedStyle = window.getComputedStyle(this.dialogRef.value);
-    const dialogMargin = parseInt(dialogComputedStyle.marginTop) + parseInt(dialogComputedStyle.marginBottom);
+    //const dialogMargin = parseInt(dialogComputedStyle.marginTop) + parseInt(dialogComputedStyle.marginBottom);
+    const dialogMargin = 30;
     const dialogPadding = parseInt(dialogComputedStyle.paddingTop) + parseInt(dialogComputedStyle.paddingBottom);
     const headingHeight = this.renderRoot.querySelector('.heading-wrapper').offsetHeight;
     const buttonsHeight = this.renderRoot.querySelector('.buttons-wrapper').offsetHeight;
@@ -94,7 +97,7 @@ export default class AppDialogModal extends Mixin(LitElement)
     this._loading = false;
 
     this.logger.info('Opening dialog modal', e);
-    this.dialogRef.value.showModal();
+    this.open();
     this.dialogRef.value.querySelector('.modal-content').scrollTop = 0;
     document.body.style.overflow = 'hidden';
   }
@@ -104,20 +107,33 @@ export default class AppDialogModal extends Mixin(LitElement)
    * Will emit a dialog-action AppStateModel event with the action value and data
    * @param {String} action - The action value to emit
    */
-  _onButtonClick(actionValue){
+  async _onButtonClick(actionValue){
     const action = this.actions.find(a => a.value === actionValue);
     if ( !action ) return;
     if ( action.disableOnLoading && this._loading ){
       return;
     }
     if ( this.actionCallback ){
-      const cb = this.actionCallback(actionValue, this);
+      let cb = this.actionCallback(actionValue, this);
+      if ( cb instanceof Promise ) {
+        cb = await cb;
+      }
       if ( cb?.abortModalAction ) return;
     }
-    this.dialogRef.value.close();
+    this.close();
     document.body.style.overflow = '';
     this.logger.info(`Dialog action: ${actionValue}`, this.data);
     this.AppStateModel.emit('app-dialog-action', {action, data: this.data});
+  }
+
+  open(){
+    this.dialogRef.value.showModal();
+    this._isOpen = true;
+  }
+
+  close(){
+    this.dialogRef.value.close();
+    this._isOpen = false;
   }
 
 }
