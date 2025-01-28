@@ -51,6 +51,7 @@ COPY tools .
 
 WORKDIR /services
 COPY services/client ./client
+COPY services/lib ./lib
 RUN cd client/dev && npm install
 RUN npm run client-build
 RUN npm run client-dist
