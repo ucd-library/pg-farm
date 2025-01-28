@@ -13,7 +13,6 @@ class KubectlWrapper {
 
   constructor() {
     this.initalized = false;
-    this.init();
   }
 
   async init() {
