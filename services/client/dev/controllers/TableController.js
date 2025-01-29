@@ -42,7 +42,18 @@ export default class TableController {
   }
 
   getRows(){
-    return this.data.filter( item => !item.hidden );
+    const d = this.data.filter( item => !item.hidden );
+    return d.map( (item, i) => {
+      item.index = i;
+      item.even = i % 2 === 0;
+      item.first = i === 0;
+      item.last = i === d.length-1;
+      return item;
+    });
+  }
+
+  getRowCt(){
+    return this.getRows().length;
   }
 
   _itemContainsSearchValue(item){
@@ -51,5 +62,14 @@ export default class TableController {
     return this.opts.searchProps.some( prop => {
       return (item[prop]|| '').toLowerCase().includes(searchValue);
     } );
+  }
+
+  search(value){
+    console.log('search', value);
+    this.opts.searchValue = (value || '').toLowerCase();
+    this.data.forEach( item => {
+      item.hidden = !this._itemContainsSearchValue(item.item);
+    });
+    this.host.requestUpdate();
   }
 }

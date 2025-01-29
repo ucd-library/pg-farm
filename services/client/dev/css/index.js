@@ -11,6 +11,7 @@ import layout from './layout.css';
 import pageHeader from './page-header.css';
 import site from './site.css';
 import spacing from './spacing.css';
+import tables from './tables.css';
 import text from './text.css';
 
 const styles = `
@@ -26,6 +27,7 @@ const styles = `
   ${pageHeader}
   ${site}
   ${spacing}
+  ${tables}
   ${text}
 `;
 
