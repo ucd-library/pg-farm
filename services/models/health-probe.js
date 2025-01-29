@@ -1,8 +1,11 @@
 import kubectl from '../lib/kubectl.js';
 import config from '../lib/config.js';
 import utils from '../lib/utils.js';
+import logger from '../lib/logger.js';
 import pgClient from '../lib/pg-admin-client.js'
 import metrics from '../lib/metrics/index.js';
+import instance from './instance.js';
+import pgRest from './pg-rest.js';
 import {ValueType} from '@opentelemetry/api';
 
 const INST_REGEX = /^inst-/;
@@ -190,7 +193,49 @@ class HealthProbe {
       }
     }
 
+    this.ensureRunning();
+
     return this.tcpStatus;
+  }
+
+
+  /**
+   * @method ensureRunning
+   * @description Ensure that all instances are running that are in a RUN state in the db.
+   * Leverages the this.tcpStatus to determine if the instance is running.  Will start the
+   * instance if the state is RUN but the tcp status is not active.
+   */
+  async ensureRunning() {
+    if( this.ensureRunningActive ) return;
+    this.ensureRunningActive = true;
+
+    try {
+      let instances = await instance.list({state: instance.STATES.RUN});
+      for( let inst of instances ) {
+
+        // check the tcp status of the instance
+        // start the instance if it is not running
+        if( this.tcpStatus.inst[inst.hostname]?.isAlive !== true ) {
+          logger.info(`Instance ${inst.name} is not running but in a RUN state.  Starting...`);
+          await instance.start(inst.name, inst.organization_id);
+          continue;
+        }
+
+        let databases = await pgClient.getInstanceDatabases(inst.name, inst.organization_id);
+        for( let db of databases ) {
+          if( this.tcpStatus.rest[db.pgrest_hostname]?.isAlive !== true ) {
+            logger.info(`Instance ${inst.name} database ${db.database_name} pgrest is not running but instance in a RUN state.  Starting...`);
+            await pgRest.start(db.database_name, inst.organization_id);
+            break;
+          }
+        }
+
+      }
+    } catch(e) {
+      logger.error(e);
+    }
+
+    this.ensureRunningActive = false;
   }
 
   async isAlive(type, host, port) {
@@ -203,5 +248,5 @@ class HealthProbe {
 
 }
 
-const instance = new HealthProbe();
-export default instance;
+const inst = new HealthProbe();
+export default inst;
