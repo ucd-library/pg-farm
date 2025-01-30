@@ -11,7 +11,7 @@
 .app-table .row:last-child {
   border-bottom: none;
 }
-.app-table .row--header {
+.app-table .row.row--header {
   border-bottom: 2px solid var(--ucd-gold-80, #FFD24C);
 }
 .app-table .row.row--header .cell {
@@ -31,4 +31,21 @@
 .app-table .row .cell {
   padding: 1rem 0;
   justify-content: center;
+}
+.app-table .row.selected {
+  background-color: var(--ucd-blue-30, #EBF3FA);
+}
+.app-table .row.not-selected:hover {
+  background-color: var(--ucd-gold-30, #FFF9E6);
+}
+.app-table .checkbox-container {
+  display: flex;
+  flex-direction: row;
+  gap: .5rem;
+  align-items: flex-start;
+}
+.app-table .checkbox-container input {
+  margin-top: .5rem;
+  margin-right: 0;
+  cursor: pointer;
 }

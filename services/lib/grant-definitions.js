@@ -29,6 +29,20 @@ class GrantDefinitions {
       return acc;
     }, {});
   }
+
+  getRoleLabel(object, user) {
+    if ( user?.pgFarmUser?.type === 'ADMIN') return 'Admin';
+    const actions = ['EXECUTE', 'WRITE', 'READ'];
+    for ( let action of actions ) {
+      const grant = this.registry.find(grant => grant.object === object && grant.action === action);
+      if ( !grant?.grant?.length ) continue;
+      const firstPriv = grant.grant[0];
+      if ( user?.pgPrivileges?.includes(firstPriv) ) {
+        return grant.roleLabel;
+      }
+    }
+    return 'No Access';
+  }
 }
 
 export default new GrantDefinitions();

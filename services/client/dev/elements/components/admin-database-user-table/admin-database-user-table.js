@@ -9,7 +9,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
 
   static get properties() {
     return {
-      users: {type: Array}
+      users: {type: Array},
+      bulkActions: {type: Array},
+      selectedBulkAction: {type: String}
     }
   }
 
@@ -21,13 +23,27 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.users = [];
+    this._setBulkActions();
+    this.selectedBulkAction = '';
 
     this.tableCtl = new TableController(this, 'users', {searchProps: ['name']});
 
     this._injectModel('AppStateModel');
   }
 
-  _onRemoveClick(user){
+  _setBulkActions() {
+    this.bulkActions = [
+      {value: 'delete', label: 'Delete User'}
+    ];
+  }
+
+  _onBulkActionSelect() {
+    if ( this.selectedBulkAction === 'delete' ) {
+      this._showDeleteUserModal(this.tableCtl.getSelectedItems());
+    }
+  }
+
+  _showDeleteUserModal(user) {
     this.AppStateModel.showDialogModal({
       title: `Delete User`,
       actions: [

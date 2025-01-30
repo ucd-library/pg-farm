@@ -18,6 +18,7 @@ export function styles() {
       padding: .5rem 1rem;
       border: none;
       box-shadow: none;
+      transition: background-color .2s, color .2s;
     }
     .container.color--light {
       background: var(--ucd-blue-40, #DBEAF7);

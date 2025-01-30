@@ -31,12 +31,16 @@ export default class TableController {
   update(){
     this.logger.debug('update', this.hostData);
     this.data = (this.hostData || []).map( item => {
-      const out = {
+      const row = {
         item,
         hidden: !this._itemContainsSearchValue(item),
         selected: false
       };
-      return out;
+      row.toggleSelected = () => {
+        row.selected = !row.selected;
+        this.host.requestUpdate();
+      }
+      return row;
     } );
     this.host.requestUpdate();
   }
@@ -48,6 +52,7 @@ export default class TableController {
       item.even = i % 2 === 0;
       item.first = i === 0;
       item.last = i === d.length-1;
+      item.classes = `row ${item.selected ? 'selected' : 'not-selected'}`;
       return item;
     });
   }
@@ -65,11 +70,24 @@ export default class TableController {
   }
 
   search(value){
-    console.log('search', value);
     this.opts.searchValue = (value || '').toLowerCase();
     this.data.forEach( item => {
       item.hidden = !this._itemContainsSearchValue(item.item);
     });
     this.host.requestUpdate();
+  }
+
+  allSelected(){
+    return this.getRows().every( item => item.selected );
+  }
+
+  toggleAllSelected(){
+    const selected = !this.allSelected();
+    this.getRows().forEach( item => item.selected = selected );
+    this.host.requestUpdate();
+  }
+
+  getSelectedItems(){
+    return this.getRows().filter( item => item.selected ).map( item => item.item );
   }
 }
