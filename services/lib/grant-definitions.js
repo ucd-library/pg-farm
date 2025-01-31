@@ -7,7 +7,8 @@ class GrantDefinitions {
 
     this.roleLabels = {
       'READ': 'Viewer',
-      'WRITE': 'Editor'
+      'WRITE': 'Editor',
+      'ADMIN': 'Admin'
     }
 
     this.registry = [

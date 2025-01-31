@@ -20,6 +20,20 @@
   padding: .5rem 0;
   justify-content: flex-end;
 }
+.app-table .row.row--header select {
+  border-style: none;
+  box-shadow: none;
+  color: var(--black, #000);
+  font-weight: 700;
+  width: auto;
+  padding-left: 0;
+  height: auto;
+}
+.app-table .row.row--header select:focus {
+  border-style: none;
+  box-shadow: none;
+  background-color: transparent;
+}
 .app-table .cell {
   display: flex;
   flex-direction: column;
@@ -31,6 +45,9 @@
 .app-table .row .cell {
   padding: 1rem 0;
   justify-content: center;
+}
+.app-table .row .cell.cell--icon-top {
+  justify-content: flex-start;
 }
 .app-table .row.selected {
   background-color: var(--ucd-blue-30, #EBF3FA);

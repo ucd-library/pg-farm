@@ -20,7 +20,7 @@ export function styles() {
       display: block;
     }
     admin-database-user-table .mobile .app-table .row {
-      grid-template-columns: 1fr 75px;
+      grid-template-columns: 1fr auto;
     }
     admin-database-user-table .action-bar {
       margin-bottom: var(--spacer, 1rem);
@@ -28,6 +28,15 @@ export function styles() {
       flex-direction: column-reverse;
       gap: 1rem;
       justify-content: space-between;
+    }
+    admin-database-user-table .mobile .details {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      font-size: var(--font-size--small, .75rem);
+      justify-content: space-between;
+      max-width: 350px;
+      margin-top: .75rem;
     }
     @container (min-width: 480px) {
       admin-database-user-table .action-bar {
@@ -81,13 +90,24 @@ function _renderDesktopView(){
         <div class='row row--header'>
           <div class='cell'>
             <div class='checkbox-container'>
-              <input type='checkbox' .checked=${this.tableCtl.allSelected()} @change=${() => this.tableCtl.toggleAllSelected()}>
+              <input
+                type='checkbox'
+                ?disabled=${!this.tableCtl.getRowCt()}
+                .checked=${this.tableCtl.allSelected()}
+                @change=${() => this.tableCtl.toggleAllSelected()}>
               <div>Users (${this.tableCtl.getRowCt()})</div>
             </div>
           </div>
           <div class='cell'>
             <div>Database</div>
-            <div>Any Access</div>
+            <div>
+              <select .value=${this.tableCtl.getFilterValue('db-access')} @change=${e => this.tableCtl.setFilterValue('db-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('db-access')}>Any Access</option>
+                ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('db-access') === value}>${label}</option>
+                `)}
+              </select>
+            </div>
           </div>
           <div class='cell'>
             <div>Schema</div>
@@ -145,6 +165,45 @@ function _renderMobileView(){
           </div>
           <div class='cell'></div>
         </div>
+
+        ${this.tableCtl.getRows().map( row => html`
+          <div class=${row.classes}>
+            <div class='cell'>
+              <div class='checkbox-container'>
+                <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
+                <div class='u-width-100'>
+                  <div>
+                    <div>${row.item?.name}</div>
+                    <div class='caption'>name of person</div>
+                  </div>
+                  <div class='details'>
+                    <div>
+                      <div>Database:</div>
+                      <div>
+                        ${row.item?.pgFarmUser?.type === 'ADMIN' ? html`
+                          <div class='admin-badge'>Admin</div>
+                        ` : html`
+                          <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
+                        `}
+                      </div>
+                    </div>
+                    <div>
+                      <div>Schema:</div>
+                      <div>some schema role</div>
+                    </div>
+                    <div>
+                      <div>Tables:</div>
+                      <div>100</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class='cell cell--icon-top'>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item)}></app-icon-button>
+            </div>
+          </div>
+        `)}
       </div>
     </div>
 
