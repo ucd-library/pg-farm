@@ -1,4 +1,5 @@
 import { html, css } from 'lit';
+import {unsafeHTML} from 'lit/directives/unsafe-html.js';
 import formStyles from '@ucd-lib/theme-sass/1_base_html/_forms.css.js';
 import brandColorStyles from '@ucd-lib/theme-sass/4_component/_category-brand.css.js';
 
@@ -35,6 +36,18 @@ export function styles() {
       flex-wrap: wrap;
       gap: 0.5rem;
     }
+    .search {
+      background: white;
+    }
+    .search .result {
+      padding: 5px;
+    }
+    .search svg {
+      height: 30px;
+      width: 30px;
+      fill: var(--gray, #4c4c4c);
+      outline: var(--gray, #4c4c4c);
+    }
 
   `;
 
@@ -58,8 +71,19 @@ return html`
         type='text'
         .value=${this._value}
         @input=${e => this._onInput(e.target.value)}
+        @keyup=${e => this._onKeyUp(e)}
+        @focus=${e => this._onFocus(e)}
+        @blur=${e => this._onBlur(e)}
       />
       <div ?hidden=${!(!this._iconExists && this.value)} class='no-exist'>This icon does not exist.</div>
+      <div class="search" ?hidden=${!this.searchResults.length}>
+        <div>Suggestions:</div>
+        ${this.searchResults.map(result => html`
+          <div class="result">
+            ${unsafeHTML(result.svg)} ${result.name}
+          </div>
+        `)}
+      </div>
     </div>
 
   </div>

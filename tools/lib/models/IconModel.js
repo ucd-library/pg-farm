@@ -17,6 +17,10 @@ class IconModel extends BaseModel {
     this.register('IconModel');
   }
 
+  search(term) {
+    return this.service.search(term);
+  }
+
   /**
    * @description Retrieve the svg for a given icon slug.
    * By default, this method batches requests to the server

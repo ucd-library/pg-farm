@@ -18,6 +18,9 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
     return {
       db: { type: Object },
       connectionType: { type: String, attribute: 'connection-type' },
+      selectedUser: { type: String },
+      userTypes: { type: Array },
+      swaggerUrl: { type: String },
       _exampleCode: { state: true}
     }
   }
@@ -30,7 +33,16 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.db = {};
-    this.connectionType = '';
+    this.connectionType = 'python';
+    
+    this.selectedUser = 'public';
+    this.userTypes = ['public'];
+    this.isLoggedIn = false; 
+    if( window.APP_CONFIG?.user?.loggedIn ) {
+      this.isLoggedIn = true;
+      this.userTypes.unshift('you');
+      this.selectedUser = 'you';
+    }
 
     this.examples = new ConnectExamples();
     this.idGen = new IdGenerator({randomPrefix: true});
@@ -39,10 +51,10 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
   }
 
   willUpdate(props){
-    if ( props.has('db')) {
+    if ( props.has('db') || props.has('selectedUser') ) {
       this.setExampleOptions();
       this.setExampleCode();
-    } else if ( props.has('connectionType') ){
+    } else if ( props.has('connectionType') ) {
       this.setExampleCode();
     }
   }
@@ -52,11 +64,23 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
       host: window.location.hostname
     };
     if ( this.db?.name ){
-      opts.database = `${this.db?.organization?.name}/${this.db.name}`;
+      opts.database = `${this.db?.organization?.name || '_'}/${this.db.name}`;
     }
-    if ( window.APP_CONFIG?.user?.tokenParsed?.preferred_username ) {
-      opts.user = window.APP_CONFIG.user.tokenParsed.preferred_username;
+    if ( this.selectedUser === 'you' ) {
+      opts.user = window.APP_CONFIG.user.preferred_username;
+    } else {
+      opts.user = window.APP_CONFIG.publicUser.username;
+      opts.password = window.APP_CONFIG.publicUser.password;
     }
+
+    this.swaggerUrl = window.location.origin +
+      window.APP_CONFIG.swaggerUi.basePath +
+      '?url=' + 
+      encodeURIComponent(
+        (APP_CONFIG.swaggerUi.testingDomain || window.location.origin) + 
+        '/api/query/' +
+        opts.database
+      );
     this.examples.setOpts(opts);
   }
 

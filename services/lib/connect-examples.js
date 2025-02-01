@@ -9,27 +9,53 @@ export default class ConnectExamples {
       {
         name: 'psql',
         prismLang: 'bash',
-        template: () => `PGSERVICE=pgfarm psql ${this.opts.database}`
+        loggedInOnly: true,
+        template: () => {
+          return `PGSERVICE=pgfarm psql ${this.opts.database}`;
+        }
       },
       {
         name: 'psql-full',
         prismLang: 'bash',
-        template: () => `PGPASSWORD=$(pgfarm auth token) psql -U ${this.opts.user} -h ${this.opts.host} -p ${this.opts.port} ${this.opts.database}`
+        template: () => {
+          let password = 'PGPASSWORD=$(pgfarm auth token)';
+          if( this.opts.password ) {
+            password = `PGPASSWORD="${this.opts.password}"`;
+          }
+
+          return `${password} psql -U ${this.opts.user} -h ${this.opts.host} -p ${this.opts.port} ${this.opts.database}`;
+        }
       },
       {
         name: 'json',
         prismLang: 'json',
-        template: () => JSON.stringify(this.opts, null, 2)
+        template: () => {
+          if( !this.opts.password ) {
+            this.opts.password = '<PASSWORD>';
+          }
+          return JSON.stringify(this.opts, null, 2)
+        }
       },
       {
         name: 'yaml',
         prismLang: 'yaml',
-        template: () => yaml.dump(this.opts)
+        template: () => {
+          if( !this.opts.password ) {
+            this.opts.password = '<PASSWORD>';
+          }
+          yaml.dump(this.opts)
+        }
       },
       {
         name: 'nodejs',
         prismLang: 'javascript',
-        template: () =>`
+        template: () => {
+          let password = 'process.env.PGPASSWORD';
+          if( this.opts.password ) {
+            password = `'${this.opts.password}'`;
+          }
+
+          return`
 /* https://node-postgres.com/features/connecting */
 const {Pool} = require('pg');
 const client = new Pool({
@@ -37,7 +63,7 @@ const client = new Pool({
   host: '${this.opts.host}',
   port: ${this.opts.port},
   database: '${this.opts.database}',
-  password: process.env.PGPASSWORD,
+  password: ${password},
   ssl: ${this.opts.ssl}
 });
 
@@ -45,11 +71,18 @@ await client.query('SELECT NOW()', (err, res) => {
   console.log(err, res);
   client.end();
 });`
+        }
       },
       {
         name: 'python',
         prismLang: 'python',
-        template: () => `
+        template: () => { 
+          let password = 'os.environ["PGPASSWORD"]';
+          if( this.opts.password ) {
+            password = `'${this.opts.password}'`;
+          }
+          
+          return`
 # https://www.psycopg.org/docs/usage.html
 import psycopg2
 conn = psycopg2.connect(
@@ -57,7 +90,7 @@ conn = psycopg2.connect(
   host='${this.opts.host}',
   port=${this.opts.port},
   database='${this.opts.database}',
-  password=os.environ['PGPASSWORD'],
+  password=${password},
   sslmode='require'
 )
 
@@ -65,11 +98,17 @@ cur = conn.cursor()
 cur.execute('SELECT NOW()')
 print(cur.fetchone())
 cur.close()`
+        }
       },
       {
         name: 'r',
         prismLang: 'r',
-        template: () => `
+        template: () => { 
+          let password = 'Sys.getenv("PGPASSWORD")';
+          if( this.opts.password ) {
+            password = `'${this.opts.password}'`;
+          }
+          return `
 # https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
 library(DBI)
 con <- dbConnect(
@@ -78,25 +117,38 @@ con <- dbConnect(
   host='${this.opts.host}',
   port=${this.opts.port},
   dbname='${this.opts.database}',
-  password=Sys.getenv('PGPASSWORD')
+  password=${password},
 )
 
 dbGetQuery(con, 'SELECT NOW()')
 dbDisconnect(con)`
+        }
       },
       {
         name: 'http',
         prismLang: 'bash',
-        template: () => `
+        template: () => { 
+          let password = '';
+          let header = '';
+          if( this.opts.password ) {
+            password="export TOKEN=$(pgfarm auth token)\n";
+            header = '-H "Authorization: Bearer $TOKEN" ';
+          }
+
+          return `
 # docs: https://docs.postgrest.org/en/stable/references/api/tables_views.html
-curl ${this.opts.queryPath}/${this.opts.database}
+${password}curl ${header}${this.opts.queryPath}/${this.opts.database}
         `
+        }
       }
     ];
   }
 
-  getConnectionTypes() {
-    return this.registry.map( item => item.name );
+  getConnectionTypes(isLoggedIn) {
+    return this.registry
+      .filter( item => !item.loggedInOnly || (item.loggedInOnly && isLoggedIn) )
+      .map( item => item.name )
+      
   }
 
   getTemplate(connectionType) {
@@ -129,7 +181,7 @@ curl ${this.opts.queryPath}/${this.opts.database}
       host: 'pgfarm.library.ucdavis.edu',
       port: 5432,
       database: '<ORGANIZATION/DATABASE>',
-      password: '<PASSWORD>',
+      password: '',
       ssl: true,
       queryPath: 'https://pgfarm.library.ucdavis.edu/api/query',
       ...opts
