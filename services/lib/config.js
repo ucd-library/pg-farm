@@ -1,6 +1,12 @@
 import fs from 'fs';
 const env = process.env;
 
+function makeArray(value) {
+  if( !value ) return [];
+  if( Array.isArray(value) ) return value;
+  return value.split(/,|\s/).map((v) => v.trim());
+}
+
 // construct the image tag from the build info or env
 let BUILD_INFO = {};
 let PG_INSTANCE_IMAGE = 'us-west1-docker.pkg.dev/digital-ucdavis-edu/pub/postgres:16'
@@ -42,6 +48,10 @@ let healthProbePort = env.HEALTH_PROBE_PORT || '3000';
 if( healthProbePort.match(/^tcp:/) ) {
   healthProbePort = healthProbePort.split(':').pop();
 }
+let swaggerUiPort = env.SWAGGER_UI_PORT || '8080';
+if( swaggerUiPort.match(/^tcp:/) ) {
+  swaggerUiPort = swaggerUiPort.split(':').pop();
+}
 
 let clientEnv = env.CLIENT_ENV || 'dev';
 
@@ -50,9 +60,11 @@ if( clientPort.match(/^tcp:/) ) {
   clientPort = new URL(clientPort).port;
 }
 
+let appUrl = env.APP_URL || 'http://localhost:3000';
+
 const config = {
 
-  appUrl : env.APP_URL || 'http://localhost:3000',
+  appUrl,
 
   logging : {
     level : env.LOG_LEVEL || 'info'
@@ -272,6 +284,14 @@ const config = {
       }
     },
     debug : env.PROXY_DEBUG === 'true' // Enable debug logging
+  },
+
+  swaggerUi : {
+    host : env.SWAGGER_UI_HOST || 'swagger-ui',
+    port : swaggerUiPort,
+    basePath : env.SWAGGER_UI_BASE_PATH || '/swagger-ui',
+    testingDomain : env.SWAGGER_UI_TESTING_DOMAIN || '',
+    allowedDomains : env.SWAGGER_UI_ALLOWED_DOMAINS ? makeArray(env.SWAGGER_UI_ALLOWED_DOMAINS) : ['localhost', 'pgfarm.local', new URL(appUrl).hostname]
   },
 
   healthProbe : {

@@ -23,9 +23,7 @@ class User {
     }
 
     this.loggedIn = window.APP_CONFIG.user.loggedIn;
-    this.token = window.APP_CONFIG.user.token;
-    this.tokenParsed = window.APP_CONFIG.user.tokenParsed;
-    this.isAdmin = this.tokenParsed?.realmRoles?.includes('admin');
+    this.isAdmin = this.user?.roles?.includes('admin');
 
     this.loginPath = window.APP_CONFIG.loginPath;
     this.logoutPath = window.APP_CONFIG.logoutPath;

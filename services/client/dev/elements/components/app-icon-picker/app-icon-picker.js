@@ -19,6 +19,7 @@ export default class AppIconPicker extends Mixin(LitElement)
       iconSet: {type: String, attribute: 'icon-set'},
       brandColor: {type: String, attribute: 'brand-color'},
       default: {type: String},
+      searchResults: {type: Array},
       _value: {state: true},
       _default: {state: true},
       _loading: {state: true},
@@ -41,6 +42,7 @@ export default class AppIconPicker extends Mixin(LitElement)
     this.brandColor = '';
     this._iconExists = false;
     this._loading = false;
+    this.searchResults = [];
 
     this._injectModel('IconModel');
 
@@ -83,6 +85,32 @@ export default class AppIconPicker extends Mixin(LitElement)
       this.timeout = null;
       this.emitChange();
     }, 500);
+  }
+
+  _onFocus() {
+    this.search();
+  }
+
+  _onBlur() {
+    this.searchResults = [];
+  }
+
+  _onKeyUp(e) {
+    if( e.keyCode === 13 ) return;
+    this.search();
+  }
+
+  search() {
+    if( !this._value ) {
+      this.searchResults = [];
+      return;
+    }
+    this.IconModel.search(this._value);
+  }
+
+  _onIconSearchUpdate(e) {
+    if( e.state !== 'loaded' ) return;
+    this.searchResults = e.payload;
   }
 
   emitChange(){
