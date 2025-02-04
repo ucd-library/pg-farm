@@ -10,7 +10,7 @@ spec:
   template:
     metadata:
       labels:
-        pgfarm-type: database
+        pgfarm-type: core-service
         app:  
     spec:
       containers:
