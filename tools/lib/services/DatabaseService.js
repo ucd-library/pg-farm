@@ -9,7 +9,7 @@ class DatabaseService extends BaseService {
   constructor() {
     super();
     this.store = DatabaseStore;
-    this.basePath = `${serviceUtils.host}/api/db`;
+    this.basePath = `${serviceUtils.host}/api/query`;
     this.searchId = 0;
     this.aggsId = 0;
   }

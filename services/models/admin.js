@@ -295,7 +295,7 @@ class AdminModel {
         organization,
         host : appHostname,
         port : 5432,
-        api : config.appUrl+'/api/db/'+dbUrlName,
+        api : config.appUrl+'/api/query/'+dbUrlName,
         publicAccess : {
           username : db.username,
           password : db.password,

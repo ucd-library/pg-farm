@@ -30,7 +30,7 @@ db-anon-role = "${config.pgInstance.publicRole.username}"
 jwt-secret = ${keys}
 jwt-role-claim-key = ".preferred_username"
 
-openapi-server-proxy-uri = "${config.appUrl}/api/db/${orgUrlName}/${database.database_name}"
+openapi-server-proxy-uri = "${config.appUrl}/api/query/${orgUrlName}/${database.database_name}"
 
 server-port = ${config.pgRest.port}`
     return file;
