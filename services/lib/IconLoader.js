@@ -10,8 +10,51 @@ export default class IconLoader {
     this.customIconPath = opts?.customIconPath || '/services/administration/src/controllers/api/icon/svgs';
     this.faPrefix = opts?.faPrefix || 'fa';
 
-    this.svgs = {};
+    let svgs = [];
+    this._crawlFiles(this.faNodeModulePath, svgs);
+    this._crawlFiles(this.customIconPath, svgs);
+    this.svgs = svgs;
   }
+
+  search(searchTerm, limit=5, allowBrands=false) {
+    let re = new RegExp(searchTerm.replace(/[^a-zA-Z]/g, ''), 'i');
+    let resp = [];
+
+    for( let icon of this.svgs ) {
+      if( allowBrands === false && icon.type === 'brands' ) continue;
+      if( !re.test(icon.token) ) continue;
+
+      resp.push({
+        name: icon.name,
+        isFa: icon.isFa,
+        type: icon.type,
+        svg: fs.readFileSync(icon.file, 'utf-8')
+      });
+      if( resp.length >= limit ) {
+        break;
+      }
+    }
+    return resp;
+  }
+
+  _crawlFiles(dirpath, svgs) {
+    const files = fs.readdirSync(dirpath);
+    files.forEach(file => {
+      const fullPath = path.join(dirpath, file);
+      if (fs.statSync(fullPath).isDirectory()) {
+        this._crawlFiles(fullPath, svgs);
+      } else if( fullPath.endsWith('.svg') ) {
+        svgs.push({
+          token: file.replace('.svg', '').replace(/[^a-zA-Z]/g, ''),
+          name: file,
+          isFa: fullPath.startsWith(this.faNodeModulePath),
+          type: fullPath.replace(/.*\/([^/]+)\/([^/]+)\.svg/, '$1'),
+          file: fullPath
+        });
+      }
+    });
+  }
+
 
   /**
    * @description Get svgs for the given icon slugs

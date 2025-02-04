@@ -10,6 +10,22 @@ class IconService extends BaseService {
     this.basePath = `${serviceUtils.host}/api/icon`;
   }
 
+  async search(term) {
+    const requestStore = this.store.data.search;
+    await this.checkRequesting(
+      term, requestStore,
+      () => this.request({
+        url : `${this.basePath}/search/${term}`,
+        fetchOptions: {
+          headers: serviceUtils.authHeader()
+        },
+        checkCached: () => requestStore.get(term),
+        onUpdate: resp => this.store.set({id: term, ...resp}, requestStore)
+      })
+    );
+    return requestStore.get(term);
+  }
+
   async get(slugs){
     if ( !Array.isArray(slugs) ) slugs = [slugs];
     slugs.sort();
@@ -21,7 +37,7 @@ class IconService extends BaseService {
     await this.checkRequesting(
       id, requestStore,
       () => this.request({
-        url : `${this.basePath}/${id}`,
+        url : `${this.basePath}/batch/${id}`,
         fetchOptions: {
           headers: serviceUtils.authHeader()
         },

@@ -5,6 +5,7 @@ import logger from '../../lib/logger.js';
 import pgInstClient from '../../lib/pg-instance-client.js';
 import loaderHtml from '../html/loader.html.mjs';
 import path from 'path';
+import clone from 'clone';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
@@ -24,18 +25,14 @@ async function setup(app) {
     isRoot : true,
     appRoutes : config.client.appRoutes,
     getConfig : async (req, res, next) => {
-      let user = {loggedIn: false};
-      try {
-        if( req.cookies[config.jwt.cookieName] ) {
-          const token = req.cookies[config.jwt.cookieName];
-          const tokenParsed = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
-          if ( tokenParsed.exp > Date.now() / 1000 ) {
-            user.token = token;
-            user.tokenParsed = tokenParsed;
-            user.loggedIn = true;
-          }
-        }
-      } catch(e) {}
+      let user;
+      if( req.user ) {
+        user = clone(req.user);
+        user.loggedIn = true;
+      } else {
+        user = {loggedIn: false}
+      }
+
       next({
         user,
         loginPath : config.oidc.loginPath,
@@ -45,6 +42,14 @@ async function setup(app) {
         grants : pgInstClient.GRANTS,
         logger : config.client.logger,
         buildInfo: config.client.buildInfo,
+        publicUser : {
+          username: config.pgInstance.publicRole.username, 
+          password: config.pgInstance.publicRole.password
+        },
+        swaggerUi : {
+          basePath: config.swaggerUi.basePath,
+          testingDomain: config.swaggerUi.testingDomain
+        },
         recaptcha: {
           disabled: config.client.recaptcha.disabled,
           siteKey: config.client.recaptcha.siteKey

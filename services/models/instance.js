@@ -43,7 +43,11 @@ class Instance {
    * @method list
    * @description list all instances
    * 
-   * @param {String} state Optional.  Filter by state
+   * @param {Object} opts query options
+   * @param {String} opts.limit default 10
+   * @param {String} opts.offset default 0
+   * @param {String} opts.state filter by state
+   * @param {String} opts.organization filter by organization
    * 
    * @returns {Promise<Array>}
    **/

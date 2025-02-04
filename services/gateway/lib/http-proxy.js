@@ -7,6 +7,7 @@ import metrics from '../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
+const swaggerUiRouteRegex = /^\/swagger-ui/;
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
@@ -47,6 +48,7 @@ async function middleware(req, res) {
   let path = req.originalUrl;
   let host = DEFAULT_HOST;
   let dbRouteMatch = path.match(dbRouteRegex);
+  let swaggerUiMatch = path.match(swaggerUiRouteRegex);
 
   if( dbRouteMatch ) {
     let orgName = dbRouteMatch[1];
@@ -79,15 +81,28 @@ async function middleware(req, res) {
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
   } else if( path.startsWith('/api') || path.startsWith('/auth') || path.startsWith('/login') ) {
     host = 'http://'+config.admin.host+':'+config.admin.port;
+  } else if( swaggerUiMatch ) {
+    try {
+      let queryUrl = req.query.url;
+      if( queryUrl ) {
+        let hostname = new URL(queryUrl).hostname;
+        if( !config.swaggerUi.allowedDomains.includes(hostname) ) {
+          return res.status(403).send('Invalid swagger domain');
+        }
+      }
+      host = 'http://'+config.swaggerUi.host+':'+config.swaggerUi.port;
+    } catch(e) {
+      return res.status(500).send('Error parsing swagger-ui url');
+    }
   }
 
   logger.debug('HTTP Proxy Request: ', {
     url: req.originalUrl, 
-    method: req.method, 
-    headers: req.headers,
-    remoteIp : req.connection.remoteAddress,
-    ipAddress : req.ip,
-    forwarded : req.ips,
+    // method: req.method, 
+    // headers: req.headers,
+    // remoteIp : req.connection.remoteAddress,
+    // ipAddress : req.ip,
+    // forwarded : req.ips,
     target : host+path
   });
 
