@@ -55,9 +55,25 @@ export function render() {
         <section>
           <admin-database-wake orgName=${this.orgName} dbName=${this.dbName} @wake-up-successful=${() => this.AppStateModel.refresh()}></admin-database-wake>
           <div class='stat-buttons' ?hidden=${this.dataCtl?.db?.instance?.state === 'SLEEP'}>
-            <app-statistic-button href='${window.location.pathname}/schemas' icon='fa.solid.diagram-project' text='${this.dataCtl.schemas?.length} schemas'></app-statistic-button>
-            <app-statistic-button href='${window.location.pathname}/users' icon='fa.solid.users' text='${this.dataCtl.users?.total} users' subtext='${this.dataCtl.users?.totalPublic} public'></app-statistic-button>
-            <app-statistic-button href='${window.location.pathname}/tables' icon='fa.solid.table' text='# tables' subtext='# public'></app-statistic-button>
+            <app-statistic-button
+              href='${window.location.pathname}/schemas'
+              icon='fa.solid.diagram-project'
+              text='${this.dataCtl.schemas?.length} schemas'>
+            </app-statistic-button>
+            <app-statistic-button
+              href='${window.location.pathname}/users'
+              icon='fa.solid.users'
+              text='${this.dataCtl.users?.total} users'
+              brand-color='redbud'
+              subtext='${this.dataCtl.users?.totalPublic} public'>
+            </app-statistic-button>
+            <app-statistic-button
+              href='${window.location.pathname}/tables'
+              icon='fa.solid.table'
+              text='# tables'
+              brand-color='quad'
+              subtext='# public'>
+            </app-statistic-button>
           </div>
         </section>
         <section>

@@ -12,26 +12,18 @@ export function styles() {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: var(--spacer--medium, 1.5rem);
-      background-color: var(--ucd-blue-30, #EBF3FA);
       cursor: pointer;
       text-decoration: none;
       border: none;
       width: 100%;
       box-sizing: border-box;
       transition: background-color .2s ease;
+      padding: .875rem;
     }
     .container app-icon {
-      margin-bottom: var(--spacer, 1rem);
+      margin-bottom: .875rem;
       --app-icon-size: 2.5rem;
-      color: var(--ucd-blue-70, #73ABDD);
       transition: color .2s ease;
-    }
-    .container:hover {
-      background: var(--ucd-gold-50, #FDE9AC);
-    }
-    .container:hover app-icon {
-      color: var(--ucd-gold, #FFBF00);
     }
     .text {
       margin-bottom: .25em;
@@ -42,15 +34,21 @@ export function styles() {
       line-height: 1.2;
       font-size: 1.092rem;
     }
-    @media (min-width: 768px) {
-      .text {
-        font-size: 1.428rem;
-      }
-    }
     .subtext {
       font-size: 1rem;
       color: var(--black, #000);
       line-height: 1.2;
+    }
+    @media (min-width: 768px) {
+      .container {
+        padding: var(--spacer--medium, 1.5rem);
+      }
+      .text {
+        font-size: 1.428rem;
+      }
+      .container app-icon {
+        margin-bottom: var(--spacer, 1rem);
+      }
     }
   `;
 
@@ -59,6 +57,17 @@ export function styles() {
 
 export function render() {
 return html`
+  <style>
+    .container app-icon {
+      color: ${this._brandColorHex};
+    }
+    .container {
+      background-color: ${this._brandColorHex + '26'};
+    }
+    .container:hover {
+      background-color: ${this._brandColorHex + '40'};
+    }
+  </style>
   ${this.href ? html`
     <a class='container' href=${this.href}>${_renderContent.call(this)}</a>` : html`
     <button class='container'>${_renderContent.call(this)}</button>`}

@@ -28,6 +28,10 @@
   width: auto;
   padding-left: 0;
   height: auto;
+  cursor: pointer;
+}
+.app-table .row.row--header select:hover {
+  color: var(--tahoe, #00B2E3);
 }
 .app-table .row.row--header select:focus {
   border-style: none;
