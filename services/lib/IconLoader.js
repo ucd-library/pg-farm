@@ -66,23 +66,17 @@ export default class IconLoader {
    */
   get(...iconSlugs){
     const out = {};
-
     iconSlugs.forEach(slug => {
-      if (this.svgs[slug]) {
-        out[slug] = this.svgs[slug];
-        return;
+      const {isFa, type, name} = this._parseIconSlug(slug);
+      const icon = this.svgs.find(icon => {
+        return icon.name === name && icon.type === type && icon.isFa === isFa;
+      });
+      if ( icon ) {
+        if ( !icon.svg ) {
+          icon.svg = fs.readFileSync(icon.file, 'utf-8');
+        }
+        out[slug] = icon.svg;
       }
-
-      const iconSlugArray = this._getIconSlugArray(slug);
-      if ( !iconSlugArray.length ) return;
-      if ( iconSlugArray[0] === this.faPrefix ) {
-        iconSlugArray.shift();
-        this.svgs[slug] =  this._readIconFile(iconSlugArray, this.faNodeModulePath);
-      } else {
-        this.svgs[slug] = this._readIconFile(iconSlugArray, this.customIconPath);
-      }
-      out[slug] = this.svgs[slug];
-
     });
     return out;
   }
@@ -93,6 +87,17 @@ export default class IconLoader {
       .map(x => x.replaceAll('/', ''))
       .map(x => x);
     return iconSlugArray;
+  }
+
+  _parseIconSlug(iconSlug){
+    const iconSlugArray = iconSlug
+    .split('.')
+    .map(x => x.replaceAll('/', ''))
+    .map(x => x);
+    const isFa = iconSlugArray?.[0] === this.faPrefix;
+    const type = isFa ? iconSlugArray?.[1] : 'svgs';
+    const name = (iconSlugArray?.[iconSlugArray.length - 1] || '') + '.svg';
+    return {isFa, type, name};
   }
 
   _readIconFile(slugArray, basePath){
