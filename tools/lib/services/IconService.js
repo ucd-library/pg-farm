@@ -19,7 +19,6 @@ class IconService extends BaseService {
         fetchOptions: {
           headers: serviceUtils.authHeader()
         },
-        checkCached: () => requestStore.get(term),
         onUpdate: resp => this.store.set({id: term, ...resp}, requestStore)
       })
     );

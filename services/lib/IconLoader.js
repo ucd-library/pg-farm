@@ -1,30 +1,44 @@
 import path from 'path';
 import fs from 'fs';
+import yaml from 'js-yaml';
 
 /**
  * @description Load icons from FontAwesome or custom icons from the filesystem
  */
 export default class IconLoader {
   constructor(opts){
-    this.faNodeModulePath = opts?.faNodeModulePath || '/services/node_modules/@fortawesome/fontawesome-free/svgs';
+    this.faNodeModulePath = opts?.faNodeModulePath || '/services/node_modules/@fortawesome/fontawesome-free';
+    this.faNodeModuleSvgsPath = path.join(this.faNodeModulePath, 'svgs');
     this.customIconPath = opts?.customIconPath || '/services/administration/src/controllers/api/icon/svgs';
     this.faPrefix = opts?.faPrefix || 'fa';
 
     let svgs = [];
-    this._crawlFiles(this.faNodeModulePath, svgs);
+    this._crawlFiles(this.faNodeModuleSvgsPath, svgs);
     this._crawlFiles(this.customIconPath, svgs);
     this.svgs = svgs;
   }
 
-  search(searchTerm, limit=5, allowBrands=false) {
+  get faMetadata() {
+    if ( this._faMetadata ) {
+      return this._faMetadata;
+    }
+    const file = path.join(this.faNodeModulePath, 'metadata', 'icons.yml');
+    this._faMetadata = yaml.load(fs.readFileSync(file, 'utf-8'));
+    return this._faMetadata;
+  }
+
+  search(searchTerm, limit=10, allowBrands=false) {
     let re = new RegExp(searchTerm.replace(/[^a-zA-Z]/g, ''), 'i');
     let resp = [];
 
     for( let icon of this.svgs ) {
       if( allowBrands === false && icon.type === 'brands' ) continue;
-      if( !re.test(icon.token) ) continue;
+      if ( !(re.test(icon.token) || icon?.searchTerms?.some(term => re.test(term))) ) {
+        continue;
+      }
 
       resp.push({
+        label: icon.label,
         name: icon.name,
         isFa: icon.isFa,
         type: icon.type,
@@ -44,10 +58,15 @@ export default class IconLoader {
       if (fs.statSync(fullPath).isDirectory()) {
         this._crawlFiles(fullPath, svgs);
       } else if( fullPath.endsWith('.svg') ) {
+        const isFa = fullPath.startsWith(this.faNodeModulePath);
+        const noExt = file.replace('.svg', '');
+        const label = isFa ? this.faMetadata?.[noExt]?.label || noExt : noExt;
         svgs.push({
-          token: file.replace('.svg', '').replace(/[^a-zA-Z]/g, ''),
+          label,
+          token: noExt.replace(/[^a-zA-Z]/g, ''),
           name: file,
-          isFa: fullPath.startsWith(this.faNodeModulePath),
+          isFa,
+          searchTerms: isFa ? this.faMetadata?.[noExt]?.search?.terms || [] : [],
           type: fullPath.replace(/.*\/([^/]+)\/([^/]+)\.svg/, '$1'),
           file: fullPath
         });
@@ -79,14 +98,6 @@ export default class IconLoader {
       }
     });
     return out;
-  }
-
-  _getIconSlugArray(iconSlug){
-    const iconSlugArray = iconSlug
-      .split('.')
-      .map(x => x.replaceAll('/', ''))
-      .map(x => x);
-    return iconSlugArray;
   }
 
   _parseIconSlug(iconSlug){

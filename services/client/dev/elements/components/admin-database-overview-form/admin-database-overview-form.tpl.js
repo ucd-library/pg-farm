@@ -94,7 +94,6 @@ return html`
         value=${this.payload.icon}
         default='database'
         brand-color=${this.payload.brandColor || 'secondary'}
-        icon-set='fa.solid'
         @change=${e => this._onInput('icon', e.detail)}></app-icon-picker>
     </div>
     <div class='field-container'>
