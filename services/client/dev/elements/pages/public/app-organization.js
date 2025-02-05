@@ -1,4 +1,4 @@
-import { LitElement } from 'lit';
+import { LitElement, html } from 'lit';
 import { render, styles } from "./app-organization.tpl.js";
 import { Mixin, MainDomElement } from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
@@ -6,6 +6,8 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
+
+import '@ucd-lib/pgfarm-client/elements/components/admin-org-metadata-form/admin-org-metadata-form.js';
 
 export default class AppOrganization extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -52,6 +54,7 @@ export default class AppOrganization extends Mixin(LitElement)
     if ( e.page !== this.pageId ) return;
     await this.queryCtl.setFromLocation();
     this.orgName = e.location?.path?.[1] || '';
+    this.dataCtl.isAdmin = false;
 
     // set up database search query
     const searchOpts = {
@@ -83,6 +86,11 @@ export default class AppOrganization extends Mixin(LitElement)
         hostCallback: '_onSearchSuccess',
         returnedResponse: 'request',
         errorMessage: 'Unable to load organization databases'
+      },
+      {
+        request: this.OrganizationModel.isAdmin(this.orgName),
+        ignoreError: true,
+        hostCallback: '_onAdminCheck'
       }
     ]);
   }
@@ -91,6 +99,35 @@ export default class AppOrganization extends Mixin(LitElement)
     const data = this.DatabaseModel.getSearchResult(e.id).payload;
     this.databaseTotal = data.total;
     this.databaseResults = data.items;
+  }
+
+  _onAdminCheck(e){
+    this.dataCtl.isAdmin = e.isAdmin;
+    this.requestUpdate();
+  }
+
+  showEditModal() {
+    this.AppStateModel.showDialogModal({
+      title: `Edit Organization: ${this.dataCtl.org?.title}`,
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Save Changes', value: 'org-metadata-save', color: 'secondary', disableOnLoading: true}
+      ],
+      content: html`<admin-org-metadata-form .org=${this.dataCtl.org}></admin-org-metadata-form>`,
+      actionCallback: this._onModalAction
+    });
+  }
+
+  async _onModalAction(action, modalEle){
+    if ( action === 'org-metadata-save' ) {
+      const form = modalEle.renderRoot.querySelector('admin-org-metadata-form');
+      if ( !form.reportValidity() ) return {abortModalAction: true};
+      modalEle._loading = true;
+      const r = await form.submit();
+      modalEle._loading = false;
+      form.org = {};
+      if ( r ) this.AppStateModel.refresh();
+    }
   }
 
 }

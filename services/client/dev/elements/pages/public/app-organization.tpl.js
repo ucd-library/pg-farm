@@ -26,6 +26,17 @@ export function styles() {
     app-organization .search-form-wrapper .dd-wrapper {
       max-width: 200px;
     }
+    app-organization .teasers .edit-button {
+      display: none;
+    }
+    app-organization .is-admin .teasers {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+    }
+    app-organization .is-admin .teasers .edit-button {
+      display: block;
+    }
   `;
 
   return [elementStyles];
@@ -34,22 +45,30 @@ export function styles() {
 export function render() {
 return html`
   <div class='page-header'>
-    <div class='page-header__wrapper'>
-      <div class='page-header__title'>
-        <h1>${this.dataCtl.org?.title}</h1>
+    <div class='page-header__wrapper page-header__wrapper--flex'>
+      <div>
+        <div class='page-header__title'>
+          <h1>${this.dataCtl.org?.title}</h1>
+        </div>
+        <div class='page-header__description' ?hidden=${!this.dataCtl.org?.description}>
+          ${this.dataCtl.org?.description}
+        </div>
+        <div class='page-header__links' ?hidden=${!this.dataCtl.org?.url}>
+          <a class='prefixed-icon' href='${this.dataCtl.org?.url}'>
+            <app-icon slug='fa.solid.network-wired'></app-icon>
+            <span>${this.dataCtl.org?.url}</span>
+          </a>
+        </div>
       </div>
-      <div class='page-header__description' ?hidden=${!this.dataCtl.org?.description}>
-        ${this.dataCtl.org?.description}
+      <div>
+        <div ?hidden=${!this.dataCtl.isAdmin}>
+          <app-icon-button icon='fa.solid.pen' @click=${this.showEditModal}></app-icon-button>
+        </div>
       </div>
-      <div class='page-header__links' ?hidden=${!this.dataCtl.org?.url}>
-        <a class='prefixed-icon' href='${this.dataCtl.org?.url}'>
-          <app-icon slug='fa.solid.network-wired'></app-icon>
-          <span>${this.dataCtl.org?.url}</span>
-        </a>
-      </div>
+
     </div>
   </div>
-  <div class='l-container--narrow-desktop u-space-mt--large'>
+  <div class='l-container--narrow-desktop u-space-mt--large ${this.dataCtl.isAdmin ? 'is-admin' : ''}'>
     <div class='search-form-wrapper' ?hidden=${!(this.databaseTotal > this.queryCtl.limit.getProperty() || this.queryCtl.text.exists())}>
       <app-search-input
         query-param="text"
@@ -63,18 +82,20 @@ return html`
         </select>
       </div>
     </div>
-    <div ?hidden=${!this.dataCtl.featured?.length || this.queryCtl.text.exists() || this.queryCtl.offset.exists()}>
+    <div class='teasers' ?hidden=${!this.dataCtl.featured?.length || this.queryCtl.text.exists() || this.queryCtl.offset.exists()}>
       ${this.dataCtl.featured?.map(database => html`
         <database-teaser .data=${database} featured hide-organization></database-teaser>
+        ${_renderEditDbButton.call(this, database)}
         `)}
     </div>
-    <div ?hidden=${!this.databaseResults?.length}>
+    <div class='teasers' ?hidden=${!this.databaseResults?.length}>
       ${this.databaseResults.map(database => html`
         <database-teaser
           .data=${database}
           hide-organization
           ?featured=${(this.dataCtl.featured || []).map(db => db.id).includes(database.id)}>
         </database-teaser>
+        ${_renderEditDbButton.call(this, database)}
       `)}
     </div>
     <div ?hidden=${this.queryCtl.getMaxPage(this.databaseTotal) == 1 || !this.databaseTotal}>
@@ -91,6 +112,16 @@ return html`
     <div ?hidden=${!(!this.databaseTotal && !this.dataCtl.featured?.length && !this.queryCtl.text.exists())}>
       There are no databases available for this organization.
     </div>
-
   </div>
 `;}
+
+function _renderEditDbButton(database){
+  return html`
+    <div class='edit-button'>
+      <app-icon-button
+        icon='fa.solid.gear'
+        href='/db/${database?.organization?.name || '_'}/${database?.name || ''}/edit'>
+      </app-icon-button>
+    </div>
+  `;
+}
