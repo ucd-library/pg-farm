@@ -37,7 +37,10 @@ export default class AdminOrgMetadataForm extends Mixin(LitElement)
       this.payload = {
         title: this.org?.title || '',
         description: this.org?.description || '',
-        url: this.org?.url || ''
+        url: this.org?.url || '',
+        logo: this.org?.logo || '',
+        email: this.org?.email || '',
+        phone: this.org?.phone || ''
       };
     }
   }
@@ -48,7 +51,6 @@ export default class AdminOrgMetadataForm extends Mixin(LitElement)
   }
 
   async submit(){
-    console.log('submit', this.payload);
     this._loading = true;
     const update = await this.OrganizationModel.update(this.org.name, this.payload);
     if ( update.state === 'error' ){

@@ -1,4 +1,5 @@
 import { html, css } from 'lit';
+import '@ucd-lib/pgfarm-client/elements/components/app-file-input/app-file-input.js';
 
 export function styles() {
   const elementStyles = css`
@@ -47,6 +48,29 @@ return html`
         id=${this.idGen.get('url')}
         .value=${this.payload.url}
         @input=${e => this._onInput('url', e.target.value)}>
+    </div>
+    <div class='field-container'>
+      <label for=${this.idGen.get('email')}>Email</label>
+      <input
+        id=${this.idGen.get('email')}
+        .value=${this.payload.email}
+        @input=${e => this._onInput('email', e.target.value)}>
+    </div>
+    <div class='field-container'>
+      <label for=${this.idGen.get('phone')}>Phone</label>
+      <input
+        id=${this.idGen.get('phone')}
+        .value=${this.payload.phone}
+        @input=${e => this._onInput('phone', e.target.value)}>
+    </div>
+    <div class='field-container'>
+      <label>Logo</label>
+      <app-file-input
+        @file-change=${e => this._onInput('logo', e.detail.dataUrl)}
+        label-subtext='JPG or PNG, 400px+ square recommended (max 10mb)'
+        .fileSizeLimit=${10 * 1024 * 1024}
+        .imageUrl=${this.payload.logo}>
+      </app-file-input>
     </div>
   </form>
 `;}

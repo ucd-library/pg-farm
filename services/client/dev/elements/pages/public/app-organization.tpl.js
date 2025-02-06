@@ -46,7 +46,7 @@ export function render() {
 return html`
   <div class='page-header'>
     <div class='page-header__wrapper page-header__wrapper--flex'>
-      <div>
+      <div class='page-header__content'>
         <div class='page-header__title'>
           <h1>${this.dataCtl.org?.title}</h1>
         </div>
@@ -60,10 +60,11 @@ return html`
           </a>
         </div>
       </div>
-      <div>
-        <div ?hidden=${!this.dataCtl.isAdmin}>
-          <app-icon-button icon='fa.solid.pen' @click=${this.showEditModal}></app-icon-button>
-        </div>
+      <div ?hidden=${!this.dataCtl.org?.logo}>
+        <img class='page-header__image' src='${this.dataCtl.org?.logo}' alt='Organization logo'>
+      </div>
+      <div ?hidden=${!this.dataCtl.isAdmin}>
+        <app-icon-button icon='fa.solid.pen' @click=${this.showEditModal}></app-icon-button>
       </div>
 
     </div>
