@@ -3,8 +3,8 @@ import { render, styles } from "./app-contact.tpl.js";
 import { Mixin, MainDomElement } from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import IdGenerator from '../../../utils/IdGenerator.js';
-import recaptcha from '../../../utils/recaptcha.js';
+import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
+import recaptcha from '@ucd-lib/pgfarm-client/utils/recaptcha.js';
 
 /**
  * @description An element for the contact page

@@ -6,10 +6,13 @@ export function styles() {
     :host {
       display: block;
     }
+    [hidden] {
+      display: none !important;
+    }
     .search-bar {
       display: flex;
       align-items: center;
-      padding: var(--spacer--small, .5rem) .75rem;
+      padding: .5rem .75rem;
       background: var(--ucd-blue-30, #EBF3FA);
     }
     input {
@@ -41,6 +44,21 @@ export function styles() {
     label {
       color: var(--app-search-input-label-color, var(--ucd-blue, #022851));
     }
+    .app-search-input--basic .search-bar {
+      background-color: var(--white, #fff);
+      border: 1px solid var(--ucd-blue-60, #B0D0ED);
+      padding: calc(.5rem - 1px) .75rem;
+    }
+    .app-search-input--basic .search-bar button {
+      background-color: var(--white, #fff);
+      color: var(--ucd-blue-70, #73ABDD);
+    }
+    .app-search-input--basic .search-bar button:hover {
+      background-color: var(--white, #fff);
+    }
+    .app-search-input--basic .search-bar:has(input:focus) {
+      border: 1px solid var(--ucd-gold, #ffbf00);
+    }
   `;
 
   return [formStyles, elementStyles];
@@ -48,7 +66,7 @@ export function styles() {
 
 export function render() {
 return html`
-  <form @submit="${this._onFormSubmit}">
+  <form @submit="${this._onFormSubmit}" class='app-search-input--${this.searchBarStyle}'>
     <label ?hidden=${!this.label} for='app-search-input'>${this.label}</label>
     <div class='search-bar'>
       <input

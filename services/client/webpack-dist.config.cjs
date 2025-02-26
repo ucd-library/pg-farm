@@ -19,6 +19,7 @@ configs.forEach((config, index) => {
 
   config.resolve.alias = {
     '@ucd-lib/cork-app-utils': path.resolve(__dirname, 'dev/node_modules/@ucd-lib/cork-app-utils'),
+    '@ucd-lib/pgfarm-client': path.resolve(__dirname, 'dev')
   }
 
   config.resolve.fallback = {
@@ -27,7 +28,7 @@ configs.forEach((config, index) => {
     os : false,
     events : require.resolve("events/")
   }
-  
+
 
   let cssModule = config.module.rules.find(rule => {
     if( !Array.isArray(rule.use) ) return false;

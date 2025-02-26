@@ -4,11 +4,16 @@ import client from '../lib/pg-admin-client.js';
 class OrganizationModel {
 
   constructor() {
-    this.METADATA_FIELDS = ['title', 'url', 'description'];
+    this.METADATA_FIELDS = ['title', 'url', 'description', 'logo', 'email', 'phone'];
   }
 
-  get(nameOrId) {
-    return client.getOrganization(nameOrId);
+  async get(nameOrId) {
+    const org = await client.getOrganization(nameOrId);
+    if ( org?.logo ){
+      org.logo = `data:${org['logo_file_type']};base64,${org.logo.toString('base64')}`;
+    }
+    delete org['logo_file_type'];
+    return org;
   }
 
   async exists(name) {
@@ -23,12 +28,12 @@ class OrganizationModel {
   /**
    * @method create
    * @description create a new organization
-   * 
-   * @param {String} title name of the organization 
+   *
+   * @param {String} title name of the organization
    * @param {Object} opts
    * @param {String} opts.description description of the organization
    * @param {String} opts.url url of the organization
-   *  
+   *
    * @returns {Promise<Object>}
    */
   async create(title, opts={}) {
@@ -40,6 +45,7 @@ class OrganizationModel {
     if( exists ) {
       throw new Error('Organization already exists: '+opts.name);
     }
+    this._convertLogoToBytes(opts);
 
     logger.info('Creating organization', title, opts);
     await client.createOrganization(title, opts);
@@ -60,9 +66,23 @@ class OrganizationModel {
       }
     }
 
+    this._convertLogoToBytes(metadata);
+
     logger.info('Updating organization metadata', org.name, metadata);
 
     await client.setOrganizationMetadata(org.organization_id, metadata);
+  }
+
+  _convertLogoToBytes(metadata) {
+    if ( metadata.logo ){
+      const logo = Buffer.from(metadata.logo.split(',')[1], 'base64');
+      const logoFileType = metadata.logo.split(';')[0].split(':')[1];
+      metadata.logo = logo;
+      metadata['logo_file_type'] = logoFileType;
+    } else if ( Object.keys(metadata).includes('logo') ){
+      metadata.logo = null;
+      metadata['logo_file_type'] = null;
+    }
   }
 
   async getUsers(nameOrId) {

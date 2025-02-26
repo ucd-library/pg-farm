@@ -38,15 +38,28 @@ export function styles() {
     }
     .search {
       background: white;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--gray, #4c4c4c);
+      padding: 1rem;
     }
     .search .result {
-      padding: 5px;
+      gap: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: .5rem;
     }
     .search svg {
       height: 30px;
       width: 30px;
       fill: var(--gray, #4c4c4c);
       outline: var(--gray, #4c4c4c);
+    }
+    .search .text {
+      font-size: 1rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
   `;
@@ -76,16 +89,16 @@ return html`
         @blur=${e => this._onBlur(e)}
       />
       <div ?hidden=${!(!this._iconExists && this.value)} class='no-exist'>This icon does not exist.</div>
-      <div class="search" ?hidden=${!this.searchResults.length}>
-        <div>Suggestions:</div>
-        ${this.searchResults.map(result => html`
-          <div class="result">
-            ${unsafeHTML(result.svg)} ${result.name}
-          </div>
-        `)}
-      </div>
     </div>
-
+  </div>
+  <div class="search" ?hidden=${!this.searchResults.length}>
+    <div>Suggestions:</div>
+    ${this.searchResults.map(result => html`
+      <div class="result" @click=${() => this._onSuggestionClick(result)}>
+        <div>${unsafeHTML(result.svg)}</div>
+        <div class='label'>${result.label}</div>
+      </div>
+    `)}
   </div>
 
 `;}

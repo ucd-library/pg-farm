@@ -14,6 +14,7 @@ export function styles() {
       border-style: solid;
       cursor: pointer;
       text-decoration: none;
+      transition: background-color .2s ease, border-color .2s ease, color .2s ease;
     }
     .container.basic {
       width: var(--app-icon-button-size, 2rem);

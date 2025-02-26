@@ -24,7 +24,7 @@ export function styles() {
 export function render() {
 return html`
   <form @submit=${this._onSubmit}>
-  <div class='field-container'>
+    <div class='field-container'>
       <div class='flex flex--wrap flex--align-center'>
         <label for=${this.idGen.get('title')} class='u-space-mr--small u-space-pb--flush'>Title</label>
         <div class='gray font-size--small'>(required)</div>
@@ -94,7 +94,6 @@ return html`
         value=${this.payload.icon}
         default='database'
         brand-color=${this.payload.brandColor || 'secondary'}
-        icon-set='fa.solid'
         @change=${e => this._onInput('icon', e.detail)}></app-icon-picker>
     </div>
     <div class='field-container'>

@@ -9,7 +9,7 @@ class OrganizationModel extends BaseModel {
 
     this.store = OrganizationStore;
     this.service = OrganizationService;
-      
+
     this.register('OrganizationModel');
   }
 
@@ -27,6 +27,10 @@ class OrganizationModel extends BaseModel {
 
   update(org, opts) {
     return this.service.update(org, opts);
+  }
+
+  isAdmin(org) {
+    return this.service.isAdmin(org);
   }
 
 }

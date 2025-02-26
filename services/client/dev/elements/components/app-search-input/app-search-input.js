@@ -23,7 +23,8 @@ export default class AppSearchInput extends Mixin(LitElement)
       placeholder: {type: String},
       label: {type: String},
       queryParam: {type: String, attribute: 'query-param'},
-      grayLabel: {type: Boolean, attribute: 'gray-label'}
+      grayLabel: {type: Boolean, attribute: 'gray-label'},
+      searchBarStyle: {type: String, attribute: 'search-bar-style'}
     }
   }
 
@@ -47,6 +48,13 @@ export default class AppSearchInput extends Mixin(LitElement)
     super.connectedCallback();
     this.queryCtl = new QueryParamController(this, this.queryParam, {hostProperty: 'value'});
     this.queryCtl.setFromLocation();
+  }
+
+  willUpdate(props){
+    const searchBarStyles = ['default', 'basic'];
+    if ( props.has('searchBarStyle') && !searchBarStyles.includes(this.searchBarStyle) ){
+      this.searchBarStyle = searchBarStyles[0];
+    }
   }
 
   _onAppStateUpdate(){

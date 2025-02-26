@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS pgfarm.organization (
     title text NOT NULL UNIQUE,
     url text,
     description text,
+    logo BYTEA,
+    logo_file_type text,
+    email text,
+    phone text,
     created_at timestamp NOT NULL DEFAULT now(),
     updated_at timestamp NOT NULL DEFAULT now()
 );
