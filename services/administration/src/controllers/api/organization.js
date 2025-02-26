@@ -56,8 +56,8 @@ router.get('/:organization/users', async (req, res) => {
 });
 
 router.patch(
-  '/:organization', 
-  keycloak.protect('organization-admin'), 
+  '/:organization',
+  keycloak.protect('organization-admin'),
   async (req, res) => {
 
   try {
@@ -69,6 +69,10 @@ router.patch(
   } catch(e) {
     handleError(res, e);
   }
+});
+
+router.get('/:organization/is-admin', keycloak.protect('organization-admin'), async (req, res) => {
+  return res.json({isAdmin: true});
 });
 
 

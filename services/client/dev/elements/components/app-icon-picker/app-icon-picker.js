@@ -63,6 +63,14 @@ export default class AppIconPicker extends Mixin(LitElement)
     }
   }
 
+  _onSuggestionClick(result) {
+    let value = result.name.replace('.svg', '');
+    if ( !this.iconSet ) {
+      value = [result.isFa ? 'fa' : '', result.type, value].filter(v => v).join('.');
+    }
+    this._onInput(value);
+  }
+
   _onInput(value){
     this._value = value;
     if ( this.timeout ) {
@@ -92,7 +100,9 @@ export default class AppIconPicker extends Mixin(LitElement)
   }
 
   _onBlur() {
-    this.searchResults = [];
+    setTimeout(() => {
+      this.searchResults = [];
+    }, 100);
   }
 
   _onKeyUp(e) {

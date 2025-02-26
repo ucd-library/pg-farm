@@ -3,8 +3,8 @@ import {render, styles} from "./app-admin-database-overview.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import PageDataController from '../../../controllers/PageDataController.js';
-import '../../components/admin-database-overview-form/admin-database-overview-form.js';
+import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
+import '@ucd-lib/pgfarm-client/elements/components/admin-database-overview-form/admin-database-overview-form.js';
 
 /**
  * @class AppAdminDatabaseOverview

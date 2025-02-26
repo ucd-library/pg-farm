@@ -3,7 +3,7 @@ import {render, styles} from "./app-database.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import PageDataController from '../../../controllers/PageDataController.js';
+import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 
 export default class AppDatabase extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {

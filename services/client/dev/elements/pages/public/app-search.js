@@ -3,9 +3,9 @@ import {render, styles} from "./app-search.tpl.js";
 import { Mixin, MainDomElement } from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import QueryParamsController from '../../../controllers/QueryParamsController.js';
-import PageDataController from '../../../controllers/PageDataController.js';
-import IdGenerator from '../../../utils/IdGenerator.js';
+import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
+import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
+import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 
 /**
  * @description - Page for searching databases

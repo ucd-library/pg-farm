@@ -89,6 +89,25 @@ class OrganizationService extends BaseService {
     return this.store.data.update.get(id);
   }
 
+  async isAdmin(org) {
+    let id = payload.getKey({org});
+
+    await this.checkRequesting(
+      id, this.store.data.isAdmin,
+      () => this.request({
+          url: `${this.basePath}/${org}/is-admin`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onIsAdminUpdate({org}, {request}),
+          onLoad: payload => this.store.onIsAdminUpdate({org}, {payload: payload.body}),
+          onError: error => this.store.onIsAdminUpdate({org}, {error})
+        })
+    );
+
+    return this.store.data.isAdmin.get(id);
+  }
+
 }
 
 const service = new OrganizationService();

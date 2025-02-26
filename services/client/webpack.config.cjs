@@ -18,6 +18,7 @@ configs.forEach((config, index) => {
 
   config.resolve.alias = {
     '@ucd-lib/cork-app-utils': path.resolve(__dirname, 'dev/node_modules/@ucd-lib/cork-app-utils'),
+    '@ucd-lib/pgfarm-client': path.resolve(__dirname, 'dev')
   }
 
   config.resolve.fallback = {

@@ -1,6 +1,6 @@
 import { html, css } from 'lit';
-import chunkIntoColumns from '../../../utils/chunkIntoColumns.js';
-import '../../components/database-teaser/database-teaser.js';
+import chunkIntoColumns from '@ucd-lib/pgfarm-client/utils/chunkIntoColumns.js';
+import '@ucd-lib/pgfarm-client/elements/components/database-teaser/database-teaser.js';
 
 export function styles() {
   const elementStyles = css`
@@ -18,6 +18,7 @@ export function styles() {
     }
     .featured-projects[hidden] + .project-cta {
       padding-top: 3rem;
+    }
   `;
 
   return [elementStyles];

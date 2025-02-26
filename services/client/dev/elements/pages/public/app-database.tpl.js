@@ -1,6 +1,6 @@
 import { html, css } from 'lit';
 
-import '../../components/database-connect-info/database-connect-info.js';
+import '@ucd-lib/pgfarm-client/elements/components/database-connect-info/database-connect-info.js';
 
 export function styles() {
   const elementStyles = css`

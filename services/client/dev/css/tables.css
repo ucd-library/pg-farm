@@ -1,0 +1,72 @@
+.app-table {
+  font-size: 1rem;
+}
+.app-table .row {
+  display: grid;
+  column-gap: .5rem;
+  align-items: stretch;
+  border-bottom: 1px solid var(--ucd-blue-60, #B0D0ED);
+  padding: 0 .5rem;
+}
+.app-table .row:last-child {
+  border-bottom: none;
+}
+.app-table .row.row--header {
+  border-bottom: 2px solid var(--ucd-gold-80, #FFD24C);
+}
+.app-table .row.row--header .cell {
+  color: var(--black, #000);
+  font-weight: 700;
+  padding: .5rem 0;
+  justify-content: flex-end;
+}
+.app-table .row.row--header select {
+  border-style: none;
+  box-shadow: none;
+  color: var(--black, #000);
+  font-weight: 700;
+  width: auto;
+  padding-left: 0;
+  height: auto;
+  cursor: pointer;
+}
+.app-table .row.row--header select:hover {
+  color: var(--tahoe, #00B2E3);
+}
+.app-table .row.row--header select:focus {
+  border-style: none;
+  box-shadow: none;
+  background-color: transparent;
+}
+.app-table .cell {
+  display: flex;
+  flex-direction: column;
+}
+.app-table .cell--center {
+  justify-content: center;
+  align-items: center;
+}
+.app-table .row .cell {
+  padding: 1rem 0;
+  justify-content: center;
+}
+.app-table .row .cell.cell--icon-top {
+  justify-content: flex-start;
+}
+.app-table .row.selected {
+  background-color: var(--ucd-blue-30, #EBF3FA);
+}
+.app-table .row.not-selected:hover {
+  background-color: var(--ucd-gold-30, #FFF9E6);
+}
+.app-table .checkbox-container {
+  display: flex;
+  flex-direction: row;
+  gap: .5rem;
+  align-items: flex-start;
+}
+.app-table .checkbox-container input {
+  margin-top: .5rem;
+  margin-right: 0;
+  cursor: pointer;
+}

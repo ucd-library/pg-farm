@@ -1,4 +1,5 @@
 import { LitElement } from 'lit';
+import { categoryBrands } from "@ucd-lib/theme-sass/colors";
 import {render, styles} from "./app-statistic-button.tpl.js";
 
 /**
@@ -15,7 +16,9 @@ export default class AppStatisticButton extends LitElement {
       icon: { type: String },
       href: { type: String },
       text: { type: String },
-      subtext: { type: String }
+      subtext: { type: String },
+      brandColor: { type: String, attribute: 'brand-color' },
+      _brandColorHex: { state: true }
     }
   }
 
@@ -31,6 +34,23 @@ export default class AppStatisticButton extends LitElement {
     this.href = '';
     this.text = '';
     this.subtext = '';
+    this.brandColor = '';
+    this._brandColorHex = '';
+  }
+
+  willUpdate(props) {
+    if (props.has('brandColor')) {
+      this._setColor();
+    }
+  }
+
+  /**
+   * @description Set theme color
+   */
+  _setColor(){
+    let color = Object.values(categoryBrands).find(c => c.id === this.brandColor);
+    if ( !color ) color = categoryBrands.secondary;
+    this._brandColorHex = color.hex;
   }
 
 }
