@@ -46,6 +46,7 @@ class ProxyConnection {
 
     // if ssl request has been handled
     this.sslHandled = false; 
+    this.isSecureSocket = false;
 
     // if we are intercepting server auth messages and logging user in
     // via the password stored in the pg farm database
@@ -115,7 +116,8 @@ class ProxyConnection {
     this.ERROR_CODES = {
       ADMIN_SHUTDOWN: '57P01',
       CONNECTION_FAILURE: '08006',
-      INVALID_PASSWORD: '28P01'
+      INVALID_PASSWORD: '28P01',
+      SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION: '08004' 
     }
 
     this.NOTICE_SEVERITY = {
@@ -255,6 +257,20 @@ class ProxyConnection {
    * This message provides the connection properties such as user and database.
    **/
   async handleStartupMessage(data) {
+    if( config.proxy.tls.enabled && !this.isSecureSocket ) {
+      logger.info('client attempting clear text connection with tls enabled, closing connection', this.getConnectionInfo());
+      this.sendNotice(
+        this.NOTICE_SEVERITY.FATAL,
+        this.ERROR_CODES.SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION,
+        'Plain text connection attempted but SSL is required.  Ensure your client is connecting with SSL enabled.',
+        'See sslmode documentation https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION',
+        'If you see this message after a failed login message, your client may be attempting to reconnect without SSL.',
+        this.clientSocket
+      );
+      this.closeSockets();
+      return;
+    }
+
     logger.info('client handling startup message', data.length, this.getConnectionInfo())
   
 
@@ -369,6 +385,7 @@ class ProxyConnection {
 
       // replace the client socket with the secure socket
       this.clientSocket = secureSocket;
+      this.isSecureSocket = true;
     }
   }
 
@@ -442,11 +459,11 @@ class ProxyConnection {
     let orgText = this.dbOrganization ? this.dbOrganization + '/' : '';
     if ( userError ) {
       this.sendNotice(
-        'ERROR',
-        '28P01',
-        'Invalid Username or Database',
+        this.NOTICE_SEVERITY.FATAL,
+        this.ERROR_CODES.INVALID_PASSWORD,
         `The username provided (${this.startupProperties.user}) is not registered with the database (${orgText}${this.startupProperties.database}) or database does not exist.`,
-        'Make sure you are using the correct database name, username and that your account has been registered with PG Farm.',
+        null,
+        null,
         this.clientSocket
       );
       return false;
@@ -454,7 +471,7 @@ class ProxyConnection {
 
     if( !this.ALLOWED_INSTANCE_STATES.includes(this.pgFarmUser.instance_state) ) {
       this.sendNotice(
-        'ERROR',
+        this.NOTICE_SEVERITY.ERROR,
         '57P01',
         'Instance Not Running',
         `The database (${orgText}${this.startupProperties.database}) is in a ${this.pgFarmUser.instance_state} state.`,
@@ -882,10 +899,10 @@ class ProxyConnection {
     } catch (e) {
       // badness accessing keycloak
       this.sendNotice(
-        'ERROR',
+        this.NOTICE_SEVERITY.FATAL,
         this.ERROR_CODES.CONNECTION_FAILURE,
         e.message,
-        'JWT Verification Error',
+        'Token Verification Error',
         '',
         this.clientSocket
       );
@@ -899,10 +916,10 @@ class ProxyConnection {
         jwt
       })
       this.sendNotice(
-        'ERROR',
+        this.NOTICE_SEVERITY.FATAL,
         this.ERROR_CODES.INVALID_PASSWORD,
-        'Invalid JWT Token',
         'The JWT token provided is not valid or has expired.',
+        null,
         'Try logging in again and using the new token.',
         this.clientSocket
       );
@@ -927,11 +944,11 @@ class ProxyConnection {
     // provide pg username does not match jwt username
     if (!isAdminAndPGuser && this.jwtUsername !== this.startupProperties.user) {
       this.sendNotice(
-        'ERROR',
+        this.NOTICE_SEVERITY.ERROR,
         this.ERROR_CODES.INVALID_PASSWORD,
-        'Invalid JWT Token',
-        `The JWT token username provided does not match the postgres username provided (${jwtUsername} ${this.startupProperties.user}).`,
-        'Make sure your username matches your JWT token (CAS Username).',
+        `The token username provided does not match the postgres username provided (${jwtUsername} ${this.startupProperties.user}).`,
+        null,
+        null,
         this.clientSocket
       );
       return;
@@ -1029,7 +1046,18 @@ class ProxyConnection {
    * @param {String} hint 
    * @param {Socket} socket 
    */
-  sendNotice(severity, code, message, detail = '', hint = '', socket) {
+  sendNotice(severity, code, message = '', detail = '', hint = '', socket) {
+    if( typeof severity === 'object' ) {
+      let obj = severity;
+      severity = obj.severity;
+      code = obj.code;
+      message = obj.message;
+      detail = obj.detail;
+      hint = obj.hint;
+      socket = obj.socket;
+    }
+
+
     logger.info('Sending notice to client', {severity, code, message, detail, hint});
     // TODO: add back in as stats
     // this.emitStat(severity.toLowerCase(), {
@@ -1040,10 +1068,11 @@ class ProxyConnection {
 
     // two extra bytes.  one for the message code and one for the ending null
     let mLen = Buffer.byteLength(severity) + 2 +
-      Buffer.byteLength(code) + 2 +
-      Buffer.byteLength(message) + 2 +
-      Buffer.byteLength(detail) + 2 +
-      Buffer.byteLength(hint) + 2;
+      Buffer.byteLength(code) + 2;
+
+    if( message ) mLen += Buffer.byteLength(message) + 2;
+    if( detail ) mLen += Buffer.byteLength(detail) + 2;
+    if( hint ) mLen += Buffer.byteLength(hint) + 2;
 
     // code + len(32bit) + e code + error detail + null
     let eBuffer = Buffer.alloc(1 + 4 + mLen + 1);
@@ -1075,20 +1104,26 @@ class ProxyConnection {
       offset += Buffer.byteLength(code) + 1;
     }
 
-    eBuffer[offset] = this.ERROR_MSG_FIELDS.MESSAGE;
-    offset++;
-    eBuffer.write(message, offset);
-    offset += Buffer.byteLength(message) + 1;
+    if( message ) {
+      eBuffer[offset] = this.ERROR_MSG_FIELDS.MESSAGE;
+      offset++;
+      eBuffer.write(message, offset);
+      offset += Buffer.byteLength(message) + 1;
+    }
 
-    eBuffer[offset] = this.ERROR_MSG_FIELDS.DETAIL;
-    offset++;
-    eBuffer.write(detail, offset);
-    offset += Buffer.byteLength(detail) + 1;
+    if( detail ) {
+      eBuffer[offset] = this.ERROR_MSG_FIELDS.DETAIL;
+      offset++;
+      eBuffer.write(detail, offset);
+      offset += Buffer.byteLength(detail) + 1;
+    }
 
-    eBuffer[offset] = this.ERROR_MSG_FIELDS.HINT;
-    offset++;
-    eBuffer.write(hint, offset);
-    offset += Buffer.byteLength(hint) + 1;
+    if( hint ) {
+      eBuffer[offset] = this.ERROR_MSG_FIELDS.HINT;
+      offset++;
+      eBuffer.write(hint, offset);
+      offset += Buffer.byteLength(hint) + 1;
+    }
 
     socket.write(eBuffer);
   }
