@@ -3,7 +3,7 @@ const PG = require('pg');
 // const connections = 105;
 // const sleepTime = 5000;
 const connections = 1;
-const sleepTime = 30000;
+const sleepTime = 1;
 
 let clients = [];
 
@@ -12,7 +12,7 @@ async function run() {
 
   for( let i = 0; i < connections; i++ ) {
       let c = connectAndQuery(i)
-        .catch(e => console.error('failed to connect', i));
+        .catch(e => console.error('failed to connect', i, e));
       clients.push(c);
   }
 
@@ -26,12 +26,15 @@ async function connectAndQuery(i) {
     database : 'library/ca-base-layers',
     password : process.env.PGPASSWORD,
     port : 5432,
-    user : 'jrmerz'
+    user : 'jrmerz',
+    ssl : {
+      requestCert: true
+    }
   })
   await c.connect();
   console.log('connected', i);
 
-  for( let i = 0; i < 100; i++ ) {
+  for( let i = 0; i < 1; i++ ) {
     let res = await c.query('select * from foo');
     if( res.rows.length != 2 ) {
       console.error('unexpected result', i, res.rows);

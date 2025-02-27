@@ -23,7 +23,7 @@ export default class ConnectExamples {
             password = `PGPASSWORD="${this.opts.password}"`;
           }
 
-          return `${password} psql -U ${this.opts.user} -h ${this.opts.host} -p ${this.opts.port} ${this.opts.database}`;
+          return `${password} PGSSLMODE='verify-full' PGSSLROOTCERT='system' psql -U ${this.opts.user} -h ${this.opts.host} -p ${this.opts.port} ${this.opts.database}`;
         }
       },
       {
@@ -58,13 +58,15 @@ export default class ConnectExamples {
           return`
 /* https://node-postgres.com/features/connecting */
 const {Pool} = require('pg');
+
+
 const client = new Pool({
   user: '${this.opts.user}',
   host: '${this.opts.host}',
   port: ${this.opts.port},
   database: '${this.opts.database}',
   password: ${password},
-  ssl: ${this.opts.ssl}
+  ssl : {requestCert: true}
 });
 
 await client.query('SELECT NOW()', (err, res) => {
@@ -85,14 +87,20 @@ await client.query('SELECT NOW()', (err, res) => {
           return`
 # https://www.psycopg.org/docs/usage.html
 import psycopg2
-conn = psycopg2.connect(
-  user='${this.opts.user}',
-  host='${this.opts.host}',
-  port=${this.opts.port},
-  database='${this.opts.database}',
-  password=${password},
-  sslmode='require'
-)
+
+# Recommended, use ~/.pg_service file set by pgfarm
+conn = psycopg2.connect(service='pgfarm', database='${this.opts.database}')
+
+# Alternative, provide connection details
+#conn = psycopg2.connect(
+#  user='${this.opts.user}',
+#  host='${this.opts.host}',
+#  port=${this.opts.port},
+#  database='${this.opts.database}',
+#  password=${password},
+#  sslmode='verify-full',
+#  sslrootcert='system'
+#)
 
 cur = conn.cursor()
 cur.execute('SELECT NOW()')
@@ -110,15 +118,28 @@ cur.close()`
           }
           return `
 # https://solutions.posit.co/connections/db/databases/postgresql/#using-the-rpostgres-package
+install.packages('RPostgres') # if not already installed
+
 library(DBI)
+
+# recommended, use ~/.pg_service file set by pgfarm
 con <- dbConnect(
   RPostgres::Postgres(),
-  user='${this.opts.user}',
-  host='${this.opts.host}',
-  port=${this.opts.port},
-  dbname='${this.opts.database}',
-  password=${password},
+  service='pgfarm',
+  dbname='${this.opts.database}'
 )
+
+# alternative
+# con <- dbConnect(
+#  RPostgres::Postgres(),
+#  user='${this.opts.user}',
+#  host='${this.opts.host}',
+#  port=${this.opts.port},
+#  dbname='${this.opts.database}',
+#  password=${password},
+#  sslmode='verify-full',
+#  sslrootcert='system'
+#)
 
 dbGetQuery(con, 'SELECT NOW()')
 dbDisconnect(con)`

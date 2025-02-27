@@ -90,6 +90,8 @@ class Auth {
       host : hostname,
       port : 5432,
       user : username,
+      sslmode: 'verify-full',
+      sslrootcert: 'system',
       password : config.tokenHash
     }
     
