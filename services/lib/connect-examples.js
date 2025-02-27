@@ -43,7 +43,7 @@ export default class ConnectExamples {
           if( !this.opts.password ) {
             this.opts.password = '<PASSWORD>';
           }
-          yaml.dump(this.opts)
+          return yaml.dump(this.opts)
         }
       },
       {

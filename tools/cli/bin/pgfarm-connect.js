@@ -3,7 +3,7 @@ import {config} from '../lib/config.js';
 import ConnectExamples from '../../../services/lib/connect-examples.js';
 
 const connectExamples = new ConnectExamples();
-const ALLOWED_TYPES = connectExamples.getConnectionTypes();
+const ALLOWED_TYPES = connectExamples.getConnectionTypes(true);
 const BASE_PATH = `${config.host}/api/query`;
 
 program
