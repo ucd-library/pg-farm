@@ -34,13 +34,15 @@ class PgFarmTcpServer {
     this.sessions = new Map();
 
     process.on('SIGINT', async () => {
-      logger.info('Received SIGINT, closing all sockets');
-      await this.closeAllSockets();
+      logger.warn('Received SIGINT, closing all sockets');
+      this.server.close();
+      await this.onShutdown();
       process.exit();
     });
     process.on('SIGTERM', async () => {
-      logger.info('Received SIGTERM, closing all sockets');
-      await this.closeAllSockets();
+      logger.warn('Received SIGTERM, closing all sockets');
+      this.server.close();
+      await this.onShutdown();
       process.exit();
     });
   }
@@ -70,17 +72,16 @@ class PgFarmTcpServer {
     });
   }
 
-  async closeAllSockets() {
-    for( let [socket, info] of this.sockets ) {
-      try {
-        if( info.type === 'incoming' ) {
-          await pgClient.onConnectionClose(info.session, new Date().toISOString())
-        }
-        await utils.closeSocket(socket);
-      } catch(e) {
-        logger.error('Error closing socket', e);
+  async onShutdown() {
+    let proms = [];
+    for (let session of this.sessions.keys()) {
+      let info = this.sessions.get(session);
+      if (info.pgConnection) {
+        proms.push(info.pgConnection.onShutdown());
       }
     }
+
+    await Promise.allSettled(proms);
   }
 
   /**

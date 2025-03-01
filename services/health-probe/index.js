@@ -1,8 +1,13 @@
 import express from 'express';
 import {healthProbe} from '../models/index.js';
 import config from '../lib/config.js';
+import { logReqMiddleware } from '@ucd-lib/logger';
+import logger from '../lib/logger.js';
 
 const app = express();
+
+app.use(logReqMiddleware(logger));
+
 healthProbe.start();
 
 app.get('/health', async (req, res) => {

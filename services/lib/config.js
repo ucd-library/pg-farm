@@ -66,10 +66,6 @@ const config = {
 
   appUrl,
 
-  logging : {
-    level : env.LOG_LEVEL || 'info'
-  },
-
   metrics : {
     enabled : env.METRICS_ENABLED === 'true',
   },

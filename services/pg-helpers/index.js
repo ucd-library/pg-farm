@@ -1,9 +1,12 @@
 import express from 'express';
 import {backup as model, admin, user, database} from '../models/index.js';
+import { logReqMiddleware } from '@ucd-lib/logger';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 
 const app = express();
+
+app.use(logReqMiddleware(logger));
 
 app.post('/backup', async (req, res) => {
   try {

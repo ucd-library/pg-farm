@@ -1032,6 +1032,21 @@ class ProxyConnection {
     socket.write(passBuffer);
   }
 
+  async onShutdown() {
+    logger.info('Proxy connection shutting down', this.getConnectionInfo());
+
+    this.sendNotice(
+      this.NOTICE_SEVERITY.FATAL,
+      this.ERROR_CODES.ADMIN_SHUTDOWN,
+      'Connection closing.',
+      'PG Farm is closing your connection, please try reconnecting shortly.',
+      'PG Farm probably needs to restart, this will only take a moment',
+      this.clientSocket
+    );
+
+    this.closeSockets();
+  }
+
   /**
    * @method sendNotice
    * @description send a notice or error message on a socket in the pg wire format
@@ -1057,8 +1072,7 @@ class ProxyConnection {
       socket = obj.socket;
     }
 
-
-    logger.info('Sending notice to client', {severity, code, message, detail, hint});
+    logger.debug('Sending notice to client', {severity, code, message, detail, hint});
     // TODO: add back in as stats
     // this.emitStat(severity.toLowerCase(), {
     //   severity,

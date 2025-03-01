@@ -3,8 +3,12 @@ import {init, middleware} from './http-proxy.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import cidrDeny from './cidr-deny.js';
+import {logReqMiddleware} from '@ucd-lib/logger';
+
 
 const app = express();
+
+app.use(logReqMiddleware(logger));
 // app.set('trust proxy', 1);
 
 if( config.gateway.http.enabled ) {

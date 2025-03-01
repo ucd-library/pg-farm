@@ -69,6 +69,15 @@ const client = new Pool({
   ssl : {requestCert: true}
 });
 
+// handle errors, otherwise pg lib will crash process on error
+client.on('error', (err, client) => {
+  console.error({
+    message: err.message
+    detail: err.detail,
+    hint: err.hint  
+  });
+});
+
 await client.query('SELECT NOW()', (err, res) => {
   console.log(err, res);
   client.end();

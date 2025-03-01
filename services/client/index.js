@@ -5,8 +5,10 @@ import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 import keycloak from '../lib/keycloak.js';
 import staticController from './controllers/static.js';
+import { logReqMiddleware } from '@ucd-lib/logger';
 
 const app = express();
+app.use(logReqMiddleware(logger));
 
 app.use(cookieParser());
 app.use(bodyParser.json());

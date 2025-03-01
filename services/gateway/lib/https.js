@@ -7,6 +7,7 @@ import path from 'path';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import cidrDeny from './cidr-deny.js';
+import {logReqMiddleware} from '@ucd-lib/logger';
 
 let defaultKey, defaultCert;
 
@@ -63,6 +64,8 @@ function start() {
   }
 
   const app = express();
+
+  app.use(logReqMiddleware(logger));
   // app.set('trust proxy', 1);
 
   // config.gateway.cidrDeny.logger = logger;

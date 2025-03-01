@@ -7,9 +7,12 @@ import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import keycloak from '../../lib/keycloak.js';
 import {admin} from '../../models/index.js';
+import { logReqMiddleware } from '@ucd-lib/logger';
 import './lib/cron/index.js';
 
 const app = express();
+
+app.use(logReqMiddleware(logger));
 
 app.use(cookieParser());
 app.use(bodyParser.json());
