@@ -95,7 +95,7 @@ class PgFarmTcpServer {
    * 
    * @returns {net.Socket}
    **/
-  createProxyConnection(host, port, incomingSocket) {
+  createProxyConnection(host, port, incomingSocket, proxyConnection) {
     let socketInfo = this.sockets.get(incomingSocket);
     if( !socketInfo ) {
       logger.error('Socket not found');
@@ -110,7 +110,7 @@ class PgFarmTcpServer {
     });
 
     // register the socket with the current proxy session
-    this.registerConnection(socket, 'outgoing', sessionId);
+    this.registerConnection(socket, 'outgoing', sessionId, proxyConnection);
 
     return socket;
   }
@@ -146,7 +146,7 @@ class PgFarmTcpServer {
     sessionInfo.sockets.push(socket);
     this.sessions.set(session, sessionInfo);
 
-    this.metrics.registerSocket(socket, type, session);
+    this.metrics.registerSocket(socket, type, pgConnection);
 
     // listen close event
     socket.on('close', () => {
@@ -176,7 +176,10 @@ class PgFarmTcpServer {
         }
 
         // close all other sockets for the session
-        logger.info('Closing all sockets for session', session);
+        logger.info('Closing all sockets for session', {
+          socketType : type,
+          socketSessionId: session
+        });
         for( let s of sockets ) {
           s.destroySoon();
         }

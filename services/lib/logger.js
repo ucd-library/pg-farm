@@ -1,8 +1,10 @@
 import {createLogger} from '@ucd-lib/logger';
-import config from './config.js';
 
 let logger = createLogger({
-  name : 'pgfarm'
+  name : 'pgfarm',
+  labelsProperties : ['name', 'hostname', 'corkTraceId', 'socketSessionId', 
+    'socketEventType', 'remoteAddress', 'socketType', 'clientSocketState', 
+    'serverSocketState', 'database', 'user', 'instance'],
 });
 
 

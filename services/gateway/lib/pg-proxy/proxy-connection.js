@@ -37,9 +37,15 @@ class ProxyConnection {
   constructor(clientSocket, server, sessionId) {
     this.sessionId = sessionId;
     this.clientSocket = clientSocket;
+
     // created after startup message and successful user auth
     this.serverSocket = null; 
     this.server = server;
+
+    // cleanup up ip address
+    let ipv4 = (this.clientSocket.remoteAddress || '').match(/([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/);
+    if( ipv4 ) this.ipAddress = ipv4[1];
+    else this.ipAddress = this.clientSocket.remoteAddress;
 
     // have we sent the clients startup message
     this.startupMessageHandled = false; 
@@ -154,13 +160,13 @@ class ProxyConnection {
    **/
   getConnectionInfo() {
     let info = {
-      session: this.sessionId
+      socketSessionId: this.sessionId
     };
     if( this.clientSocket ) {
-      info.clientSocket = this.clientSocket.readyState;
+      info.clientSocketState = this.clientSocket.readyState;
     }
     if( this.serverSocket ) {
-      info.serverSocket = this.serverSocket.readyState;
+      info.serverSocketState = this.serverSocket.readyState;
     }
     if( this.startupProperties ) {
       info.database = this.startupProperties.database;
@@ -179,7 +185,7 @@ class ProxyConnection {
    * 
    */
   init() {
-    logger.info('proxy handling new connection', this.clientSocket.remoteAddress);
+    logger.debug('proxy handling new connection', {remoteAddress: this.ipAddress});
 
     // When the client sends data, forward it to the target server
     this.clientSocket.on('data', data => this.onClientSocketData(data));
@@ -523,7 +529,8 @@ class ProxyConnection {
       this.serverSocket = this.server.createProxyConnection(
         this.instance.hostname,
         this.instance.port,
-        this.clientSocket
+        this.clientSocket,
+        this
       );
 
       // badness
@@ -734,13 +741,6 @@ class ProxyConnection {
         logger.info('Pg instance connect authentication ok message received.', this.getConnectionInfo());
 
         monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.AUTHENTICATION_OK, {username: this.pgFarmUser.username});
-
-        // this.emitStat('client-connection', {
-        //   startupProperties: this.startupProperties,
-        //   user: this.pgFarmUser,
-        //   remoteAddress : this.clientSocket.remoteAddress,
-        //   serverId : this.server.id
-        // });
 
         // if we have pending messages, send them now
         if (this.pendingMessages.length) {

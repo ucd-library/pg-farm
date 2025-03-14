@@ -74,36 +74,36 @@ class ProxyMonitor {
     });
 
 
-    const serverEvents = meter.createObservableGauge(metricRoot+'server-events',  {
-      description: 'TCP server events',
-      unit: '',
-      valueType: ValueType.INT,
-    });
-    serverEvents.addCallback(async result => {
-      for( let event in this.data.serverEvents ) {
-        result.observe(this.data.serverEvents[event], {
-          name : this.name,
-          type: event
-        });
-        this.data.serverEvents[event] = 0;
-      }
-    });
+    // const serverEvents = meter.createObservableGauge(metricRoot+'server-events',  {
+    //   description: 'TCP server events',
+    //   unit: '',
+    //   valueType: ValueType.INT,
+    // });
+    // serverEvents.addCallback(async result => {
+    //   for( let event in this.data.serverEvents ) {
+    //     result.observe(this.data.serverEvents[event], {
+    //       name : this.name,
+    //       type: event
+    //     });
+    //     this.data.serverEvents[event] = 0;
+    //   }
+    // });
 
-    const clientEvents = meter.createObservableGauge(metricRoot+'socket-events',  {
-      description: 'TCP proxy socket events',
-      unit: '',
-      valueType: ValueType.INT,
-    });
-    clientEvents.addCallback(async result => {
-      for( let key in this.data.socketEvents ) {
-        let [type, event] = key.split('-');
-        result.observe(this.data.socketEvents[key], {
-          name : this.name,
-          event, type
-        });
-        this.data.socketEvents[key] = 0;
-      }
-    });
+    // const clientEvents = meter.createObservableGauge(metricRoot+'socket-events',  {
+    //   description: 'TCP proxy socket events',
+    //   unit: '',
+    //   valueType: ValueType.INT,
+    // });
+    // clientEvents.addCallback(async result => {
+    //   for( let key in this.data.socketEvents ) {
+    //     let [type, event] = key.split('-');
+    //     result.observe(this.data.socketEvents[key], {
+    //       name : this.name,
+    //       event, type
+    //     });
+    //     this.data.socketEvents[key] = 0;
+    //   }
+    // });
   }
 
   setSocketProperties(socket, props) {
@@ -112,12 +112,12 @@ class ProxyMonitor {
     this.socketsProperties.set(socket, currentProps);
   }
 
-  registerSocket(socket, type='', session='') {
+  registerSocket(socket, type='', proxyConnection) {
     if( !this.SOCKET_TYPES.includes(type) ) {
       throw new Error('Invalid socket type: '+type);
     }
 
-    this.socketsProperties.set(socket, {type, session});
+    this.socketsProperties.set(socket, {type, proxyConnection});
     SOCKET_EVENTS.forEach(event => {
       socket.on(event, data => this.socketEventHandler(socket, event, data));
     });
@@ -154,10 +154,17 @@ class ProxyMonitor {
         lt = 'error';
       }
 
+      let eventProps = {
+        socketType: props.type,
+        socketEventType : event,
+        socketSessionId : props.proxyConnection.sessionId,
+        remoteAddress : props.proxyConnection.ipAddress
+      };
+
       if( !data ) {
-        logger[lt](this.name+' socket event', event, props);
+        logger[lt](this.name+' socket event', props.type, event, eventProps);
       } else {
-        logger[lt](this.name+' socket event', event, props, data);
+        logger[lt](this.name+' socket event', props.type, event, eventProps, {jsonPayload: data});
       }
     }
   }
@@ -180,10 +187,15 @@ class ProxyMonitor {
         lt = 'error';
       }
 
+      let eventProps = {
+        socketType : 'server',
+        socketEventType : event
+      };
+
       if( !data ) {
-        logger[lt](this.name+' server event', event);
+        logger[lt](this.name+' server event', eventProps);
       } else {
-        logger[lt](this.name+' server event', event, data);
+        logger[lt](this.name+' server event', eventProps, data);
       }
     }
   }

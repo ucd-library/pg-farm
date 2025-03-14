@@ -100,7 +100,7 @@ class ProxyMonitor {
         databaseName: proxyConnection.pgFarmUser.database_name,
         orgName: proxyConnection.pgFarmUser.organization_name,
         userName: proxyConnection.pgFarmUser?.username,
-        remoteAddress: proxyConnection.clientSocket.remoteAddress,
+        remoteAddress: proxyConnection.ipAddress,
         gatewayId: proxyConnection.server.id,
         data : {
           startupProperties: proxyConnection.startupProperties
