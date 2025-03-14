@@ -5,7 +5,6 @@ import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import metrics from '../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
-import {logReqMiddleware} from '@ucd-lib/logger';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 const swaggerUiRouteRegex = /^\/swagger-ui/;

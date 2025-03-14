@@ -23,6 +23,25 @@ CREATE TABLE IF NOT EXISTS pgfarm.connection_event (
     timestamp timestamp NOT NULL DEFAULT now()
 );
 
+CREATE OR REPLACE FUNCTION pgfarm.add_connection_event(
+    ses_id_in TEXT,
+    type_in TEXT,
+    message_in TEXT
+) RETURNS void AS $$
+BEGIN
+
+  -- Check if the session_id exists in the pgfarm.connection table
+    IF EXISTS (SELECT 1 FROM pgfarm.connection WHERE session_id = ses_id_in) THEN
+      INSERT INTO
+        pgfarm.connection_event(session_id, type, message)
+      VALUES
+        (ses_id_in, type_in, message_in);
+    ELSE
+        RAISE INFO 'Ignoring connection event insert type=%, message=%. Session ID=% does not exist in pgfarm.connection,', type_in, message_in, ses_id_in;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE VIEW pgfarm.connection_view AS
   SELECT
     c.session_id,

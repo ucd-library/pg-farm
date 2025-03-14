@@ -785,7 +785,7 @@ class PgFarmAdminClient {
 
   logProxyConnectionEvent(sessionId, type, message) {
     return client.query(`
-      INSERT INTO ${this.schema}.connection_event (session_id, type, message) VALUES ($1, $2, $3)
+      SELECT * FROM ${this.schema}.add_connection_event($1, $2, $3)
     `,
       [sessionId, type, message]
     );

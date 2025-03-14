@@ -135,7 +135,10 @@ class ProxyMonitor {
         proxyConnection.sessionId, event, message
       );
     } catch(e) {
-      logger.error('Error logging proxy event to pg: ', e);
+      logger.error('Error logging proxy event to pg: ', 
+        {sessionId: proxyConnection.sessionId, event, message}, 
+        e
+      );
     }
   }
 
