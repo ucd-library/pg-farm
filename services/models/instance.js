@@ -290,7 +290,7 @@ class Instance {
     // main pg container
     let container = template.spec.containers[0];
     container.image = instanceImage;
-    container.volumeMounts[0].name = hostname+'-ps';
+    container.volumeMounts.find(i => i.mountPath == '/var/lib/postgresql/data').name = hostname+'-ps';
 
     // helper container
     container = template.spec.containers[1];
