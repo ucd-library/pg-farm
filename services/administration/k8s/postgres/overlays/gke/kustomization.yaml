@@ -7,4 +7,4 @@ resources:
 patches:
   - path: statefulset.yaml
     target:
-      kind: Statefulset
+      kind: StatefulSet
