@@ -150,8 +150,21 @@ router.post('/:organization/:instance/backup', keycloak.protect('admin'), async 
 router.post('/:organization/:instance/sync-users', keycloak.protect('admin'), async (req, res) => {
   try {
     let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await instanceModel.remoteSyncUsers(instance, organization);
-    res.status(resp.status).send(await resp.text());
+
+    let result = await instanceModel.remoteSyncUsers(instance, organization, 
+      req.query['update-passwords'] === 'true',
+      req.query['hard-reset'] === 'true'
+    );
+
+
+    let status = 0;
+    result.forEach(r => {
+      if( r.response.status > status ) {
+        status = r.response.status;
+      }
+    });
+
+    res.status(status).json(result);
   } catch(e) {
     handleError(res, e);
   }

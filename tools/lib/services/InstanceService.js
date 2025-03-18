@@ -271,8 +271,12 @@ class InstanceService extends BaseService {
     return this.store.data.resize.get(id);
   }
 
-  async syncUsers(org, instance) {
+  async syncUsers(org, instance, opts) {
     let id = payload.getKey({org, instance});
+
+    let flags = {};
+    if( opts.rotatePasswords ) flags['update-passwords'] = true;
+    if( opts.hardReset ) flags['hard-reset'] = true;
 
     await this.request({
       url: `${this.basePath}/${org}/${instance}/sync-users`,
@@ -280,6 +284,7 @@ class InstanceService extends BaseService {
         method : 'POST',
         headers: serviceUtils.authHeader()
       },
+      qs : flags,
       json: true,
       onLoading: request => this.store.onSyncUsersUpdate({org, instance}, {request}),
       onLoad: payload => this.store.onSyncUsersUpdate({org, instance}, {payload: payload.body}),

@@ -31,9 +31,11 @@ class PGInstance {
   async getConnection(opts={}, attempts=3) {
     let error;
 
-    let db = await pgAdminClient.getInstanceByHostname(opts.host);
-    if( db.instance_state !== 'RUN' ) {
-      throw new Error('Database instance is currently in a '+db.instance_state+' state. The database instance must be in a RUN state before trying this operation.');
+    if( opts.host !== '/var/run/postgresql' ) {
+      let db = await pgAdminClient.getInstanceByHostname(opts.host);
+      if( db.instance_state !== 'RUN' ) {
+        throw new Error('Database instance is currently in a '+db.instance_state+' state. The database instance must be in a RUN state before trying this operation.');
+      }
     }
 
     for( let i = 0; i < attempts; i++ ) {

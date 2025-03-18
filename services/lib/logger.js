@@ -4,7 +4,7 @@ let logger = createLogger({
   name : 'pgfarm',
   labelsProperties : ['name', 'hostname', 'corkTraceId', 'socketSessionId', 
     'socketEventType', 'remoteAddress', 'socketType', 'clientSocketState', 
-    'serverSocketState', 'database', 'user', 'instance'],
+    'serverSocketState', 'database', 'user', 'instance', 'organization'],
 });
 
 

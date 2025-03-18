@@ -171,16 +171,18 @@ class User {
    * @param {String} username
    * @param {String} password
    *
-   * @returns {Promise}
+   * @returns {Promise<String>} new password
    */
-  async resetPassword(instNameOrId, orgNameOrId=null, username, password) {
+  async resetPassword(instNameOrId, orgNameOrId=null, username, password, updateInstance=true) {
     // generate random password if not provided
     if( !password ) password = utils.generatePassword();
 
     let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
     logger.info('resetting password for user: '+username+' on instance: '+con.host+' for organization: '+orgNameOrId);
 
-    await pgInstClient.createOrUpdatePgUser(con, { username, password });
+    if( updateInstance ) {
+      await pgInstClient.createOrUpdatePgUser(con, { username, password });
+    }
 
     // update database
     await client.query(
@@ -189,6 +191,8 @@ class User {
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
       [username, instNameOrId, orgNameOrId, password]
     );
+
+    return password;
   }
 
   checkPermissionType(type) {

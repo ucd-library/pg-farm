@@ -566,6 +566,21 @@ class ProxyConnection {
       let error = this.parseError(data);
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.ERROR_MESSAGE, error);
 
+      // if we have an error message and we are handinling jwt auth, send the error to the client
+      if (this.handlingJwtAuth) {
+        logger.error('PG Farm JWT connection error', {jsonPayload: error}, this.getConnectionInfo());
+        this.sendNotice(
+          this.NOTICE_SEVERITY.FATAL,
+          this.ERROR_CODES.CONNECTION_FAILURE,
+          `PG Farm JWT connection error`,
+          `An error occurred while attempting to connect to the database.  ${error.message}.  Please contact the PG Farm administrators.`,
+          null,
+          this.clientSocket
+        );
+        this.closeSockets();
+        return;
+      }
+
       // if we have a shutdown message, capture it possible use later
       if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
         this.shutdownMsg = data;
@@ -634,7 +649,9 @@ class ProxyConnection {
    * socket is still open and if so, attempts a reconnect to the server.
    **/
   async _onServerSocketClose() {
-    this.serverSocket.destroySoon();
+    if( this.serverSocket ) {
+      this.serverSocket.destroySoon();
+    }
     monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.SERVER_CLOSE);
 
     // if we still have a client socket, and the server is unavailable, attempt reconnect
