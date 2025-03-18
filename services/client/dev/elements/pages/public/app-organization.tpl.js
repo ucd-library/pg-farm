@@ -61,7 +61,9 @@ return html`
         </div>
       </div>
       <div ?hidden=${!this.dataCtl.org?.logo}>
-        <img class='page-header__image' src='${this.dataCtl.org?.logo}' alt='Organization logo'>
+        <div class='page-header__image'>
+          <img src='${this.dataCtl.org?.logo}' alt='Organization logo'>
+        </div>
       </div>
       <div ?hidden=${!this.dataCtl.isAdmin}>
         <app-icon-button icon='fa.solid.pen' @click=${this.showEditModal}></app-icon-button>
