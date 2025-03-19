@@ -107,7 +107,7 @@ export function render() {
           <div ?hidden=${!db?.url}>${db?.url}</div>
           <div ?hidden=${db?.url}>No website provided</div>
         </section>
-
+        <app-prefixed-icon-button icon='fa.solid.eye' href='/db/${this.orgName}/${this.dbName}'>View public database page</app-prefixed-icon-button>
       </div>
     </div>
 `;}

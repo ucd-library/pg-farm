@@ -72,6 +72,7 @@ return html`
         placeholder='Bulk changes'
         button-text='Apply'
         .value=${this.selectedBulkAction}
+        ?disabled=${!this.tableCtl.getSelectedCount()}
         @option-change=${e => this.selectedBulkAction = e.detail.value}
         @apply=${this._onBulkActionSelect}>
       </app-dropdown-button>

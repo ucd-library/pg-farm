@@ -41,12 +41,12 @@ export function styles() {
 export function render() {
 return html`
   <form @submit=${this._onSubmit}>
-    <select @change=${this._onSelectChange} .value=${this.value}>
+    <select @change=${this._onSelectChange} .value=${this.value} ?disabled=${this.disabled}>
       ${this.placeholder ? html`<option disabled value="" ?selected=${!this.value}>${this.placeholder}</option>` : ''}
       ${this.options.map(option => html`
         <option value=${option.value} ?disabled=${option.disabled}>${option.label}</option>`
       )}
     </select>
-    <button type='submit' class='' ?disabled=${!this.value}>${this.buttonText}</button>
+    <button type='submit' ?disabled=${!this.value || this.disabled}>${this.buttonText}</button>
   </form>
 `;}
