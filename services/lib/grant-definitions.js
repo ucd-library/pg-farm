@@ -7,8 +7,7 @@ class GrantDefinitions {
 
     this.roleLabels = {
       'READ': 'Viewer',
-      'WRITE': 'Editor',
-      'ADMIN': 'Admin'
+      'WRITE': 'Editor'
     }
 
     this.registry = [
@@ -32,7 +31,6 @@ class GrantDefinitions {
   }
 
   getRoleLabel(object, user) {
-    if ( user?.pgFarmUser?.type === 'ADMIN') return 'Admin';
     const actions = ['EXECUTE', 'WRITE', 'READ'];
     for ( let action of actions ) {
       const grant = this.registry.find(grant => grant.object === object && grant.action === action);

@@ -85,12 +85,37 @@ export default class AppAdminDatabaseTables extends Mixin(LitElement)
     r = await this.dataCtl.get(selectedSchemas.map(schema => ({
       request: this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, schema),
       errorMessage: `Unable to load tables for schema ${schema}`
-    })));
-    this.tables = [];
+    })), {ignoreLoading: true});
+    if ( !r ) return;
+
+    const tables = [];
     r.forEach(r => {
-      this.tables = this.tables.concat(r.response.value.payload);
+      (r.response.value.payload || []).forEach(table => {
+        const t = {
+          table: table
+        }
+        tables.push(t);
+      });
     });
-    console.log(this.tables);
+
+    // get access for each table
+    r = await this.dataCtl.get(tables.map(t => ({
+      request: this.DatabaseModel.getSchemaTableAccess(this.orgName, this.dbName, t.table.table_schema, t.table.table_name),
+      errorMessage: `Unable to load table access for ${t.table.table_schema}:${t.table.name}`
+    })));
+    if ( !r ) return;
+    r.forEach(r => {
+      const response = r.response.value;
+      const table = tables.find(t => t?.table?.table_schema === response.schema && t?.table?.table_name === response.table);
+      if ( !table ) {
+        this.logger.warn(`Unable to find table ${response.schema}:${response.table} in tables list`);
+        return;
+      }
+      table.access = response.payload;
+      table.userCt = Object.keys(table.access).length;
+      table.accessSummary = table.access['pgfarm-public'] ? 'Public' : 'Restricted';
+    });
+    this.tables = tables;
   }
 
 }

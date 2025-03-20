@@ -26,8 +26,19 @@ export function styles() {
       font-size: inherit;
       transition: background-color .2s;
     }
+    button:disabled {
+      cursor: not-allowed;
+    }
     button:hover {
       background-color: var(--ucd-blue-60, #B0D0ED);
+    }
+    button:disabled:hover {
+      background-color: var(--ucd-blue-40, #DBEAF7);
+    }
+    select:disabled {
+      background-color: var(--ucd-blue-10, #F7FAFC);
+      color: var(--ucd-blue-70, #73abdd);
+      cursor: not-allowed;
     }
   `;
 

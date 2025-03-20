@@ -19,6 +19,12 @@
 .flex--align-center {
   align-items: center;
 }
+.gap {
+  gap: 1rem;
+}
+.gap--small {
+  gap: 0.5rem;
+}
 .u-width-100 {
   width: 100%;
 }

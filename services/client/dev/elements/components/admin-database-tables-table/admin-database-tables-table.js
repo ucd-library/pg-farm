@@ -11,6 +11,8 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
   static get properties() {
     return {
       tables: {type: Array},
+      bulkActions: {type: Array},
+      selectedBulkAction: {type: String}
     }
   }
 
@@ -22,12 +24,26 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.tables = [];
+    this.bulkActions = [
+      {value: 'add-users', label: 'Add Users'},
+      {value: 'remove-users', label: 'Remove Users'}
+    ];
+    this.selectedBulkAction = '';
 
     const ctlOptions = {
-      searchProps: ['table_name'],
-      filters: []
+      searchProps: ['table.table_name'],
+      filters: [{id: 'table-access', cb: this._onTableAccessFilterChange}]
     }
     this.tableCtl = new TableController(this, 'tables', ctlOptions);
+  }
+
+  _onBulkActionSelect() {
+    console.log('TODO: ' + this.selectedBulkAction);
+  }
+
+  _onTableAccessFilterChange(table, value) {
+    if ( !value ) return true;
+    return table.accessSummary == value;
   }
 
 }

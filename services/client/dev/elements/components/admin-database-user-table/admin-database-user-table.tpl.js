@@ -14,7 +14,7 @@ export function styles() {
       display: none;
     }
     admin-database-user-table .desktop .app-table .row {
-      grid-template-columns: 1fr 1fr 1fr 75px 75px;
+      grid-template-columns: 2fr 1fr 1fr 75px 75px;
     }
     admin-database-user-table .mobile {
       display: block;
@@ -22,12 +22,10 @@ export function styles() {
     admin-database-user-table .mobile .app-table .row {
       grid-template-columns: 1fr auto;
     }
-    admin-database-user-table .action-bar {
-      margin-bottom: var(--spacer, 1rem);
+    admin-database-user-table .user-name-container {
       display: flex;
-      flex-direction: column-reverse;
-      gap: 1rem;
-      justify-content: space-between;
+      gap: .5rem;
+      align-items: center;
     }
     admin-database-user-table .mobile .details {
       display: flex;
@@ -37,18 +35,6 @@ export function styles() {
       justify-content: space-between;
       max-width: 350px;
       margin-top: .75rem;
-    }
-    @container (min-width: 480px) {
-      admin-database-user-table .action-bar {
-        margin-bottom: var(--spacer--large, 2rem);
-        display: flex;
-        flex-flow: row;
-        gap: 1rem;
-        justify-content: space-between;
-      }
-        admin-database-user-table app-search-input {
-        max-width: 300px;
-      }
     }
     @container (min-width: 768px) {
       admin-database-user-table .desktop {
@@ -65,7 +51,7 @@ export function styles() {
 
 export function render() {
 return html`
-  <div class='content'>
+  <div class='content app-table-container'>
     <div class='action-bar'>
       <app-dropdown-button
         .options=${this.bulkActions}
@@ -124,18 +110,17 @@ function _renderDesktopView(){
               <div class='checkbox-container'>
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
                 <div>
-                  <div>${row.item?.name}</div>
+                  <div class='user-name-container'>
+                    <div>${row.item?.name}</div>
+                    <div class='admin-badge' ?hidden=${row.item?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+                  </div>
                   <div class='caption'>name of person</div>
                 </div>
               </div>
             </div>
             <div class='cell'>
-              ${row.item?.pgFarmUser?.type === 'ADMIN' ? html`
-                <div><div class='admin-badge'>Admin</div></div>
-              ` : html`
-                <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
-                <div class='caption'>${row.item?.pgPrivileges?.join(', ') || ''}</div>
-              `}
+              <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
+              <div class='caption'>${row.item?.pgPrivileges?.join(', ') || ''}</div>
             </div>
             <div class='cell'>
               <div>some schema role</div>
@@ -174,7 +159,10 @@ function _renderMobileView(){
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
                 <div class='u-width-100'>
                   <div>
-                    <div>${row.item?.name}</div>
+                    <div class='user-name-container'>
+                      <div>${row.item?.name}</div>
+                      <div class='admin-badge' ?hidden=${row.item?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+                    </div>
                     <div class='caption'>name of person</div>
                   </div>
                   <div class='details'>
