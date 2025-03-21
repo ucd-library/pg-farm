@@ -98,7 +98,6 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
       errorMessage: `Unable to get access for user ${user} on schema ${schema}`
     })), {ignoreLoading: true});
     if ( !schemaAccess ) return;
-    console.log(schemaAccess.map(r => r.response.value));
 
     // merge it all together
     this.users = this.dataCtl.users.map(user => {
@@ -146,9 +145,6 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
         schemaRoles
       }
     });
-    console.log(this.users);
-
-
     this.AppStateModel.hideLoading();
   }
 

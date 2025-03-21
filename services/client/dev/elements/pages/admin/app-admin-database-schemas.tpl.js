@@ -40,12 +40,16 @@ export function render() {
             <h2>Schemas</h2>
           </div>
           <div>
-            ${(this.dataCtl?.schemas || []).map(schema => html`
+            ${(this.schemas || []).map(schema => html`
                 <section>
-                  <h3>${schema}</h3>
+                  <h3>${schema.name}</h3>
                   <div class='nav-buttons'>
-                    <app-prefixed-icon-button icon='fa.solid.table' href='/db/${this.orgName}/${this.dbName}/edit/tables?schema=${schema}'># Tables</app-prefixed-icon-button>
-                    <app-prefixed-icon-button icon='fa.solid.user' href='/db/${this.orgName}/${this.dbName}/edit/users?schema=${schema}'># Users</app-prefixed-icon-button>
+                    <app-prefixed-icon-button icon='fa.solid.table' href='/db/${this.orgName}/${this.dbName}/edit/tables?schema=${schema.name}'>
+                      ${schema.tables?.length || 0} Tables ${schema.publicTableCt ? `(${schema.publicTableCt} public)` : ''}
+                    </app-prefixed-icon-button>
+                    <app-prefixed-icon-button icon='fa.solid.user' href='/db/${this.orgName}/${this.dbName}/edit/users?schema=${schema.name}'>
+                      ${schema.userCt} Users ${schema.isPublic ? '(1 public)' : ''}
+                    </app-prefixed-icon-button>
                   </div>
                 </section>
               `)}
