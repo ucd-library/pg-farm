@@ -99,8 +99,10 @@ program.command('resize <org/instance> <size>')
 
 program.command('sync-users <org/instance>')
   .description('Sync postgres instance users '+print.pgFarmAdminOnlyMsg())
-  .action(instanceName => {
-    instance.syncUsers(instanceName);
+  .option('-r, --rotate-passwords', 'Rotate passwords for all users')
+  .option('-h, --hard-reset', 'Reset the pgfarm-authenticator as well.  This will cause a quick reset of the PG Rest service.')
+  .action((instanceName, opts) => {
+    instance.syncUsers(instanceName, opts);
   });
 
 

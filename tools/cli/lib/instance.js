@@ -173,19 +173,12 @@ class Instances {
     console.log(resp.body);
   }
 
-  async syncUsers(instance) {
-    instance = formatInstName(instance);
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/sync-users`, {
-      method: 'POST',
-      headers: headers()
-    });
+  async syncUsers(name, opts) {
+    let { organization, instance } = this.parseOrg(name);
+    let resp = await instanceModel.syncUsers(organization, instance, opts);
 
-    if( resp.status !== 200 ) {
-      console.error(resp.status, 'Unable to sync instance users', await resp.text());
-      return;
-    }
-
-    console.log(`Instance user syncd: ${instance}`);
+    print.display(resp, opts.output);
+    process.exit(0);
   }
 
 }

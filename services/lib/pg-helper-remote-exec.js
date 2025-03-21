@@ -19,9 +19,6 @@ async function remoteExec(hostname, path, fetchOpts={}) {
   }
   const url = `http://${hostname}:${config.pgHelper.port}${path}`;
   return fetch(url, fetchOpts)
-    .catch(e => {
-      logger.error(`Error remote exec pg helper ${url}`, e);
-    });
 }
 
 export default remoteExec;

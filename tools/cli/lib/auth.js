@@ -86,13 +86,32 @@ class Auth {
     let payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
     let username = payload.username || payload.preferred_username;
 
-    pgService[this.PG_SERVICE_NAME] = {
-      host : hostname,
-      port : 5432,
-      user : username,
-      sslmode: 'verify-full',
-      sslrootcert: 'system',
-      password : config.tokenHash
+    let found = false;
+    for( let serviceName in pgService ) {
+      if( pgService[serviceName].host === hostname && !hostname.startsWith('localhost') ) {
+        if( serviceName === this.PG_SERVICE_NAME ) {
+          found = true;
+        }
+
+        pgService[serviceName] = Object.assign(pgService[serviceName], {
+          port : 5432,
+          user : pgService[serviceName].username || username,
+          sslmode: 'verify-full',
+          sslrootcert: 'system',
+          password : config.tokenHash
+        });
+      }
+    }
+
+    if( !found ) {
+      pgService[this.PG_SERVICE_NAME] = {
+        host : hostname,
+        port : 5432,
+        user : username,
+        sslmode: 'verify-full',
+        sslrootcert: 'system',
+        password : config.tokenHash
+      }
     }
     
     let fileContents = '';

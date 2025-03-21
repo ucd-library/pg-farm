@@ -1,12 +1,15 @@
 import express from 'express';
-import {backup as model, admin, user, database} from '../models/index.js';
+import bodyParser from 'body-parser';
+import {backup as model, admin, user, database, instance} from '../models/index.js';
 import { logReqMiddleware } from '@ucd-lib/logger';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 
+
 const app = express();
 
 app.use(logReqMiddleware(logger));
+app.use(bodyParser.json());
 
 app.post('/backup', async (req, res) => {
   try {
@@ -40,15 +43,14 @@ app.post('/archive', async (req, res) => {
   }
 });
 
-app.post('/sync-users', async (req, res) => {
+app.post('/sync-user', async (req, res) => {
   try {
-    let updatePassword = req.query['update-password'] === 'true';
-
-    await admin.syncInstanceUsers(config.pgInstance.name, config.pgInstance.organization, updatePassword)
-    res.status(200).send('syncd users');
+    let user = req.body;
+    await instance.syncUser(config.pgInstance.name, config.pgInstance.organization, user)
+    res.status(200).send('syncd user: '+user.username);
   } catch (e) {
-    logger.error('sync users failed', e);
-    res.status(500).send('sync users failed');
+    logger.error('sync user failed', user.username, e);
+    res.status(500).send('sync user failed: '+user.username);
   }
 });
 

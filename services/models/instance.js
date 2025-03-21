@@ -1,4 +1,5 @@
 import client from '../lib/pg-admin-client.js';
+import pgInstClient from '../lib/pg-instance-client.js'
 import config from '../lib/config.js';
 import kubectl from '../lib/kubectl.js';
 import logger from '../lib/logger.js';
@@ -423,15 +424,105 @@ class Instance {
     return pgResult;
   }
 
-  async remoteSyncUsers(instNameOrId, orgNameOrId=null) {
+  async remoteSyncUsers(instNameOrId, orgNameOrId=null, updatePassword, hardReset=false) {
     let instance = await client.getInstance(instNameOrId, orgNameOrId);
     if( instance.state !== 'RUN' ) {
       throw new Error('Instance must be RUN state to sync users: '+instance.name);
     }
 
-    logger.info(`Rpc request to resync users for instance ${instance.hostname}`);
-    
-    return remoteExec(instance.hostname, '/sync-users');
+    let logInfo = {
+      instance : instance.name,
+      organization : instance.organization_name
+    }
+
+    logger.info(`Rpc request to resync users for instance ${instance.hostname}`, logInfo);
+
+
+    let users = await client.getInstanceUsers(instance.instance_id);
+    let data = [];
+    for( let user of users ) {
+      if( !['ADMIN', 'PUBLIC', 'USER', 'PGREST'].includes(user.type) ) {
+        logger.warn(`Skipping user ${user.username} of type ${user.type}`, logInfo);
+        continue;
+      }
+      if( user.type === 'PGREST' && (updatePassword == false || hardReset == false) ) {
+        logger.warn(`Skipping user ${user.username} of type ${user.type}, no hard reset`, logInfo);
+        continue;
+      }
+
+      let password = updatePassword ? null : user.password;
+      if( user.type === 'PUBLIC' ) {
+        password = config.pgInstance.publicRole.password;
+      }
+
+      password = await this.models.user.resetPassword(
+        instance.instance_id, 
+        instance.organization_id, 
+        user.username, 
+        password, 
+        false
+      );
+
+      let resp = await remoteExec(instance.hostname, '/sync-user', {
+        method : 'POST',
+        headers : {
+          'Content-Type' : 'application/json'
+        },
+        body : JSON.stringify({
+          username : user.username,
+          password
+        })
+      });
+
+      let body = await resp.text();
+      data.push({
+        username : user.username,
+        response : {
+          status : resp.status,
+          body
+        }
+      });
+
+      if( resp.status > 299 ) {
+        logger.error(`Error syncing user ${user.username} to instance ${instance.hostname}`, resp.status, body, logInfo);
+        return data;
+      }
+
+      if( updatePassword && hardReset && user.type === 'PGREST' ) {
+        let dbs = await client.getInstanceDatabases(instance.instance_id, instance.organization_id);
+        for( let db of dbs ) {
+          await this.models.pgRest.restart(db.database_name, db.organization_name);
+        }
+      }
+
+      logger.info(`Synced user ${user.username} to instance ${instance.hostname}`, resp.status, logInfo);
+    }
+
+    return data;
+  }
+
+  /**
+   * @method syncUser 
+   * @description Sync a user to the instance.  This will create the user
+   * in the instance's postgres database and grant the user access to the
+   * instance's database. If the user already exists, the password will be
+   * updated.  This should be run by the PG Helper container on the instance.
+   * 
+   * @param {*} instNameOrId 
+   * @param {*} orgNameOrId 
+   * @param {*} password 
+   */
+  async syncUser(instNameOrId, orgNameOrId, user) {
+    // this establishes a socket connection to the instance 'postgres' database
+    let con = await this.models.database.getConnection('postgres');
+
+    logger.info('Syncing user', user.username);
+    await pgInstClient.createOrUpdatePgUser(con, user)
+
+    // grant the users role to the authenticator user
+    if( user.username !== config.pgInstance.adminRole && user.username !== config.pgRest.authenticator.username ) {
+      await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user.username, con);
+    }
   }
 
   async resizeVolume(instNameOrId, orgNameOrId, size) {

@@ -99,9 +99,9 @@ class InstanceModel extends BaseModel {
     return this.service.resize(org, instance, size);
   }
 
-  syncUsers(org, instance) {
+  syncUsers(org, instance, opts={}) {
     instance = this.formatName(instance);
-    return this.service.syncUsers(org, instance);
+    return this.service.syncUsers(org, instance, opts);
   }
 
 }
