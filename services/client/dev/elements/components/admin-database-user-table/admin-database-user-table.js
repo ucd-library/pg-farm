@@ -28,9 +28,10 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.selectedBulkAction = '';
 
     const ctlOptions = {
-      searchProps: ['name'],
+      searchProps: ['user.name'],
       filters: [
-        {id: 'db-access', cb: this._onDbAccessFilterChange}
+        {id: 'db-access', cb: this._onDbAccessFilterChange},
+        {id: 'schema-access', cb: this._onSchemaAccessFilterChange}
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
@@ -41,13 +42,19 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
   _onDbAccessFilterChange(user, value) {
     if ( !value ) return true;
     if ( value === 'ADMIN') {
-      return user?.pgFarmUser?.type === 'ADMIN';
+      return user?.user?.pgFarmUser?.type === 'ADMIN';
     } else {
-      const roleLabel = grantDefinitions.getRoleLabel('DATABASE', user);
+      const roleLabel = grantDefinitions.getRoleLabel('DATABASE', user.user);
       for ( const [role, label] of Object.entries(grantDefinitions.roleLabels) ) {
         if ( roleLabel === label ) return role === value;
       }
     }
+  }
+
+  _onSchemaAccessFilterChange(user, value) {
+    if ( !value ) return true;
+    // todo: ask kimmy how varies filter should work
+    return value === user?.schemaRole?.grant?.action;
   }
 
   _setBulkActions() {

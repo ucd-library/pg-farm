@@ -33,9 +33,9 @@ export default class PageDataController {
 
   /**
    * @description Do API requests and update host properties
-   * @param {Array<RequestDefinition>} requests - An array of request objects as defined above.
+   * @param {Array<RequestDefinition>} requests - An array of request definition objects as defined above.
    * @param {Object} opts - Additional options for the API requests.
-   * @returns {Promise<Array<RequestDefinition>} - A promise that resolves to an array of processed request objects.
+   * @returns {Promise<Array<RequestDefinition>} - A promise that resolves to an array of processed request definition objects.
    */
   async get(requests, opts={}){
     if ( !opts.ignoreLoading ){

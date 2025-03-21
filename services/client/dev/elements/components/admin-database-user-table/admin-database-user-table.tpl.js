@@ -98,7 +98,14 @@ function _renderDesktopView(){
           </div>
           <div class='cell'>
             <div>Schema</div>
-            <div>Any Access</div>
+            <div>
+              <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Any Access</option>
+                ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('schema-access') === value}>${label}</option>
+                `)}
+              </select>
+            </div>
           </div>
           <div class='cell'>Tables</div>
           <div class='cell'>Remove</div>
@@ -111,24 +118,24 @@ function _renderDesktopView(){
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
                 <div>
                   <div class='user-name-container'>
-                    <div>${row.item?.name}</div>
-                    <div class='admin-badge' ?hidden=${row.item?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+                    <div>${row.item?.user?.name}</div>
+                    <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
                   </div>
                   <div class='caption'>name of person</div>
                 </div>
               </div>
             </div>
             <div class='cell'>
-              <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
-              <div class='caption'>${row.item?.pgPrivileges?.join(', ') || ''}</div>
+              <div>${grantDefinitions.getRoleLabel('DATABASE', row.item?.user)}</div>
+              <div class='caption'>${row.item?.user?.pgPrivileges?.join?.(', ') || ''}</div>
             </div>
             <div class='cell'>
-              <div>some schema role</div>
-              <div></div>
+              <div>${row.item?.schemaRole?.grant?.roleLabel}</div>
+              <div class='caption' ?hidden=${!row.item?.schemaRole?.privileges?.length}>${row.item?.schemaRole?.privileges?.join?.(', ')}</div>
             </div>
-            <div class='cell'>100</div>
+            <div class='cell'>${row.item?.tableCt}</div>
             <div class='cell cell--center'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item)}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item?.user)}></app-icon-button>
             </div>
           </div>
           `)}
@@ -160,36 +167,30 @@ function _renderMobileView(){
                 <div class='u-width-100'>
                   <div>
                     <div class='user-name-container'>
-                      <div>${row.item?.name}</div>
-                      <div class='admin-badge' ?hidden=${row.item?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+                      <div>${row.item?.user?.name}</div>
+                      <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
                     </div>
                     <div class='caption'>name of person</div>
                   </div>
                   <div class='details'>
                     <div>
                       <div>Database:</div>
-                      <div>
-                        ${row.item?.pgFarmUser?.type === 'ADMIN' ? html`
-                          <div class='admin-badge'>Admin</div>
-                        ` : html`
-                          <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
-                        `}
-                      </div>
+                      <div>${grantDefinitions.getRoleLabel('DATABASE', row.item?.user)}</div>
                     </div>
                     <div>
                       <div>Schema:</div>
-                      <div>some schema role</div>
+                      <div>${row.item?.schemaRole?.grant?.roleLabel}</div>
                     </div>
                     <div>
                       <div>Tables:</div>
-                      <div>100</div>
+                      <div>${row.item?.tableCt}</div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <div class='cell cell--icon-top'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item)}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item?.user)}></app-icon-button>
             </div>
           </div>
         `)}

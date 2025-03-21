@@ -6,6 +6,7 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
+import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 
 import '@ucd-lib/pgfarm-client/elements/components/admin-instance-user-form/admin-instance-user-form.js';
 
@@ -103,9 +104,46 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
     this.users = this.dataCtl.users.map(user => {
       const access = schemaAccess.filter(r => r.response?.value?.user === user.name).map(r => r.response.value);
       const tableCt = access.reduce((acc, r) => acc + Object.keys(r.payload.tables).length, 0);
+
+      let schemaRole;
+      let schemaRoles = [];
+      if ( access.length ){
+
+        // one schema selected, only need to show access summary to that one
+        if ( selectedSchemas.length === 1 ){
+          schemaRole = {
+            privileges: access[0].payload?.schema,
+            grant: grantDefinitions.getGrant('SCHEMA', access[0].payload?.schema)
+          }
+
+        // multiple schemas selected, If all access the same, show that. Otherwise show 'varies'
+        } else {
+          schemaRoles = access.map(r => ({
+            schema: r.payload?.schema,
+            privileges: r.payload?.schema,
+            grant: grantDefinitions.getGrant('SCHEMA', r.payload?.schema)
+          }));
+
+          const allSame = schemaRoles.every((r, i, arr) => r.grant.action === arr[0].grant.action);
+          if ( allSame ){
+            schemaRole = {
+              privileges: schemaRoles[0].privileges,
+              grant: schemaRoles[0].grant
+            }
+          } else {
+            schemaRole = {
+              privileges: [],
+              grant: {action: 'VARIES', roleLabel: 'Varies' }
+            }
+          }
+        }
+      }
+
       return {
         user,
-        tableCt
+        tableCt,
+        schemaRole,
+        schemaRoles
       }
     });
     console.log(this.users);
