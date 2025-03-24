@@ -23,29 +23,19 @@ return html`
         required>
     </div>
     <div class='field-container'>
-      <label>Account Type</label>
-      <ul class="list--reset radio">
+      <ul class="list--reset checkbox">
         <li>
           <input
-            id=${this.idGen.get('admin.false')}
+            id=${this.idGen.get('admin')}
             name='admin'
-            type='radio'
-            @input=${e => this._onInput('admin', false)}
-            .checked=${!this.payload.admin} />
-          <label for=${this.idGen.get('admin.false')}>Standard</label>
-        </li>
-        <li>
-          <input
-            id=${this.idGen.get('admin.true')}
-            name='admin'
-            type='radio'
-            @input=${e => this._onInput('admin', true)}
-            .checked=${this.payload.admin === true} />
-          <label for=${this.idGen.get('admin.true')}>Admin</label>
+            type='checkbox'
+            @input=${e => this._onInput('admin', !this.payload.admin)}
+            .checked=${this.payload.admin} />
+          <label for=${this.idGen.get('admin')}>Enable admin access</label>
         </li>
       </ul>
     </div>
-    <div class='field-container' ?hidden=${this.payload.admin}>
+    <div class='field-container'>
       <label>Database Access</label>
       <ul class="list--reset radio">
         ${grantDefinitions.registry.filter(def => def.object === 'DATABASE').map(def => html`
