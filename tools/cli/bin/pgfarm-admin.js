@@ -10,7 +10,7 @@ program.command('connections')
   .addOption(new Option('-g, --group-by <type>', 'Display connections grouped by type.').choices(['username', 'database']))
   .action(async (opts) => {
     let resp = await adminModel.getConnections();
-    
+
     if( resp.error ) {
       print.display(resp, opts.output);
       process.exit(1);
@@ -23,7 +23,7 @@ program.command('connections')
         keys = ['organization_name', 'database_name'];
         values = ['username'];
       }
-      
+
       let grouped = {};
       resp.payload.forEach(row => {
         let key = keys.map(k => row[k]).join('/');
@@ -58,7 +58,7 @@ program.command('connection-log')
       }
       return row;
     });
-    
+
     print.display(resp, opts.output);
     process.exit(0);
   });
@@ -68,6 +68,15 @@ program.command('sleep')
   .description('run the cron to sleep instances now')
   .action(async (opts) => {
     let resp = await adminModel.sleep();
+    print.display(resp, opts.output);
+    process.exit(0);
+  });
+
+program.command('update-user-iam-profile')
+  .description('Fetches user profile from UCD IAM API and updates the user record in the admin database')
+  .argument('<username>', 'UC Davis Kerberos ID')
+  .action(async (username, opts) => {
+    let resp = await adminModel.updateUcdIamProfile(username);
     print.display(resp, opts.output);
     process.exit(0);
   });

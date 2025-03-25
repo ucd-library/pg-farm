@@ -115,12 +115,22 @@ class User {
     const firstName = ucdUserProfile?.dFirstName || '';
     const lastName = ucdUserProfile?.dLastName || '';
     const middleName = ucdUserProfile?.dMiddleName || '';
-    return client.query(
+    await client.query(
       `UPDATE ${config.adminDb.tables.USER}
       SET first_name = $2, last_name = $3, middle_name = $4, ucd_iam_payload = $5, ucd_iam_fetched_at = NOW()
       WHERE user_id = ${this.schema}.get_user_id($1)`,
       [username, firstName, lastName, middleName, ucdUserProfile]
     );
+    return ucdUserProfile;
+  }
+
+  async pgFarmUserExists(username) {
+    const res = await client.query(
+      `SELECT * FROM ${config.adminDb.tables.USER}
+      WHERE user_id = ${this.schema}.get_user_id($1)`,
+      [username]
+    );
+    return res.rows.length > 0;
   }
 
   async delete(nameOrId, orgNameOrId=null, username) {
