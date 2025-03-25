@@ -20,6 +20,29 @@ export function styles() {
     admin-database-tables-table .mobile {
       display: block;
     }
+    admin-database-tables-table .mobile .app-table .row {
+      grid-template-columns: 1fr auto;
+    }
+    admin-database-tables-table .table-name-container {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+
+      color: var(--ucd-blue-80, #13639E);
+      font-weight: 700;
+    }
+    admin-database-tables-table .table-name-container a {
+      text-decoration: none;
+    }
+    admin-database-tables-table .mobile .details {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      font-size: var(--font-size--small, .75rem);
+      justify-content: space-between;
+      max-width: 350px;
+      margin-top: .75rem;
+    }
     @container (min-width: 768px) {
       admin-database-tables-table .desktop {
         display: block;
@@ -90,8 +113,8 @@ function _renderDesktopView(){
           <div class='cell'>
             <div class='checkbox-container'>
               <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
-              <div>
-                <div>${row.item?.table?.table_name}</div>
+              <div class='table-name-container'>
+                <a href='${this.tableUrl}/${row.item?.table?.table_name}'>${row.item?.table?.table_name}</a>
               </div>
             </div>
           </div>
@@ -101,7 +124,7 @@ function _renderDesktopView(){
           <div class='cell'>${row.item?.userCt}</div>
           <div class='cell'>${row.item?.accessSummary}</div>
           <div class='cell cell--center'>
-            <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete', row.item)}></app-icon-button>
+            <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete table', row.item)}></app-icon-button>
           </div>
         </div>
       `)}
@@ -112,6 +135,53 @@ function _renderDesktopView(){
 
 function _renderMobileView(){
   return html`
-    <div class='mobile'>mobile table ${this.tableCtl.getRowCt()}</div>
+    <div class='mobile'>
+      <div class='app-table'>
+        <div class='row row--header'>
+          <div class='cell'>
+            <div class='checkbox-container'>
+              <input type='checkbox' .checked=${this.tableCtl.allSelected()} @change=${() => this.tableCtl.toggleAllSelected()}>
+              <div>Tables (${this.tableCtl.getRowCt()})</div>
+            </div>
+          </div>
+          <div class='cell'></div>
+        </div>
+
+        ${this.tableCtl.getRows().map( row => html`
+          <div class=${row.classes}>
+            <div class='cell'>
+              <div class='checkbox-container'>
+                <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
+                <div class='u-width-100'>
+                  <div>
+                    <div class='table-name-container'>
+                      <a href='${this.tableUrl}/${row.item?.table?.table_name}'>${row.item?.table?.table_name}</a>
+                    </div>
+                  </div>
+                  <div class='details'>
+                    <div>
+                      <div>Schema:</div>
+                      <div>${row.item?.table?.table_schema}</div>
+                    </div>
+                    <div>
+                      <div>Users:</div>
+                      <div>${row.item?.userCt}</div>
+                    </div>
+                    <div>
+                      <div>Access:</div>
+                      <div>${row.item?.accessSummary}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class='cell cell--icon-top'>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete table', row.item)}></app-icon-button>
+            </div>
+          </div>
+        `)}
+      </div>
+    </div>
+
   `;
 }

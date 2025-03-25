@@ -35,6 +35,21 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
       filters: [{id: 'table-access', cb: this._onTableAccessFilterChange}]
     }
     this.tableCtl = new TableController(this, 'tables', ctlOptions);
+    console.log({ tableCtl: this.tableCtl });
+
+    this._injectModel('AppStateModel');
+  }
+
+  /**
+   * @description Callback for when the app state is updated
+   * @param {Object} e - app state update event
+   * @returns
+  */
+  async _onAppStateUpdate(e){
+    if ( e.location?.path?.[0] !== 'db' ) return;
+    this.orgName = e.location?.path?.[1] || '';
+    this.dbName = e.location?.path?.[2] || '';
+    this.tableUrl = `/db/${this.orgName}/${this.dbName}/edit/tables`;
   }
 
   _onBulkActionSelect() {
