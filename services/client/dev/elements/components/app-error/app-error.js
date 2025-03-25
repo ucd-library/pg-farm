@@ -45,6 +45,8 @@ export default class AppError extends Mixin(LitElement)
       this.errors = opts.errors.map(error => this.formatError(error));
     } else if ( opts.error ) {
       this.errors = [this.formatError({errorMessage: opts.message, response: {value: opts.error}})];
+    } else if ( opts.message ) {
+      this.errors = [this.formatError({errorMessage: opts.message})];
     } else {
       this.errors = [];
     }

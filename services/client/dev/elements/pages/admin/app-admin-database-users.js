@@ -52,7 +52,6 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
     await this.queryCtl.setFromLocation();
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
-    this.dataCtl.isFeatured = false;
     this.AppStateModel.showLoading();
     let r = await this.dataCtl.get([
       {

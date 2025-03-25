@@ -27,6 +27,27 @@ class UcdIamApi {
     return data?.responseData?.results?.[0] || null;
   }
 
+  /**
+   * @description Extract a user's positions from their directory listings
+   * @param {Object} profile - The user's profile object from the UCD IAM API
+   * @returns {Array} - An array of objects with 'dept' and 'title' keys
+   */
+  getPositions(profile){
+    return (profile?.directory?.listings || [])
+    .sort((a, b) => a?.listingOrder || 0 - b?.listingOrder || 0)
+    .map(listing => {
+      const d = {};
+      if ( listing?.deptUcdFlag === 'Y' && listing?.deptName ) {
+        d.dept = listing?.deptName;
+      }
+      if ( listing?.titleUcdFlag === 'Y' && listing?.title ) {
+        d.title = listing?.title;
+      }
+      return d;
+    })
+    .filter(d => Object.keys(d).length > 0);
+  }
+
   async _fetch(path, urlParams={}, fetchOpts={}) {
     urlParams = new URLSearchParams(urlParams);
     if ( !urlParams.get('key') ) urlParams.set('key', config.ucdIamApi.key);

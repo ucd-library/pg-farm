@@ -24,7 +24,11 @@ class AppStateModelImpl extends AppStateModel {
       }
 
       if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
-        if ( update.location.path?.[4]){
+
+        if ( update.location.path?.[4] === 'users' && update.location.path?.[5]){
+          page = 'admin-db-user-single';
+        }
+        else if ( update.location.path?.[4]){
           page = `admin-db-${update.location.path[4]}`;
         } else {
           page = 'admin-db-overview';

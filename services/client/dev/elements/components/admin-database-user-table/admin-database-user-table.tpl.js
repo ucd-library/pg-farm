@@ -27,6 +27,10 @@ export function styles() {
       gap: .5rem;
       align-items: center;
     }
+    admin-database-user-table .user-name-container a {
+      font-weight: 700;
+      text-decoration: none;
+    }
     admin-database-user-table .mobile .details {
       display: flex;
       gap: .5rem;
@@ -116,13 +120,7 @@ function _renderDesktopView(){
             <div class='cell'>
               <div class='checkbox-container'>
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
-                <div>
-                  <div class='user-name-container'>
-                    <div>${row.item?.user?.name}</div>
-                    <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
-                  </div>
-                  ${_renderUserName.call(this, row)}
-                </div>
+                ${_renderUserName.call(this, row)}
               </div>
             </div>
             <div class='cell'>
@@ -165,13 +163,7 @@ function _renderMobileView(){
               <div class='checkbox-container'>
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
                 <div class='u-width-100'>
-                  <div>
-                    <div class='user-name-container'>
-                      <div>${row.item?.user?.name}</div>
-                      <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
-                    </div>
-                    ${_renderUserName.call(this, row)}
-                  </div>
+                  ${_renderUserName.call(this, row)}
                   <div class='details'>
                     <div>
                       <div>Database:</div>
@@ -202,8 +194,16 @@ function _renderMobileView(){
 
 function _renderUserName(row){
   return html`
-    <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
-      ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
+    <div>
+      <div class='user-name-container'>
+        <div>
+          <a href='${window.location.pathname}/${row.item?.user?.name}'>${row.item?.user?.name}</a>
+        </div>
+        <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+      </div>
+      <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
+        ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
+      </div>
     </div>
   `;
 }

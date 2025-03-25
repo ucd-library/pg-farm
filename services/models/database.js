@@ -4,6 +4,7 @@ import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
 import utils from './utils.js';
+import ucdIamApi from '../lib/ucd-iam-api.js';
 
 class Database {
 
@@ -464,7 +465,7 @@ class Database {
     let access = await pgInstClient.getDatabaseAccess(con, database.database_name);
     access = access.rows;
 
-    const userColumns = ['u.username', 'u.user_id', 'type', 'u.first_name', 'u.last_name'];
+    const userColumns = ['u.username', 'u.user_id', 'type', 'u.first_name', 'u.last_name', 'u.ucd_iam_payload'];
     let pgFarmUsers = await client.getInstanceUsers(database.instance_id, userColumns);
 
     let users = resp.rows.filter(row => !row.rolname.match(/^pg_/))
@@ -483,7 +484,8 @@ class Database {
             id : farmUser.user_id,
             type : farmUser.type,
             firstName : farmUser.first_name,
-            lastName : farmUser.last_name
+            lastName : farmUser.last_name,
+            ucdPositions : ucdIamApi.getPositions(farmUser.ucd_iam_payload)
           };
         }
 
