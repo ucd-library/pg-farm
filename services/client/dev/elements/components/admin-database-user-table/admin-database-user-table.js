@@ -28,7 +28,7 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.selectedBulkAction = '';
 
     const ctlOptions = {
-      searchProps: ['user.name'],
+      searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
       filters: [
         {id: 'db-access', cb: this._onDbAccessFilterChange},
         {id: 'schema-access', cb: this._onSchemaAccessFilterChange}

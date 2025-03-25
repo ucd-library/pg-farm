@@ -464,7 +464,8 @@ class Database {
     let access = await pgInstClient.getDatabaseAccess(con, database.database_name);
     access = access.rows;
 
-    let pgFarmUsers = await client.getInstanceUsers(database.instance_id, ['u.username', 'u.user_id', 'type']);
+    const userColumns = ['u.username', 'u.user_id', 'type', 'u.first_name', 'u.last_name'];
+    let pgFarmUsers = await client.getInstanceUsers(database.instance_id, userColumns);
 
     let users = resp.rows.filter(row => !row.rolname.match(/^pg_/))
       .map(row => {
@@ -480,7 +481,9 @@ class Database {
         if( farmUser ) {
           obj.pgFarmUser = {
             id : farmUser.user_id,
-            type : farmUser.type
+            type : farmUser.type,
+            firstName : farmUser.first_name,
+            lastName : farmUser.last_name
           };
         }
 

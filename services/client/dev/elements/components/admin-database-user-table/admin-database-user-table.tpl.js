@@ -121,7 +121,7 @@ function _renderDesktopView(){
                     <div>${row.item?.user?.name}</div>
                     <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
                   </div>
-                  <div class='caption'>name of person</div>
+                  ${_renderUserName.call(this, row)}
                 </div>
               </div>
             </div>
@@ -170,7 +170,7 @@ function _renderMobileView(){
                       <div>${row.item?.user?.name}</div>
                       <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
                     </div>
-                    <div class='caption'>name of person</div>
+                    ${_renderUserName.call(this, row)}
                   </div>
                   <div class='details'>
                     <div>
@@ -197,6 +197,14 @@ function _renderMobileView(){
       </div>
     </div>
 
+  `;
+}
+
+function _renderUserName(row){
+  return html`
+    <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
+      ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
+    </div>
   `;
 }
 

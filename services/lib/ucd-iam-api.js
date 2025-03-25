@@ -6,6 +6,12 @@ import fetch from "node-fetch";
  */
 class UcdIamApi {
 
+  /**
+   * @description Get a user's profile from the UCD IAM API
+   * @param {String} id - The user's id
+   * @param {String} idType - The type of id to search for.  One of 'userId', 'iamId', or 'email'
+   * @returns
+   */
   async getUserProfile(id, idType='userId'){
     const path = '/people/profile/search';
     const idTypes = ['userId', 'iamId', 'email'];
