@@ -1,6 +1,7 @@
 import { html, css } from 'lit';
 
 import buttonStyles from '@ucd-lib/theme-sass/2_base_class/_buttons.css.js';
+import user from '@ucd-lib/pgfarm-client/utils/user.js';
 
 export function styles() {
   const elementStyles = css`
@@ -98,6 +99,13 @@ export function styles() {
     .error {
       margin-bottom: 1rem;
     }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
   `;
 
   return [
@@ -135,7 +143,11 @@ return html`
         </div>
       `)}
     </div>
-    <a class='btn btn--primary btn--round' @click=${() => window.location.reload(true)}>Reload Page</a>
+    <div class='buttons'>
+      <a class='btn btn--primary btn--round' @click=${() => window.location.reload(true)}>Reload Page</a>
+      <a ?hidden=${!this.showLoginButton} class='btn btn--primary btn--invert btn--round' href='${user.loginPath}?redirect=${window.location}'>Login</a>
+    </div>
+
     </div>
   </div>
 `;}
