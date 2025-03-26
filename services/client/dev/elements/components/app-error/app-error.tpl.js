@@ -145,7 +145,7 @@ return html`
     </div>
     <div class='buttons'>
       <a class='btn btn--primary btn--round' @click=${() => window.location.reload(true)}>Reload Page</a>
-      <a ?hidden=${!this.showLoginButton} class='btn btn--primary btn--invert btn--round' href='${user.loginPath}?redirect=${window.location}'>Login</a>
+      <a ?hidden=${!this.showLoginButton} class='btn btn--primary btn--invert btn--round' href='${user.loginPath}?redirect=${window.location}&set-cookie=true'>Login</a>
     </div>
 
     </div>

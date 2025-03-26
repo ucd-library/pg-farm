@@ -1,5 +1,6 @@
 import { html, css } from 'lit';
 import adminDatabaseHeader from '@ucd-lib/pgfarm-client/elements/templates/admin-database-header.js';
+import { elementChWidth } from '@ucd-lib/pgfarm-client/elements/templates/styles.js';
 import '@ucd-lib/pgfarm-client/elements/components/admin-database-subnav/admin-database-subnav.js';
 import '@ucd-lib/pgfarm-client/elements/components/admin-database-wake/admin-database-wake.js';
 
@@ -64,6 +65,7 @@ export function render() {
               <h3 class='u-space-mb--tiny'>Schema:</h3>
               <div>
                 <label hidden for=${this.idGen.get('schema')}>Schema</label>
+                ${elementChWidth(this.idGen.get('schema'), this.queryCtl.schema?.value || '')}
                 <select class='select-header select-header--h3'
                   id=${this.idGen.get('schema')}
                   @input=${e => this.queryCtl.schema.setProperty(e.target.value, true)}
