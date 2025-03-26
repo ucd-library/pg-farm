@@ -17,6 +17,7 @@ export default class AppIcon extends Mixin(LitElement)
   static get properties() {
     return {
       slug: {type: String},
+      transformDegrees: {type: String, attribute: 'transform-degrees'},
       size: {type: String},
       fetchMethod: {type: String, attribute: 'fetch-method'},
       invisibleIfEmpty: {type: Boolean, attribute: 'invisible-if-empty'},
@@ -34,6 +35,7 @@ export default class AppIcon extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.slug = '';
+    this.transformDegrees = '0';
     this.size = '';
     this.svg = '';
     this.invisibleIfEmpty = false;
