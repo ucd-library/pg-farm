@@ -17,7 +17,8 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       orgName: { type: String},
       dbName: { type: String},
       username: { type: String },
-      user: { type: Object }
+      user: { type: Object },
+      schemaGrant: { type: Object },
     }
   }
 
@@ -32,6 +33,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     this.dbName = '';
     this.username = '';
     this.user = {};
+    this.schemaGrant = {};
 
     this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
@@ -63,6 +65,11 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     ], {ignoreLoading: true});
     if ( !r ) return;
 
+    if ( this.dataCtl?.db?.instance?.state === 'SLEEP' ) {
+      this.AppStateModel.hideLoading();
+      return;
+    }
+
     r = await this.dataCtl.get([
       {
         request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
@@ -84,6 +91,31 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     }
     this._setUser(user);
 
+    // Get schema and table access for selected schema
+    if ( this.queryCtl.schema.exists() ){
+      r = await this.dataCtl.get([
+        {
+          request: this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, this.queryCtl.schema.value, this.username),
+          ctlProp: 'schemaAccess',
+          errorMessage: 'Unable to get schema access'
+
+        },
+        {
+          request: this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, this.queryCtl.schema.value),
+          ctlProp: 'schemaTables',
+          errorMessage: 'Unable to get schema tables'
+        }
+      ], {ignoreLoading: true});
+      if ( !r ) return;
+    }
+    this.schemaGrant = grantDefinitions.getGrant('SCHEMA', this.dataCtl?.schemaAccess?.schema);
+    this.tables = (this.dataCtl?.schemaTables || []).map(table => {
+      const roles = [...(this.dataCtl?.schemaAccess?.tables?.[table.table_name	] || [])];
+      const grant = grantDefinitions.getGrant('TABLE', roles);
+      return { table: {...table}, grant, roles };
+    });
+    console.log(this.tables);
+
 
     this.AppStateModel.hideLoading();
   }
@@ -101,7 +133,6 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     user.showContactSection = user.displayName || user.positions.length;
 
     this.user = user;
-    console.log('user', user);
   }
 
 }

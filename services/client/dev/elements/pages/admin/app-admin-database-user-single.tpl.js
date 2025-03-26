@@ -59,6 +59,32 @@ export function render() {
             <h3>Database</h3>
             <h4>${this.user?.databaseGrant?.roleLabel}</h4>
           </section>
+          <section>
+            <div class='flex flex--align-center gap--small flex--wrap u-space-mb--small'>
+              <h3 class='u-space-mb--tiny'>Schema:</h3>
+              <div>
+                <label hidden for=${this.idGen.get('schema')}>Schema</label>
+                <select class='select-header select-header--h3'
+                  id=${this.idGen.get('schema')}
+                  @input=${e => this.queryCtl.schema.setProperty(e.target.value, true)}
+                  .value=${this.queryCtl.schema?.value}
+                  >
+                  <option value="" ?selected=${!this.queryCtl.schema.exists()}>Select a Schema</option>
+                  ${this.dataCtl.schemas?.map(schema => html`
+                    <option value=${schema} ?selected=${this.queryCtl.schema.equals(schema)}>${schema}</option>`)}
+                </select>
+              </div>
+            </div>
+            <div ?hidden=${this.queryCtl.schema.exists()}>
+              <p>Select a schema to view ${this.user?.data?.name}'s access permissions and tables.</p>
+            </div>
+            <div ?hidden=${!this.queryCtl.schema.exists()}>
+              <div class='flex flex--align-center gap--small flex--wrap'>
+                <h4 class='u-space-mb--flush'>${this.schemaGrant?.roleLabel}</h4>
+                <app-icon-button basic icon='fa.solid.pen' @click=${() => console.log('todo: edit')}></app-icon-button>
+              </div>
+            </div>
+          </section>
         </div>
 
       </div>

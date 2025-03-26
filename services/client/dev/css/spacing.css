@@ -1,3 +1,6 @@
+.u-space-mb--tiny {
+  margin-bottom: var(--spacer--tiny, 0.25rem);
+}
 .u-space-py-responsive--huge {
   padding-top: var(--spacer--large, 2rem);
   padding-bottom: var(--spacer--large, 2rem);

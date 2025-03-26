@@ -20,9 +20,15 @@ select.select-header {
   color: var(--forced-contrast-heading-primary, #13639e);
   font-size: 1.6055rem;
 }
+select.select-header.select-header--h3 {
+  font-size: 1.3325rem;
+}
 @media (min-width: 768px) {
   select.select-header {
     font-size: 2.0995rem;
+  }
+  select.select-header.select-header--h3 {
+    font-size: 1.7425rem;
   }
 }
 select.select-header option {

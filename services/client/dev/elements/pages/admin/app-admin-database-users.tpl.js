@@ -51,7 +51,12 @@ export function render() {
               <h2>Users:</h2>
               <div>
                 <label hidden for=${this.idGen.get('schema')}>Schema</label>
-                <select class='select-header' id=${this.idGen.get('schema')} @input=${e => this.queryCtl.schema.setProperty(e.target.value, true)}>
+                <select
+                  class='select-header'
+                  id=${this.idGen.get('schema')}
+                  @input=${e => this.queryCtl.schema.setProperty(e.target.value, true)}
+                  .value=${this.queryCtl.schema?.value}
+                  >
                   <option value="" ?selected=${!this.queryCtl.schema.exists()}>All Schemas</option>
                   ${this.dataCtl.schemas?.map(schema => html`
                     <option value=${schema} ?selected=${this.queryCtl.schema.equals(schema)}>${schema}</option>`)}
