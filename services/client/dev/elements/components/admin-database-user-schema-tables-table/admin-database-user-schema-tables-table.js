@@ -29,7 +29,17 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
         label: grant.roleLabel,
         value: grant.action
       }
-    })
+    });
+    this.selectedBulkAction = '';
+
+    this.tableCtl = new TableController(this, 'tables');
+
+    this._injectModel('AppStateModel');
+
+  }
+
+  _onBulkActionSelect() {
+    console.log(this.selectedBulkAction);
   }
 
 }

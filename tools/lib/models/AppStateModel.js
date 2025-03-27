@@ -52,6 +52,10 @@ class AppStateModelImpl extends AppStateModel {
 
   hideLoading(){
     this.store.emit(this.store.events.APP_LOADING_UPDATE, {show: false});
+    if ( this.toastOnPageLoad ) {
+      this.showToast(this.toastOnPageLoad);
+      this.toastOnPageLoad = null;
+    }
   }
 
   /**
@@ -71,7 +75,7 @@ class AppStateModelImpl extends AppStateModel {
 
   /**
    * @description Show a modal dialog box.
-   * To listen for the action event, add the _onDialogAction method to your element and then filter on e.action
+   * To listen for the action event, add the _onAppDialogAction method to your element and then filter on e.action.value
    * @param {Object} options Dialog object with the following properties:
    * - title {TemplateResult} - The title of the dialog (optional)
    * - content {TemplateResult} - The html content of the dialog (optional, but should probably be included)
@@ -111,8 +115,14 @@ class AppStateModelImpl extends AppStateModel {
    * @param {String} opts.type - Optional. The type of toast. Options are 'basic' 'success', 'error'
    * @param {Number} opts.displayTime - Optional. The time in ms to display the toast.
    * @param {Number} opts.animationTime - Optional. The time in ms to do enter/exit animations
+   * @param {Boolean} opts.showOnPageLoad - Optional. Wait to show the toast on the next page load event
    */
   showToast(opts={}){
+    if ( opts.showOnPageLoad ) {
+      delete opts.showOnPageLoad;
+      this.toastOnPageLoad = opts;
+      return;
+    }
     this.store.emit(this.store.events.APP_TOAST_SHOW, opts);
   }
 

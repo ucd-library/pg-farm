@@ -7,6 +7,7 @@ import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataContr
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
+import { deleteUserConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -41,7 +42,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       {name: 'schema', defaultValue: ''}
     ]);
 
-    this._injectModel('AppStateModel', 'DatabaseModel');
+    this._injectModel('AppStateModel', 'DatabaseModel', 'InstanceModel');
   }
 
   async _onAppStateUpdate(e){
@@ -114,8 +115,6 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       const grant = grantDefinitions.getGrant('TABLE', roles);
       return { table: {...table}, grant, roles };
     });
-    console.log(this.tables);
-
 
     this.AppStateModel.hideLoading();
   }
@@ -123,16 +122,54 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
   _setUser(data) {
     const user = {
       isAdmin: data?.pgFarmUser?.type === 'ADMIN',
-      displayName: `${data?.pgFarmUser?.firstName} ${data?.pgFarmUser?.lastName}`.trim(),
+      displayName: `${data?.pgFarmUser?.firstName || ''} ${data?.pgFarmUser?.lastName || ''}`.trim(),
       databaseGrant: grantDefinitions.getGrant('DATABASE', data),
       data
     };
     user.positions = (data?.pgFarmUser?.ucdPositions || [])
       .map(listing => [listing?.title, listing?.dept].filter(x => x).join(', '))
       .filter(x => x);
-    user.showContactSection = user.displayName || user.positions.length;
+    user.showContactSection = user.displayName || user.positions.length ? true : false;
 
     this.user = user;
+  }
+
+  _showDeleteUserModal(user) {
+    if ( !user ) {
+      user = this.user.data;
+    }
+    this.AppStateModel.showDialogModal({
+      title: `Delete User`,
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Delete User', value: 'db-delete-user', color: 'secondary'}
+      ],
+      content: deleteUserConfirmation(user),
+      data: {user}
+    });
+  }
+
+  _onAppDialogAction(e){
+    if ( e.action?.value === 'db-delete-user' ) {
+      this.deleteUser();
+    }
+  }
+
+  async deleteUser() {
+    this.AppStateModel.showLoading();
+    const r = await this.dataCtl.get([
+      {
+        request: this.InstanceModel.deleteUser(this.orgName, this.dbName, this.username),
+        errorMessage: `Unable to delete user '${this.username}'`
+      }
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+    this.AppStateModel.setLocation(`/db/${this.orgName}/${this.dbName}/edit/users`);
+    this.AppStateModel.showToast({
+      text: `User '${this.username}' has been deleted from the database`,
+      type: 'success',
+      showOnPageLoad: true
+    });
   }
 
 }

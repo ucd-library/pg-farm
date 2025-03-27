@@ -88,7 +88,11 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
         }
       }
       this._loading = false;
-      this.AppStateModel.showToast({type: 'success', text: 'User added'});
+      this.AppStateModel.showToast({
+        type: 'success',
+        text: `User ${this.payload.username} added to instance ${this.instanceName}`,
+        showOnPageLoad: true
+      });
       return true;
     }
   }

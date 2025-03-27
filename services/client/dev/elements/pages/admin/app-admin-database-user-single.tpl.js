@@ -3,6 +3,7 @@ import adminDatabaseHeader from '@ucd-lib/pgfarm-client/elements/templates/admin
 import { elementChWidth } from '@ucd-lib/pgfarm-client/elements/templates/styles.js';
 import '@ucd-lib/pgfarm-client/elements/components/admin-database-subnav/admin-database-subnav.js';
 import '@ucd-lib/pgfarm-client/elements/components/admin-database-wake/admin-database-wake.js';
+import '@ucd-lib/pgfarm-client/elements/components/admin-database-user-schema-tables-table/admin-database-user-schema-tables-table.js';
 
 export function styles() {
   const elementStyles = css`
@@ -45,7 +46,7 @@ export function render() {
               <div class='admin-badge' ?hidden=${!this.user?.isAdmin}>Admin</div>
             </div>
             <div class='flex flex--align-center gap--small flex--wrap'>
-              <app-icon-button icon='fa.solid.trash' @click=${() => console.log('todo: delete')}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' @click=${() => this._showDeleteUserModal()}></app-icon-button>
               <app-icon-button icon='fa.solid.pen' @click=${() => console.log('todo: edit')}></app-icon-button>
             </div>
           </div>
@@ -81,10 +82,11 @@ export function render() {
               <p>Select a schema to view ${this.user?.data?.name}'s access permissions and tables.</p>
             </div>
             <div ?hidden=${!this.queryCtl.schema.exists()}>
-              <div class='flex flex--align-center gap--small flex--wrap'>
+              <div class='flex flex--align-center gap--small flex--wrap u-space-mb--large'>
                 <h4 class='u-space-mb--flush'>${this.schemaGrant?.roleLabel}</h4>
                 <app-icon-button basic icon='fa.solid.pen' @click=${() => console.log('todo: edit')}></app-icon-button>
               </div>
+              <admin-database-user-schema-tables-table .tables=${this.tables}></admin-database-user-schema-tables-table>
             </div>
           </section>
         </div>

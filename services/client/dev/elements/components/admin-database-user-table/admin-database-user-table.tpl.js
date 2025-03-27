@@ -208,16 +208,3 @@ function _renderUserName(row){
   `;
 }
 
-export function renderRemoveUserConfirmation(user){
-  if ( !Array.isArray(user) ) user = [user];
-  return html`
-    <div>
-      ${user.length > 1 ? html`
-        <p>Are you sure you want to delete <strong>${user.length} users</strong>?</p>
-        ` : html`
-        <p>Are you sure you want to delete user <strong>${user[0].name}</strong>?</p>
-        `}
-      <p class='double-decker'>This will revoke all database access</p>
-    </div>
-  `
-}

@@ -1,9 +1,10 @@
 import { LitElement } from 'lit';
-import {render, styles, renderRemoveUserConfirmation} from "./admin-database-user-table.tpl.js";
+import {render, styles} from "./admin-database-user-table.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
+import { deleteUserConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 export default class AdminDatabaseUserTable extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -74,9 +75,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       title: `Delete User`,
       actions: [
         {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
-        {text: 'Delete User', value: 'db-delete-user', color: 'secondary'}
+        {text: 'Delete User', value: 'db-delete-users', color: 'secondary'}
       ],
-      content: renderRemoveUserConfirmation(user),
+      content: deleteUserConfirmation(user.map(user => user.user)),
       data: {user}
     });
   }
