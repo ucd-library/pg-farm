@@ -59,8 +59,10 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
 
   _onSchemaAccessFilterChange(user, value) {
     if ( !value ) return true;
-    // todo: ask kimmy how varies filter should work
-    return value === user?.schemaRole?.grant?.action;
+    const isThisSchema = value === user?.schemaRole?.grant?.action;
+    const isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
+
+    return isThisSchema || isAnySchema;
   }
 
   _setBulkActions() {
