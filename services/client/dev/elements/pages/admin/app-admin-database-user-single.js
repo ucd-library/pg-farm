@@ -164,12 +164,12 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       }
     ], {ignoreLoading: true});
     if ( !r ) return;
-    this.AppStateModel.setLocation(`/db/${this.orgName}/${this.dbName}/edit/users`);
     this.AppStateModel.showToast({
       text: `User '${this.username}' has been deleted from the database`,
       type: 'success',
       showOnPageLoad: true
     });
+    this.AppStateModel.setLocation(`/db/${this.orgName}/${this.dbName}/edit/users`);
   }
 
 }

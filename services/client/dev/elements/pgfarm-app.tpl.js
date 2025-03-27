@@ -122,7 +122,7 @@ function _renderFooter(){
                 University of California, Davis<br>
                 Davis, CA 95616
               </p>
-              <div><a href='https>//library.ucdavis.edu'>library.ucdavis.edu</a></div>
+              <div><a href='https://library.ucdavis.edu'>library.ucdavis.edu</a></div>
             </div>
             <app-build-info></app-build-info>
           </div>
