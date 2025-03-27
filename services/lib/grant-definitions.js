@@ -50,12 +50,35 @@ class GrantDefinitions {
         return JSON.parse(JSON.stringify(grant));
       }
     }
-    return {object, action: 'NONE', grant: [], roleLabel: this.roleLabels.NONE};
+    return this.getNoAccessGrant(object);
   }
 
   getRoleLabel(object, userOrPrivs) {
     const grant = this.getGrant(object, userOrPrivs);
     return grant.roleLabel;
+  }
+
+  /**
+   * @description Get the grant object for no access
+   * @param {String} object - The object type (e.g. DATABASE, SCHEMA, TABLE, FUNCTION, SEQUENCE, TYPE)
+   * @returns {Object} - The grant object for no access
+   */
+  getNoAccessGrant(object) {
+    return {object, action: 'NONE', grant: [], roleLabel: this.roleLabels.NONE};
+  }
+
+  /**
+   * @description Get all grant types for a given object
+   * @param {String} object - The object type (e.g. DATABASE, SCHEMA, TABLE, FUNCTION, SEQUENCE, TYPE)
+   * @param {Boolean} excludeNoAccess - Exclude the no access grant
+   * @returns {Array}
+   */
+  getObjectGrants(object, excludeNoAccess) {
+    let grants = this.registry.filter(grant => grant.object === object).map(grant => {return {...grant}});
+    if ( !excludeNoAccess ) {
+      grants.push(this.getNoAccessGrant(object));
+    }
+    return grants
   }
 }
 
