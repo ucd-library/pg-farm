@@ -84,7 +84,7 @@ export function render() {
             <div ?hidden=${!this.queryCtl.schema.exists()}>
               <div class='flex flex--align-center gap--small flex--wrap u-space-mb--large'>
                 <h4 class='u-space-mb--flush'>${this.schemaGrant?.roleLabel}</h4>
-                <app-icon-button basic icon='fa.solid.pen' @click=${() => console.log('todo: edit')}></app-icon-button>
+                <app-icon-button basic icon='fa.solid.pen' @click=${() => this._showEditSchemaUserModal()}></app-icon-button>
               </div>
               <admin-database-user-schema-tables-table .tables=${this.tables}></admin-database-user-schema-tables-table>
             </div>

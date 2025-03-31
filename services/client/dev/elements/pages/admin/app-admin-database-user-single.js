@@ -176,16 +176,42 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     });
   }
 
-  async _onEditUserModalAction(action, modalEle) {
-    if ( action === 'db-edit-user' ) {
-      const form = modalEle.renderRoot.querySelector('admin-instance-user-form');
-      if ( !form.reportValidity() ) return {abortModalAction: true};
-      modalEle._loading = true;
-      const r = await form.submit();
-      modalEle._loading = false;
-      form.payload = {};
-      if ( r ) this.AppStateModel.refresh();
+  _showEditSchemaUserModal() {
+    const payload = {
+      username: this.user.data.name,
+      access: this.schemaGrant.action,
     }
+    this.AppStateModel.showDialogModal({
+      title: 'Change Schema Access',
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Apply Access', value: 'db-edit-user-schema-access', color: 'secondary', disableOnLoading: true}
+      ],
+      content: html`
+        <admin-instance-user-form
+          .orgName=${this.orgName}
+          .dbName=${this.dbName}
+          .instanceName=${this.dataCtl?.db?.instance?.name}
+          operation='update-schema'
+          .payload=${payload}
+          .schema=${this.queryCtl.schema.value}
+          >
+        </admin-instance-user-form>`,
+      actionCallback: this._onEditUserModalAction
+    });
+  }
+
+  async _onEditUserModalAction(action, modalEle) {
+    if ( action === 'dismiss' ){
+      return;
+    }
+    const form = modalEle.renderRoot.querySelector('admin-instance-user-form');
+    if ( !form.reportValidity() ) return {abortModalAction: true};
+    modalEle._loading = true;
+    const r = await form.submit();
+    modalEle._loading = false;
+    form.payload = {};
+    if ( r ) this.AppStateModel.refresh();
   }
 
   _onAppDialogAction(e){

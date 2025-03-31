@@ -13,9 +13,11 @@ export function styles() {
 
 export function render() {
   const isUpdate = this.operation === 'update';
+  const isSchemaUpdate = this.operation === 'update-schema';
+  const isCreate = this.operation === 'create';
   return html`
   <form @submit=${this._onSubmit}>
-    <div class='field-container' ?hidden=${!isUpdate}>
+    <div class='field-container' ?hidden=${!isCreate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
       <input
         id=${this.idGen.get('username')}
@@ -23,11 +25,11 @@ export function render() {
         @input=${e => this._onInput('username', e.target.value)}
         required>
     </div>
-    <div class='field-container' ?hidden=${isUpdate}>
+    <div class='field-container' ?hidden=${isCreate}>
       <label>Username</label>
       <div>${this.payload.username || ''}</div>
     </div>
-    <div class='field-container'>
+    <div class='field-container' ?hidden=${isSchemaUpdate}>
       <ul class="list--reset checkbox">
         <li>
           <input
@@ -40,10 +42,14 @@ export function render() {
         </li>
       </ul>
     </div>
+    <div class='field-container' ?hidden=${!isSchemaUpdate}>
+      <label>Schema</label>
+      <div>${this.schema || ''}</div>
+    </div>
     <div class='field-container'>
-      <label>Database Access</label>
+      <label>${isSchemaUpdate ? 'Schema Access' : 'Database Access'}</label>
       <ul class="list--reset radio">
-        ${grantDefinitions.registry.filter(def => def.object === 'DATABASE').map(def => html`
+        ${grantDefinitions.getObjectGrants(isSchemaUpdate ? 'SCHEMA' : 'DATABASE', !isSchemaUpdate).map(def => html`
           <li>
             <input
               id=${this.idGen.get(`access.${def.action}`)}
