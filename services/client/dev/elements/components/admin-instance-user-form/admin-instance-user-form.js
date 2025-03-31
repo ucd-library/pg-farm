@@ -22,7 +22,7 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
       orgName: { type: String },
       dbName: { type: String },
       instanceName: { type: String },
-      payload: { state: true },
+      payload: { type: Object },
     }
   }
 
@@ -62,39 +62,77 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
   }
 
   async submit(){
-    this._loading = true;
-
     if ( this.operation === 'create' ) {
-      const opts = {
-        admin: this.payload.admin
-      }
-      const create = await this.InstanceModel.addUser(this.orgName, this.instanceName, this.payload.username, opts);
-      if ( create.state === 'error' ){
+      return await this._create();
+    } else if ( this.operation === 'update' ) {
+      return await this._update();
+    }
+    return false;
+  }
+
+  async _update(){
+    this._loading = true;
+    const errorMessage = `Unable to update user '${this.payload.username}'`;
+    const opts = {
+      type: this.payload.admin ? 'ADMIN' : 'USER'
+    }
+    const instanceUser = await this.InstanceModel.updateUser(this.orgName, this.instanceName, this.payload.username, opts);
+    if ( instanceUser.state === 'error' ){
+      this._loading = false;
+      return this.AppStateModel.showError({
+        message: errorMessage,
+        error: instanceUser.error
+      });
+    }
+    const access = await this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, '_', this.payload.username, this.payload.access);
+    const error = access.find(r => r.state === 'error');
+    if( error ) {
+      this._loading = false;
+      return this.AppStateModel.showError({
+        message: errorMessage,
+        error: error.error
+      });
+    }
+    this._loading = false;
+    this.AppStateModel.showToast({
+      type: 'success',
+      text: `User ${this.payload.username} updated`,
+      showOnPageLoad: true
+    });
+    return true;
+  }
+
+  async _create(){
+    this._loading = true;
+    const opts = {
+      admin: this.payload.admin
+    }
+    const create = await this.InstanceModel.addUser(this.orgName, this.instanceName, this.payload.username, opts);
+    if ( create.state === 'error' ){
+      this._loading = false;
+      return this.AppStateModel.showError({
+        message: 'Unable to add user',
+        error: create.error
+      });
+    }
+    if ( !this.payload.admin && this.payload.access && this.payload.access !== 'READ' ) {
+      const access = await this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, '_', this.payload.username, this.payload.access);
+      const error = access.find(r => r.state === 'error');
+      if( error ) {
         this._loading = false;
         return this.AppStateModel.showError({
-          message: 'Unable to add user',
-          error: create.error
+          message: 'Unable to set user access',
+          error: error.error
         });
       }
-      if ( !this.payload.admin && this.payload.access && this.payload.access !== 'READ' ) {
-        const access = await this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, '_', this.payload.username, this.payload.access);
-        const error = access.find(r => r.state === 'error');
-        if( error ) {
-          this._loading = false;
-          return this.AppStateModel.showError({
-            message: 'Unable to set user access',
-            error: error.error
-          });
-        }
-      }
-      this._loading = false;
-      this.AppStateModel.showToast({
-        type: 'success',
-        text: `User ${this.payload.username} added to instance ${this.instanceName}`,
-        showOnPageLoad: true
-      });
-      return true;
     }
+    this._loading = false;
+    this.AppStateModel.showToast({
+      type: 'success',
+      text: `User ${this.payload.username} added to instance ${this.instanceName}`,
+      showOnPageLoad: true
+    });
+    return true;
   }
 
   _onInput(prop, value){

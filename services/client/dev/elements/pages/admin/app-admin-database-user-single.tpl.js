@@ -47,7 +47,7 @@ export function render() {
             </div>
             <div class='flex flex--align-center gap--small flex--wrap'>
               <app-icon-button icon='fa.solid.trash' @click=${() => this._showDeleteUserModal()}></app-icon-button>
-              <app-icon-button icon='fa.solid.pen' @click=${() => console.log('todo: edit')}></app-icon-button>
+              <app-icon-button icon='fa.solid.pen' @click=${() => this._showEditUserModal()}></app-icon-button>
             </div>
           </div>
           <section ?hidden=${!this.user?.showContactSection}>

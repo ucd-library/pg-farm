@@ -12,15 +12,20 @@ export function styles() {
 }
 
 export function render() {
-return html`
+  const isUpdate = this.operation === 'update';
+  return html`
   <form @submit=${this._onSubmit}>
-    <div class='field-container'>
+    <div class='field-container' ?hidden=${!isUpdate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
       <input
         id=${this.idGen.get('username')}
         .value=${this.payload.username || ''}
         @input=${e => this._onInput('username', e.target.value)}
         required>
+    </div>
+    <div class='field-container' ?hidden=${isUpdate}>
+      <label>Username</label>
+      <div>${this.payload.username || ''}</div>
     </div>
     <div class='field-container'>
       <ul class="list--reset checkbox">

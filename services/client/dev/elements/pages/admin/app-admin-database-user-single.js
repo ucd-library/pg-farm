@@ -1,4 +1,4 @@
-import { LitElement } from 'lit';
+import { LitElement, html } from 'lit';
 import {render, styles} from "./app-admin-database-user-single.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
@@ -8,6 +8,8 @@ import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParam
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 import { deleteUserConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
+
+import '@ucd-lib/pgfarm-client/elements/components/admin-instance-user-form/admin-instance-user-form.js';
 
 export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -147,6 +149,43 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       content: deleteUserConfirmation(user),
       data: {user}
     });
+  }
+
+  _showEditUserModal() {
+    const payload = {
+      username: this.user.data.name,
+      admin: this.user.isAdmin,
+      access: this.user.databaseGrant.action,
+    };
+    this.AppStateModel.showDialogModal({
+      title: 'Edit User',
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Save Changes', value: 'db-edit-user', color: 'secondary', disableOnLoading: true}
+      ],
+      content: html`
+        <admin-instance-user-form
+          .orgName=${this.orgName}
+          .dbName=${this.dbName}
+          .instanceName=${this.dataCtl?.db?.instance?.name}
+          operation='update'
+          .payload=${payload}
+          >
+        </admin-instance-user-form>`,
+      actionCallback: this._onEditUserModalAction
+    });
+  }
+
+  async _onEditUserModalAction(action, modalEle) {
+    if ( action === 'db-edit-user' ) {
+      const form = modalEle.renderRoot.querySelector('admin-instance-user-form');
+      if ( !form.reportValidity() ) return {abortModalAction: true};
+      modalEle._loading = true;
+      const r = await form.submit();
+      modalEle._loading = false;
+      form.payload = {};
+      if ( r ) this.AppStateModel.refresh();
+    }
   }
 
   _onAppDialogAction(e){
