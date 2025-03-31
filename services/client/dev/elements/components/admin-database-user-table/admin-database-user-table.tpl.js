@@ -133,7 +133,7 @@ function _renderDesktopView(){
             </div>
             <div class='cell'>${row.item?.tableCt}</div>
             <div class='cell cell--center'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item?.user)}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._onRemoveUserButtonClick(row.item?.user)}></app-icon-button>
             </div>
           </div>
           `)}
@@ -182,7 +182,7 @@ function _renderMobileView(){
               </div>
             </div>
             <div class='cell cell--icon-top'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item?.user)}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._onRemoveUserButtonClick(row.item?.user)}></app-icon-button>
             </div>
           </div>
         `)}
@@ -204,6 +204,34 @@ function _renderUserName(row){
       <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
         ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
       </div>
+    </div>
+  `;
+}
+
+export function renderRmAccessForm(user){
+  return html`
+    <div class='u-space-mb'>Are you sure you want to remove access for <strong>${user?.name}</strong>?</div>
+    <div class='field-container'>
+      <ul class="list--reset radio">
+        <li>
+          <input
+            id=${this.idGen.get('rm-from-db--false')}
+            type='radio'
+            name=${this.idGen.get('rm-from-db')}
+            @input=${e => this.rmFromDb = false}
+            .checked=${!this.rmFromDb} />
+          <label for=${this.idGen.get('rm-from-db--false')}>Remove access to schema: <strong>${this.queryCtl.schema.value}</strong></label>
+        </li>
+        <li>
+          <input
+            id=${this.idGen.get('rm-from-db--true')}
+            type='radio'
+            name=${this.idGen.get('rm-from-db')}
+            @input=${e => this.rmFromDb = true}
+            .checked=${this.rmFromDb} />
+          <label for=${this.idGen.get('rm-from-db--true')}>Remove user from database (this will revoke all access)</label>
+        </li>
+      </ul>
     </div>
   `;
 }

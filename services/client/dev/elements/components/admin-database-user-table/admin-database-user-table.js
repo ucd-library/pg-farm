@@ -1,9 +1,12 @@
 import { LitElement } from 'lit';
-import {render, styles} from "./admin-database-user-table.tpl.js";
+import {render, styles, renderRmAccessForm} from "./admin-database-user-table.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
+import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
+import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
+import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 import { deleteUserConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
@@ -16,7 +19,8 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       bulkActions: {type: Array},
       selectedBulkAction: {type: String},
       orgName: { type: String},
-      dbName: { type: String}
+      dbName: { type: String},
+      rmFromDb: { type: Boolean }
     }
   }
 
@@ -30,8 +34,14 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.users = [];
     this._setBulkActions();
     this.selectedBulkAction = '';
+    this.rmFromDb = false;
 
     this.dataCtl = new PageDataController(this);
+    this.idGen = new IdGenerator({randomPrefix: true});
+    this.queryCtl = new QueryParamsController(this, [
+      {name: 'schema', defaultValue: ''}
+    ]);
+    this.compCtl = new AppComponentController(this);
 
     const ctlOptions = {
       searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
@@ -43,6 +53,12 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.tableCtl = new TableController(this, 'users', ctlOptions);
 
     this._injectModel('AppStateModel', 'InstanceModel');
+  }
+
+  async _onAppStateUpdate(e){
+    if ( e.page !== this.compCtl.parentPageId ) return;
+    await this.queryCtl.setFromLocation();
+    this._setBulkActions();
   }
 
   _onDbAccessFilterChange(user, value) {
@@ -66,15 +82,39 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
   }
 
   _setBulkActions() {
-    this.bulkActions = [
-      {value: 'delete', label: 'Delete User'}
+    const bulkActions = [
+      {value: 'delete', label: 'Delete user'}
     ];
+    if ( this.queryCtl?.schema?.exists?.() ){
+      bulkActions.push({value: 'rm-schema-access', label: `Remove access to "${this.queryCtl.schema.value}" schema`});
+    }
+    this.bulkActions = bulkActions;
   }
 
   _onBulkActionSelect() {
     if ( this.selectedBulkAction === 'delete' ) {
       this._showDeleteUserModal(this.tableCtl.getSelectedItems().map(user => user.user));
     }
+  }
+
+  _onRemoveUserButtonClick(user) {
+    if ( this.queryCtl?.schema.exists() ){
+      this._showRemoveAccessForm(user);
+    } else {
+      this._showDeleteUserModal(user);
+    }
+  }
+
+  _showRemoveAccessForm(user){
+    this.AppStateModel.showDialogModal({
+      title: 'Remove User Access',
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Confirm Removal', value: 'db-remove-single-user-access', color: 'secondary'}
+      ],
+      content: renderRmAccessForm.call(this, user),
+      data: {user}
+    });
   }
 
   _showDeleteUserModal(user) {
@@ -90,9 +130,17 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
   }
 
   _onAppDialogAction(e){
-    if ( e.action?.value === 'db-delete-users' ) {
+    if (
+      e.action?.value === 'db-delete-users' ||
+      (e.action?.value === 'db-remove-single-user-access' && this.rmFromDb)
+    ) {
       const users = (Array.isArray(e.data.user) ? e.data.user : [e.data.user]).map(user => user.name);
       this.deleteUsers(users);
+      return;
+    }
+    if ( e.action?.value === 'db-remove-single-user-access' ) {
+      const user = e.data.user;
+      console.log(user);
     }
   }
 

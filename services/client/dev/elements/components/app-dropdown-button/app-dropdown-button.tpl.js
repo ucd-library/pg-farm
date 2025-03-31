@@ -16,6 +16,7 @@ export function styles() {
     select {
       border: 1px solid var(--ucd-blue-60, #B0D0ED);
       font-size: inherit;
+      max-width: var(--app-dropdown-button-select-max-width, auto);
     }
     button {
       padding: .5rem 1rem;
