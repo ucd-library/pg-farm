@@ -86,7 +86,13 @@ export function render() {
                 <h4 class='u-space-mb--flush'>${this.schemaGrant?.roleLabel}</h4>
                 <app-icon-button basic icon='fa.solid.pen' @click=${() => this._showEditSchemaUserModal()}></app-icon-button>
               </div>
-              <admin-database-user-schema-tables-table .tables=${this.tables}></admin-database-user-schema-tables-table>
+              <admin-database-user-schema-tables-table
+                .tables=${this.tables}
+                .orgName=${this.orgName}
+                .dbName=${this.dbName}
+                .schema=${this.queryCtl?.schema?.value}
+                .username=${this.username}>
+              </admin-database-user-schema-tables-table>
             </div>
           </section>
         </div>
