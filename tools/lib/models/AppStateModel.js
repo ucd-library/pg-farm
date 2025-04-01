@@ -64,6 +64,7 @@ class AppStateModelImpl extends AppStateModel {
    * @param {String} opts.errors - array of errors with expected format from PageDataController
    * @param {String} opts.error - A single cork-app-utils error object if only one error
    * @param {String} opts.message - A single error message if only one error. Optional.
+   * @param {Boolean} opts.showLoginButton - Show a login button. Is automatically set to true if the error is a 401 or 403
    */
   showError(opts){
     this.store.emit(this.store.events.APP_ERROR_UPDATE, {show: true, opts});

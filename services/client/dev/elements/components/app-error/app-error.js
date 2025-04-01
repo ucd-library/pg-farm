@@ -46,7 +46,7 @@ export default class AppError extends Mixin(LitElement)
     } else if ( opts.error ) {
       this.errors = [this.formatError({errorMessage: opts.message, response: {value: opts.error}})];
     } else if ( opts.message ) {
-      this.errors = [this.formatError({errorMessage: opts.message})];
+      this.errors = [this.formatError({errorMessage: opts.message, showLoginButton: opts.showLoginButton})];
     } else {
       this.errors = [];
     }
@@ -55,7 +55,8 @@ export default class AppError extends Mixin(LitElement)
 
   setLoginButtonVisibility(){
     const badAuth = this.errors.some(error => error.statusCode === 403 || error.statusCode === 401);
-    this.showLoginButton = badAuth && !user.loggedIn;
+    const manual = this.errors.some(error => error.showLoginButton);
+    this.showLoginButton = (badAuth || manual) && !user.loggedIn;
   }
 
   hide(){
@@ -92,6 +93,10 @@ export default class AppError extends Mixin(LitElement)
     } else if ( payload.message ) {
       out.heading = payload.message;
       out.message = '';
+    }
+
+    if ( error.showLoginButton ){
+      out.showLoginButton = true;
     }
 
     return out;
