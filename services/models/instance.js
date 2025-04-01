@@ -5,6 +5,7 @@ import kubectl from '../lib/kubectl.js';
 import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
+import { getInstanceResources, getMaxPriority } from '../lib/instance-resources.js';
 
 class Instance {
 
@@ -263,8 +264,31 @@ class Instance {
       return;
     }
 
-    logger.info('Apply k8s config for instance', instNameOrId, orgNameOrId);
+    let instance = await this.get(instNameOrId, orgNameOrId);
+    let maxPriority = await getMaxPriority(instance.availability);
+    client.updateInstancePriority(instance.instance_id, instance.organization_id, maxPriority);
 
+    await this.apply(instNameOrId, orgNameOrId);
+
+    if( opts.isRestoring ) {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RESTORING);
+    } else {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
+    }
+
+    return {pgResult, pgServiceResult};
+  }
+
+  /**
+   * @method apply
+   * @description Apply the k8s config for the instance from the current
+   * instance state.
+   * 
+   * @param {String} instNameOrId 
+   * @param {String} orgNameOrId 
+   * @returns {Promise<Object>}
+   */
+  async apply(instNameOrId, orgNameOrId) {
     let instance = await this.get(instNameOrId, orgNameOrId);
     let customProps = await client.getInstanceConfig(instNameOrId, orgNameOrId);
     let instanceImage = customProps.image || config.pgInstance.image;
@@ -292,6 +316,7 @@ class Instance {
     let container = template.spec.containers[0];
     container.image = instanceImage;
     container.volumeMounts.find(i => i.mountPath == '/var/lib/postgresql/data').name = hostname+'-ps';
+    container.resources = await getInstanceResources(instance);
 
     // helper container
     container = template.spec.containers[1];
@@ -332,14 +357,8 @@ class Instance {
     });
     logger.info('Applied instance k8s service config', hostname);
 
-    if( opts.isRestoring ) {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RESTORING);
-    } else {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
-    }
-
     return {pgResult, pgServiceResult};
-  }
+  }  
 
   /**
    * @method stop

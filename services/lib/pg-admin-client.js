@@ -254,6 +254,14 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
+  async updateInstancePriority(nameOrId, orgNameOrId, priority) {
+    return client.query(`
+      UPDATE ${config.adminDb.tables.INSTANCE}
+      SET priority_state = $1
+      WHERE instance_id = ${this.schema}.get_instance_id($2, $3)
+    `, [priority, nameOrId, orgNameOrId]);
+  }
+
   /**
    * @method getInstanceDatabases
    * @description get all databases for an instance
