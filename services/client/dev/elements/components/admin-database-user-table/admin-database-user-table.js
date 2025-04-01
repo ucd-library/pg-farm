@@ -1,15 +1,27 @@
 import { LitElement } from 'lit';
 import {render, styles, renderRmAccessForm} from "./admin-database-user-table.tpl.js";
+
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
+
 import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
-import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
-import { deleteUserConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
+import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
+import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
+
+/**
+ * @description Admin Database User Table
+ * @property {String} orgName - The name of the organization
+ * @property {String} dbName - The name of the database
+ * @property {Array} users - The list of users to display
+ * @property {Array} bulkActions - The list of bulk actions available
+ * @property {String} selectedBulkAction - The selected bulk action
+ * @property {Boolean} rmFromDb - Flag to indicate if the user should be removed from the database or just the schema
+ */
 export default class AdminDatabaseUserTable extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 
@@ -52,7 +64,7 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
 
-    this._injectModel('AppStateModel', 'InstanceModel');
+    this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel');
   }
 
   async _onAppStateUpdate(e){
@@ -61,6 +73,12 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this._setBulkActions();
   }
 
+  /**
+   * @description Callback to determine whether to show user based on db access filter
+   * @param {Object} user - The user object from this.users array
+   * @param {String} value - The value of the filter
+   * @returns {Boolean} - True if the user should be shown, false otherwise
+   */
   _onDbAccessFilterChange(user, value) {
     if ( !value ) return true;
     if ( value === 'ADMIN') {
@@ -73,6 +91,12 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
   }
 
+  /**
+   * @description Callback to determine whether to show user based on schema access filter
+   * @param {Object} user - The user object from this.users array
+   * @param {String} value - The value of the filter
+   * @returns {Boolean} - True if the user should be shown, false otherwise
+   */
   _onSchemaAccessFilterChange(user, value) {
     if ( !value ) return true;
     const isThisSchema = value === user?.schemaRole?.grant?.action;
@@ -81,6 +105,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     return isThisSchema || isAnySchema;
   }
 
+  /**
+   * @description Sets the bulk actions available for the table based on state of component
+   */
   _setBulkActions() {
     const bulkActions = [
       {value: 'delete', label: 'Delete user'}
@@ -91,12 +118,33 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.bulkActions = bulkActions;
   }
 
+  /**
+   * @description Callback for when a bulk action is selected by the user
+   */
   _onBulkActionSelect() {
     if ( this.selectedBulkAction === 'delete' ) {
       this._showDeleteUserModal(this.tableCtl.getSelectedItems().map(user => user.user));
+      return;
+    }
+    if ( this.selectedBulkAction === 'rm-schema-access' ) {
+      const users = this.tableCtl.getSelectedItems().map(user => user.user);
+      this.AppStateModel.showDialogModal({
+        title: `Remove User Schema Access`,
+        actions: [
+          {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+          {text: 'Confirm Removal', value: 'db-rm-schema-access', color: 'secondary'}
+        ],
+        content: removeSchemaAccess(users, this.queryCtl.schema.value),
+        data: {user: users}
+      });
+      return;
     }
   }
 
+  /**
+   * @description Callback for when the 'remove' button is clicked for a user
+   * @param {Object} user - The user object to remove
+   */
   _onRemoveUserButtonClick(user) {
     if ( this.queryCtl?.schema.exists() ){
       this._showRemoveAccessForm(user);
@@ -105,6 +153,10 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
   }
 
+  /**
+   * @description Shows the modal for removing access to a schema or the database. User must choose one and confirm.
+   * @param {Object} user - The user object to remove access for
+   */
   _showRemoveAccessForm(user){
     this.AppStateModel.showDialogModal({
       title: 'Remove User Access',
@@ -117,6 +169,10 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     });
   }
 
+  /**
+   * @description Shows the confirmation modal for deleting a user or users from the database
+   * @param {Object|Array} user - The user object or array of user objects to delete
+   */
   _showDeleteUserModal(user) {
     this.AppStateModel.showDialogModal({
       title: `Delete User`,
@@ -129,6 +185,13 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     });
   }
 
+  /**
+   * @description Callback for when any application dialog action is triggered
+   * @param {Object} e - The event object
+   * @param {Object} e.action - The action object specified when launching the dialog
+   * @param {Object} e.data - The data object specified when launching the dialog
+   * @returns
+   */
   _onAppDialogAction(e){
     if (
       e.action?.value === 'db-delete-users' ||
@@ -140,11 +203,46 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
     if ( e.action?.value === 'db-remove-single-user-access' ) {
       const user = e.data.user;
-      console.log(user);
+      const schema = this.queryCtl.schema.value;
+      this.removeSchemaAccess([user.name], schema);
+      return;
+    }
+    if ( e.action?.value === 'db-rm-schema-access' ) {
+      const users = (Array.isArray(e.data.user) ? e.data.user : [e.data.user]).map(user => user.name);
+      const schema = this.queryCtl.schema.value;
+      this.removeSchemaAccess(users, schema);
+      return;
     }
   }
 
+  /**
+   * @description Removes schema access for a user or users
+   * @param {Array} usernames - The array of usernames to remove access for
+   * @param {String} schema - The schema to remove access from
+   * @returns
+   */
+  async removeSchemaAccess(usernames, schema) {
+    this.AppStateModel.showLoading();
+    const r = await this.dataCtl.batchGet(usernames.map(username => ({
+      func: () => this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, schema, username, 'NONE'),
+      errorMessage: `Unable to remove access to schema '${schema}' for user '${username}'`
+    })), {ignoreLoading: true});
+    if ( !r ) return;
+    const userText = usernames.length === 1 ? `User '${usernames[0]} has'` : `${usernames.length} Users have`;
+    this.AppStateModel.showToast({
+      text: `${userText} been removed from schema '${schema}'`,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.tableCtl.reset();
+    this.AppStateModel.refresh();
+  }
 
+
+  /**
+   * @description Deletes users from the database
+   * @param {Array} usernames - The array of usernames to delete
+   */
   async deleteUsers(usernames) {
     this.AppStateModel.showLoading();
     const r = await this.dataCtl.batchGet(usernames.map(username => ({

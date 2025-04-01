@@ -26,6 +26,7 @@ export function styles() {
       display: flex;
       gap: .5rem;
       align-items: center;
+      flex-wrap: wrap;
     }
     admin-database-user-table .user-name-container a {
       font-weight: 700;
@@ -193,11 +194,15 @@ function _renderMobileView(){
 }
 
 function _renderUserName(row){
+  let href = `${window.location.pathname}/${row.item?.user?.name}`;
+  if ( this.queryCtl?.schema?.exists() ){
+    href += `?schema=${this.queryCtl.schema.value}`;
+  }
   return html`
     <div>
       <div class='user-name-container'>
         <div>
-          <a href='${window.location.pathname}/${row.item?.user?.name}'>${row.item?.user?.name}</a>
+          <a href=${href}>${row.item?.user?.name}</a>
         </div>
         <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
       </div>
