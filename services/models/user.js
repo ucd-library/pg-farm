@@ -125,12 +125,20 @@ class User {
   }
 
   async pgFarmUserExists(username) {
+    const res = await this.getPgFarmUser(username);
+    return res ? true : false;
+  }
+
+  /**
+   * @description Gets user object without being tied to an instance or database
+  */
+  async getPgFarmUser(username) {
     const res = await client.query(
       `SELECT * FROM ${config.adminDb.tables.USER}
       WHERE user_id = ${this.schema}.get_user_id($1)`,
       [username]
     );
-    return res.rows.length > 0;
+    return res.rows[0];
   }
 
   async delete(nameOrId, orgNameOrId=null, username) {
