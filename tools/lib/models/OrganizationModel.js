@@ -37,6 +37,31 @@ class OrganizationModel extends BaseModel {
     return `${this.service.basePath}/${org}/logo`;
   }
 
+  /**
+   * @method search
+   * @descsription search for databases.  Returns object with id and request promise.
+   * When the request promise resolves, use getSearchResult(id) to get the result.  The
+   * id is provided in the returned object.
+   *
+   * @param {Object} opts
+   *
+   * @returns {Object}
+   **/
+  search(opts={}) {
+    return this.service.search(opts);
+  }
+
+  /**
+   * @method getSearchResult
+   * @description get search result by id retuned from search
+   *
+   * @param {String} id
+   * @returns {Object}
+   */
+  getSearchResult(id) {
+    return this.store.data.search.get(id);
+  }
+
 }
 
 const model = new OrganizationModel();

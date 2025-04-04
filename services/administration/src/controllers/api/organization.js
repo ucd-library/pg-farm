@@ -6,6 +6,24 @@ import crypto from 'crypto';
 
 const router = Router();
 
+router.get('/search', search);
+router.post('/search', search);
+async function search(req, res) {
+  try {
+    let input = Object.assign({}, req.query, req.body);
+    let opts = {};
+
+    if( input.onlyMine && req.user ) {
+      opts.user = req.user.id;
+    }
+
+    let result = await organization.search(opts);
+    return res.status(200).json(result);
+  } catch(e) {
+    handleError(res, e);
+  }
+}
+
 router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
     let org = await organization.create(req.body.title, req.body);

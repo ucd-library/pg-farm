@@ -1,5 +1,6 @@
 import logger from '../lib/logger.js';
 import client from '../lib/pg-admin-client.js';
+import config from '../lib/config.js';
 
 class OrganizationModel {
 
@@ -30,6 +31,25 @@ class OrganizationModel {
     } catch(e) {}
 
     return false;
+  }
+
+  async search(opts){
+    const columns = this.API_FIELDS.map(col => `org.${col}`).join(', ');
+    let sql = `
+      SELECT ${columns}
+      from ${config.adminDb.views.ORGANIZATION_DATABASE_COUNT} org
+    `;
+
+    let results = await client.query(sql);
+    const items = results.rows.map(row => {
+      row.database_count = parseInt(row.database_count);
+      return row;
+    });
+    return {
+      items : items,
+      total : results.rowCount,
+      query : opts
+    }
   }
 
   /**

@@ -54,10 +54,14 @@ function register(app) {
   }));
 
   app.get(config.oidc.loginPath, (req, res) => {
-    const urlParams = new URLSearchParams({
-      redirect: req.query.redirect,
-      'set-cookie': req.query['set-cookie']
-    }).toString();
+    let urlParams = new URLSearchParams();
+    if ( req.query.redirect ){
+      urlParams.set('redirect', req.query.redirect);
+    }
+    if ( req.query['set-cookie'] ){
+      urlParams.set('set-cookie', req.query['set-cookie']);
+    }
+    urlParams = urlParams.toString();
 
     res.oidc.login({
       returnTo: '/auth/success'+(urlParams ? `?${urlParams}` : '')

@@ -12,14 +12,16 @@ class OrganizationStore extends BaseStore {
       metadata : new LruStore({name: 'organization.metadata'}),
       update : new LruStore({name: 'organization.update'}),
       users : new LruStore({name: 'organization.users'}),
-      isAdmin : new LruStore({name: 'organization.isAdmin'})
+      isAdmin : new LruStore({name: 'organization.isAdmin'}),
+      search : new LruStore({name: 'organization.search', max: 20}),
     };
     this.events = {
       ORGANIZATION_CREATE_UPDATE : 'organization-create-update',
       ORGANIZATION_METADATA_UPDATE : 'organization-metadata-update',
       ORGANIZATION_UPDATE_UPDATE : 'organization-update-update',
       ORGANIZATION_USERS_UPDATE : 'organization-users-update',
-      ORGANIZATION_IS_ADMIN_UPDATE : 'organization-is-admin-update'
+      ORGANIZATION_IS_ADMIN_UPDATE : 'organization-is-admin-update',
+      ORGANIZATION_SEARCH_UPDATE : 'organization-search-update'
     };
   }
 
@@ -60,6 +62,14 @@ class OrganizationStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.isAdmin,
       this.events.ORGANIZATION_IS_ADMIN_UPDATE
+    );
+  }
+
+  onSearchUpdate(payload) {
+    this._set(
+      payload,
+      this.data.search,
+      this.events.ORGANIZATION_SEARCH_UPDATE
     );
   }
 
