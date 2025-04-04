@@ -14,7 +14,7 @@ async function search(req, res) {
     let opts = {};
 
     if( input.onlyMine && req.user ) {
-      opts.user = req.user.id;
+      opts.user = req.user.username || req.user.preferred_username;
     }
 
     let result = await organization.search(opts);

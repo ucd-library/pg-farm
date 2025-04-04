@@ -35,13 +35,29 @@ class OrganizationModel {
 
   async search(opts){
     const columns = this.API_FIELDS.map(col => `org.${col}`).join(', ');
+
+    const params = [];
+    if (opts?.user ){
+      params.push(opts.user);
+    }
+
+
     let sql = `
       SELECT ${columns}
       from ${config.adminDb.views.ORGANIZATION_DATABASE_COUNT} org
+      WHERE 1=1
+      ${opts?.user ? `
+        AND EXISTS (
+          SELECT 1
+          FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS} idu
+          WHERE idu.organization_id = org.organization_id
+            AND idu.username = $1
+        )
+        ` : ''}
       ORDER BY org.title
     `;
 
-    let results = await client.query(sql);
+    let results = await client.query(sql , params);
     const items = results.rows.map(row => {
       row.database_count = parseInt(row.database_count);
       return row;

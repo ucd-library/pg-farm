@@ -12,6 +12,8 @@ export default class AppAdminUserProfile extends Mixin(LitElement)
     return {
       pageId: { type: String, attribute: 'page-id' },
       displayName: { type: String },
+      orgs: { type: Array },
+      totalOrgs: { type: Number }
     }
   }
 
@@ -24,8 +26,10 @@ export default class AppAdminUserProfile extends Mixin(LitElement)
     this.render = render.bind(this);
     this.dataCtl = new PageDataController(this);
     this.displayName = '';
+    this.orgs = [];
+    this.totalOrgs = 0;
 
-    this._injectModel('AppStateModel', 'UserModel');
+    this._injectModel('AppStateModel', 'UserModel', 'OrganizationModel');
   }
 
   async _onAppStateUpdate(e){
@@ -36,6 +40,12 @@ export default class AppAdminUserProfile extends Mixin(LitElement)
         request: this.UserModel.getMe(),
         ctlProp: 'me',
         errorMessage: 'Unable to load user profile'
+      },
+      {
+        request: this.OrganizationModel.search({onlyMine: true}),
+        hostCallback: '_onOrgFetchSuccess',
+        returnedResponse: 'request',
+        errorMessage: 'Unable to load your organizations'
       }
 
     ], {ignoreLoading: true});
@@ -45,6 +55,13 @@ export default class AppAdminUserProfile extends Mixin(LitElement)
       this.dataCtl.me.username;
 
     this.AppStateModel.hideLoading();
+  }
+
+  _onOrgFetchSuccess(e) {
+    const data = this.OrganizationModel.getSearchResult(e.id).payload;
+    this.totalOrgs = data.total;
+    this.orgs = data.items;
+    console.log('organizations', this.orgs);
   }
 
 }

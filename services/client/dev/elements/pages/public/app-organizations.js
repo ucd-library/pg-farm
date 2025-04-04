@@ -52,7 +52,6 @@ export default class AppOrganizations extends Mixin(LitElement)
     const data = this.OrganizationModel.getSearchResult(e.id).payload;
     this.total = data.total;
     this.orgs = data.items;
-    console.log('organizations', this.orgs);
   }
 
 }

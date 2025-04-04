@@ -6,7 +6,8 @@ export default class AppNoResults extends LitElement {
   static get properties() {
     return {
       text: { type: String },
-      subtext: { type: String }
+      subtext: { type: String },
+      hideSubtext: { type: Boolean, attribute: 'hide-subtext' },
     }
   }
 
