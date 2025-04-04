@@ -38,6 +38,7 @@ class OrganizationModel {
     let sql = `
       SELECT ${columns}
       from ${config.adminDb.views.ORGANIZATION_DATABASE_COUNT} org
+      ORDER BY org.title
     `;
 
     let results = await client.query(sql);

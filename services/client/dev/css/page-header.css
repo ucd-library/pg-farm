@@ -12,6 +12,7 @@
 .page-header__wrapper--flex {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
 }
 .page-header__content {
   flex-grow: 1;
