@@ -208,6 +208,7 @@ const config = {
       get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' },
       get DATABASE_EVENT() { return config.adminDb.schema+'.database_last_event_view' },
       get ORGANIZATION_USER() { return config.adminDb.schema+'.organization_user' },
+      get ORGANIZATION_DATABASE_COUNT() { return config.adminDb.schema+'.organization_with_db_count' }
     }
   },
 

@@ -5,10 +5,21 @@ class OrganizationModel {
 
   constructor() {
     this.METADATA_FIELDS = ['title', 'url', 'description', 'logo', 'email', 'phone'];
+    this.API_FIELDS = [
+      'organization_id', 'name', 'title', 'description', 'url',
+      'description', 'email', 'phone', 'created_at', 'updated_at',
+      'logo_file_type', 'database_count'
+    ];
   }
 
   async get(nameOrId, columns) {
+    if ( !columns ) {
+      columns = this.API_FIELDS;
+    }
     const org = await client.getOrganization(nameOrId, columns);
+    if ( org.database_count !== undefined ) {
+      org.database_count = parseInt(org.database_count);
+    }
     return org;
   }
 
