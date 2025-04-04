@@ -75,9 +75,20 @@ class PgFarmAdminClient {
    * @param {String} nameOrId organization name or ID
    * @returns {Promise<Object>}
    */
-  async getOrganization(nameOrId) {
+  async getOrganization(nameOrId, columns) {
+    if ( !columns ) {
+      columns = [
+        'organization_id', 'name', 'title', 'description', 'url',
+        'description', 'email', 'phone', 'created_at', 'updated_at',
+        'logo_file_type'
+      ];
+    }
+    if ( Array.isArray(columns) ) {
+      columns = columns.join(', ');
+    }
+
     let resp = await client.query(`
-      SELECT * FROM ${config.adminDb.tables.ORGANIZATION}
+      SELECT ${columns} FROM ${config.adminDb.tables.ORGANIZATION}
       WHERE organization_id = ${this.schema}.get_organization_id($1)
     `, [nameOrId]);
 

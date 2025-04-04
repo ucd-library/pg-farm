@@ -7,12 +7,8 @@ class OrganizationModel {
     this.METADATA_FIELDS = ['title', 'url', 'description', 'logo', 'email', 'phone'];
   }
 
-  async get(nameOrId) {
-    const org = await client.getOrganization(nameOrId);
-    if ( org?.logo ){
-      org.logo = `data:${org['logo_file_type']};base64,${org.logo.toString('base64')}`;
-    }
-    delete org['logo_file_type'];
+  async get(nameOrId, columns) {
+    const org = await client.getOrganization(nameOrId, columns);
     return org;
   }
 

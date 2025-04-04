@@ -60,11 +60,13 @@ return html`
           </a>
         </div>
       </div>
-      <div ?hidden=${!this.dataCtl.org?.logo}>
-        <div class='page-header__image'>
-          <img src='${this.dataCtl.org?.logo}' alt='Organization logo'>
+      ${this.dataCtl.org?.logo_file_type ? html`
+        <div>
+          <div class='page-header__image'>
+            <img src='${this.OrganizationModel.getLogoUrl(this.orgName)}?v=${this.dataCtl.org?.updated_at}' alt=''>
+          </div>
         </div>
-      </div>
+        ` : html``}
       <div ?hidden=${!this.dataCtl.isAdmin}>
         <app-icon-button icon='fa.solid.pen' @click=${this.showEditModal}></app-icon-button>
       </div>

@@ -2,6 +2,7 @@ import {Router} from 'express';
 import {organization} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -73,6 +74,46 @@ router.patch(
 
 router.get('/:organization/is-admin', keycloak.protect('organization-admin'), async (req, res) => {
   return res.json({isAdmin: true});
+});
+
+router.get('/:organization/logo', async (req, res) => {
+  try {
+    let org = await organization.get(req.params.organization, ['logo_file_type', 'logo', 'updated_at', 'name']);
+
+    if (!org.logo) {
+      res.status(404).send('Not found');
+      return;
+    }
+
+    // Ensure file type is valid
+    const fileType = org.logo_file_type || 'image/png';
+    const fileExtension = fileType.split('/').pop() || 'png';
+
+    // File name
+    const fileName = `${org.name ? org.name + '-logo' : 'logo'}.${fileExtension}`;
+
+    // Compute ETag as a hash of the file contents
+    const eTag = crypto.createHash('md5').update(org.logo).digest('hex');
+
+    // Handle caching
+    res.set('Content-Type', fileType);
+    res.set('Content-Length', Buffer.byteLength(org.logo));
+    res.set('Accept-Ranges', 'bytes');
+    res.set('Content-Disposition', `inline; filename="${fileName}"`);
+    res.set('Cache-Control', 'public, max-age=31557600');
+    res.set('Last-Modified', new Date(org.updated_at).toUTCString());
+    res.set('ETag', eTag);
+
+    // Handle conditional caching
+    if (req.headers['if-none-match'] === eTag) {
+      res.status(304).end();
+      return;
+    }
+
+    res.status(200).send(Buffer.from(org.logo));
+  } catch (e) {
+    res.status(404).send('Not found');
+  }
 });
 
 

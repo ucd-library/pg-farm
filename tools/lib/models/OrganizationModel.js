@@ -33,6 +33,10 @@ class OrganizationModel extends BaseModel {
     return this.service.isAdmin(org);
   }
 
+  getLogoUrl(org){
+    return `${this.service.basePath}/${org}/logo`;
+  }
+
 }
 
 const model = new OrganizationModel();

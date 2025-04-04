@@ -6,6 +6,7 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
+import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 
 import '@ucd-lib/pgfarm-client/elements/components/admin-org-metadata-form/admin-org-metadata-form.js';
 
@@ -106,7 +107,19 @@ export default class AppOrganization extends Mixin(LitElement)
     this.requestUpdate();
   }
 
-  showEditModal() {
+  async showEditModal() {
+    if ( !Object.keys(this.dataCtl.org).includes('logo') ){
+      const response = await fetch(this.OrganizationModel.getLogoUrl(this.orgName));
+      if ( response.status === 404 ) {
+        this.dataCtl.org.logo = null;
+      } else if ( !response.ok ) {
+        this.AppStateModel.showError({message: 'Unable to load logo'});
+        return;
+      } else {
+        const blob = await response.blob();
+        this.dataCtl.org.logo = await blobUtils.toBase64(blob);
+      }
+    }
     this.AppStateModel.showDialogModal({
       title: `Edit Organization: ${this.dataCtl.org?.title}`,
       actions: [
