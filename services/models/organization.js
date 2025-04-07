@@ -49,9 +49,11 @@ class OrganizationModel {
       ${opts?.user ? `
         AND EXISTS (
           SELECT 1
-          FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS} idu
-          WHERE idu.organization_id = org.organization_id
-            AND idu.username = $1
+          FROM ${config.adminDb.tables.INSTANCE_USER} iu
+          JOIN ${config.adminDb.tables.INSTANCE} i ON i.instance_id = iu.instance_id
+          JOIN ${config.adminDb.tables.USER} u ON u.user_id = iu.user_id
+          WHERE i.organization_id = org.organization_id
+            AND u.username = $1
         )
         ` : ''}
       ORDER BY org.title
