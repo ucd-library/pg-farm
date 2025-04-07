@@ -17,6 +17,10 @@ class UserModel extends BaseModel {
     return this.service.getMe();
   }
 
+  myDatabases(org) {
+    return this.service.myDatabases(org);
+  }
+
 }
 
 const model = new UserModel();

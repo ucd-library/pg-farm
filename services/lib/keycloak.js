@@ -309,7 +309,7 @@ class KeycloakUtils {
     return res.status(403).send('Unauthorized');
   }
 
-  _protectOrganization(req, res, next, types=['ADMIN']) {
+  async _protectOrganization(req, res, next, types=['ADMIN']) {
     if( !req.user ) return res.status(403).send('Unauthorized');
 
     if( req.user.roles.includes('admin') ) {
@@ -319,7 +319,7 @@ class KeycloakUtils {
     let organization = req.params.organization;
 
     try {
-      let orgUser = adminClient.getOrganizationUser(req.user.username, organization);
+      let orgUser = await adminClient.getOrganizationUser(req.user.username, organization);
       if( types.includes(orgUser?.user_type))  {
         return next();
       }
@@ -330,7 +330,7 @@ class KeycloakUtils {
     return res.status(403).send('Unauthorized');
   }
 
-  _protectInstance(req, res, next, types=['ADMIN']) {
+ async  _protectInstance(req, res, next, types=['ADMIN']) {
     if( !req.user ) return res.status(403).send('Unauthorized');
 
     if( req.user.roles.includes('admin') ) {
@@ -342,7 +342,7 @@ class KeycloakUtils {
     if( organization === '_' ) organization = null;
 
     try {
-      let instUser = adminClient.getInstanceUser(nameOrId, organization, req.user.username);
+      let instUser = await adminClient.getInstanceUser(nameOrId, organization, req.user.username);
       if( types.includes(instUser?.user_type))  {
         return next();
       }

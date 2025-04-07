@@ -26,16 +26,10 @@ export function styles() {
     app-organization .search-form-wrapper .dd-wrapper {
       max-width: 200px;
     }
-    app-organization .teasers .edit-button {
-      display: none;
-    }
     app-organization .is-admin .teasers {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 1fr 55px;
       gap: 1rem;
-    }
-    app-organization .is-admin .teasers .edit-button {
-      display: block;
     }
   `;
 
@@ -73,7 +67,7 @@ return html`
 
     </div>
   </div>
-  <div class='l-container--narrow-desktop u-space-mt--large ${this.dataCtl.isAdmin ? 'is-admin' : ''}'>
+  <div class='l-container--narrow-desktop u-space-mt--large ${this.dataCtl.isAdmin || this.dataCtl.adminDbs?.length ? 'is-admin' : ''}'>
     <div class='search-form-wrapper' ?hidden=${!(this.databaseTotal > this.queryCtl.limit.getProperty() || this.queryCtl.text.exists())}>
       <app-search-input
         query-param="text"
@@ -122,11 +116,14 @@ return html`
 
 function _renderEditDbButton(database){
   return html`
-    <div class='edit-button'>
+    <div>
+    <div class='edit-button' ?hidden=${!(this.dataCtl.isAdmin || this.isDbAdmin(database))}>
       <app-icon-button
         icon='fa.solid.gear'
         href='/db/${database?.organization?.name || '_'}/${database?.name || ''}/edit'>
       </app-icon-button>
     </div>
+    </div>
+
   `;
 }

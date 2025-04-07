@@ -1,4 +1,5 @@
 import {BaseStore, LruStore} from '@ucd-lib/cork-app-utils';
+import payloadUtils from '../payload.js';
 
 class UserStore extends BaseStore {
 
@@ -6,10 +7,12 @@ class UserStore extends BaseStore {
     super();
 
     this.data = {
-      me: new LruStore({name: 'user.me'})
+      me: new LruStore({name: 'user.me'}),
+      myDatabases: new LruStore({name: 'user.myDatabases'})
     };
     this.events = {
-      USER_ME_UPDATE : 'user-me-update'
+      USER_ME_UPDATE : 'user-me-update',
+      USER_MY_DATABASES_UPDATE : 'user-my-databases-update'
     };
   }
 
@@ -18,6 +21,14 @@ class UserStore extends BaseStore {
       {id: 'me', ...payload},
       this.data.me,
       this.events.USER_ME_UPDATE
+    );
+  }
+
+  onMyDatabasesUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.myDatabases,
+      this.events.USER_MY_DATABASES_UPDATE
     );
   }
 

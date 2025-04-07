@@ -8,6 +8,8 @@ import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParam
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 
+import user from '@ucd-lib/pgfarm-client/utils/user.js';
+
 import '@ucd-lib/pgfarm-client/elements/components/admin-org-metadata-form/admin-org-metadata-form.js';
 
 export default class AppOrganization extends Mixin(LitElement)
@@ -43,7 +45,7 @@ export default class AppOrganization extends Mixin(LitElement)
       {name: 'offset', defaultValue: 0, type: 'number'}
     ]);
 
-    this._injectModel('AppStateModel', 'OrganizationModel', 'DatabaseModel');
+    this._injectModel('AppStateModel', 'OrganizationModel', 'DatabaseModel', 'UserModel');
   }
 
   /**
@@ -55,7 +57,10 @@ export default class AppOrganization extends Mixin(LitElement)
     if ( e.page !== this.pageId ) return;
     await this.queryCtl.setFromLocation();
     this.orgName = e.location?.path?.[1] || '';
+
+    // reset data
     this.dataCtl.isAdmin = false;
+    this.dataCtl.adminDbs = [];
 
     // set up database search query
     const searchOpts = {
@@ -70,8 +75,8 @@ export default class AppOrganization extends Mixin(LitElement)
       delete searchOpts.excludeFeatured;
     }
 
-    // get data
-    await this.dataCtl.get([
+    // get public data
+    let r = await this.dataCtl.get([
       {
         request: this.OrganizationModel.get(this.orgName),
         ctlProp: 'org',
@@ -87,13 +92,30 @@ export default class AppOrganization extends Mixin(LitElement)
         hostCallback: '_onSearchSuccess',
         returnedResponse: 'request',
         errorMessage: 'Unable to load organization databases'
-      },
+      }
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+    if ( !user.loggedIn ){
+      this.AppStateModel.hideLoading();
+      return;
+    }
+
+    // if user is logged in, check if they are admin for any of the org's databases
+    // so that we can show an edit button
+    r = await this.dataCtl.get([
       {
         request: this.OrganizationModel.isAdmin(this.orgName),
         ignoreError: true,
         hostCallback: '_onAdminCheck'
+      },
+      {
+        request: this.UserModel.myDatabases(this.orgName),
+        hostCallback: '_onOwnDbFetch',
+        errorMessage: 'Unable to load your databases'
       }
-    ]);
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+    this.AppStateModel.hideLoading();
   }
 
   _onSearchSuccess(e) {
@@ -105,6 +127,15 @@ export default class AppOrganization extends Mixin(LitElement)
   _onAdminCheck(e){
     this.dataCtl.isAdmin = e.isAdmin;
     this.requestUpdate();
+  }
+
+  _onOwnDbFetch(e){
+    this.dataCtl.adminDbs = e.filter(db => db.userType === 'ADMIN');
+    this.requestUpdate();
+  }
+
+  isDbAdmin(db){
+    return this.dataCtl.adminDbs.find(d => d.databaseId === db.id) ? true : false;
   }
 
   async showEditModal() {

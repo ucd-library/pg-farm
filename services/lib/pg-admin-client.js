@@ -696,10 +696,18 @@ class PgFarmAdminClient {
 
   async getDatabases(opts={}) {
     let username = opts.username || config.pgInstance.publicRole.username;
+    const params = [username];
+
+    if ( opts.organization ) {
+      params.push(opts.organization);
+    }
 
     let resp = await client.query(
-      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS} WHERE username = $1`,
-      [username]
+      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
+        WHERE username = $1
+        ${opts.organization ? `AND organization_id = ${this.schema}.get_organization_id($2)` : ''}
+        `,
+        params
     );
 
     return resp.rows;
