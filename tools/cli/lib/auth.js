@@ -23,6 +23,10 @@ class Auth {
   login(opts) {
     opts.authUrl = config.host + config.loginPath;
 
+    if( opts.forceRemoteCert ) {
+      this.ROOT_CERT = this.PG_FARM_PEM;
+    }
+
     if( opts.headless ) {
       this.headlessLogin(opts);
       return;
@@ -73,11 +77,6 @@ class Auth {
 
     saveConfig();
 
-    // for windows, we need to use the system cert store
-    if( this.ROOT_CERT !== 'system' ) {
-      await this.getPemFile();
-    }
-
     this.updateService();
   }
 
@@ -97,7 +96,12 @@ class Auth {
     fs.writeFileSync(this.PG_FARM_PEM, pemContent);
   }
 
-  updateService() {
+  async updateService() {
+    // for windows, we need to use the system cert store
+    if( this.ROOT_CERT !== 'system' ) {
+      await this.getPemFile();
+    }
+
     let pgService = {};
     if( fs.existsSync(this.PG_SERVICE_FILE) ) {
       pgService = init.read(this.PG_SERVICE_FILE);
