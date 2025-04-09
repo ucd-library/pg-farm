@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import auth from './controllers/auth/index.js';
 import api from './controllers/api.js';
+import wellKnown from './controllers/well-known.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import keycloak from '../../lib/keycloak.js';
@@ -17,6 +18,8 @@ app.use(logReqMiddleware(logger));
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(keycloak.setUser);
+
+app.use('/.well-known', wellKnown);
 
 auth.register(app);
 

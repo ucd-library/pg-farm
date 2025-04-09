@@ -11,7 +11,13 @@ class Auth {
 
   constructor() {
     this.PG_SERVICE_FILE = path.join(os.homedir(), '.pg_service.conf');
+    this.PG_FARM_PEM = path.join(os.homedir(), '.pgfarm.pem');
     this.PG_SERVICE_NAME = 'pgfarm'
+
+    this.ROOT_CERT = 'system';
+    if (process.platform === 'win32' && !(config.host || '').includes('localhost')) {
+      this.ROOT_CERT = this.PG_FARM_PEM;
+    }
   }
 
   login(opts) {
@@ -67,7 +73,28 @@ class Auth {
 
     saveConfig();
 
+    // for windows, we need to use the system cert store
+    if( this.ROOT_CERT !== 'system' ) {
+      await this.getPemFile();
+    }
+
     this.updateService();
+  }
+
+  async getPemFile() {
+    const pemResponse = await fetch(`${config.host}/.well-known/ca-chain.pem`, {
+      headers: {
+        Authorization: `Bearer ${config.token}`
+      }
+    });
+
+    if (pemResponse.status !== 200) {
+      console.error('Failed to fetch PEM file', await pemResponse.text());
+      process.exit(1);
+    }
+
+    const pemContent = await pemResponse.text();
+    fs.writeFileSync(this.PG_FARM_PEM, pemContent);
   }
 
   updateService() {
@@ -97,7 +124,7 @@ class Auth {
           port : 5432,
           user : pgService[serviceName].username || username,
           sslmode: 'verify-full',
-          sslrootcert: 'system',
+          sslrootcert: this.ROOT_CERT,
           password : config.tokenHash
         });
       }
@@ -109,7 +136,7 @@ class Auth {
         port : 5432,
         user : username,
         sslmode: 'verify-full',
-        sslrootcert: 'system',
+        sslrootcert: this.ROOT_CERT,
         password : config.tokenHash
       }
     }

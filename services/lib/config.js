@@ -66,6 +66,8 @@ const config = {
 
   appUrl,
 
+  caChainPem : env.CA_CHAIN_PEM || '',
+
   metrics : {
     enabled : env.METRICS_ENABLED === 'true',
   },
