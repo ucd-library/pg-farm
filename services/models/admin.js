@@ -23,10 +23,10 @@ class AdminModel {
 
   async initSchema() {
     await utils.waitUntil(config.adminDb.host, config.adminDb.port);
-  
+
     // TODO: add migrations
     logger.info('loading sql files from: '+schemaPath)
-  
+
     let files = sortInitScripts(fs.readdirSync(schemaPath));
     for( let file of files ) {
       if( path.parse(file).ext.toLowerCase() !== '.sql' ) continue;
@@ -41,7 +41,7 @@ class AdminModel {
    * @method createUser
    * @description Creates a new user in the database.  This will also grant
    * the role to the pgrest authenticator user.
-   * 
+   *
    * @param {String} instNameOrId instance name or id
    * @param {String} orgNameOrId organization name or id
    * @param {String} user username
@@ -76,12 +76,12 @@ class AdminModel {
    * attempt to start the instance if it is not already running.  Additionally this command
    * will always run even if the database already exists.  Ensuring all users, roles, and
    * schema are up to date.
-   * 
+   *
    * @param {Object} opts
    * @param {String} opts.name name of database
    * @param {String} opts.database alias for name
    * @param {String} opts.organization name or id of organization
-   * @param {String} opts.instance name or id of instance 
+   * @param {String} opts.instance name or id of instance
    */
   async ensureDatabase(opts={}) {
     let name = modelUtils.cleanInstDbName(opts.name || opts.database);
@@ -122,7 +122,7 @@ class AdminModel {
     let database = await this.models.database.exists(name, opts.organization);
     if( !database ) {
       await this.models.database.create(name, opts);
-      database = await this.models.database.get(name, opts.organization); 
+      database = await this.models.database.get(name, opts.organization);
     } else {
       await this.models.database.ensurePgDatabase(instance.name, opts.organization, database.database_name);
     }
@@ -137,10 +137,10 @@ class AdminModel {
   /**
    * @method createInstance
    * @description Creates a new postgres instance
-   * 
+   *
    * @param {String} name
    * @param {Object} opts
-   * 
+   *
    * @returns {Promise}
    **/
   async createInstance(name, opts={}) {
@@ -152,12 +152,12 @@ class AdminModel {
    * @method stopInstance
    * @description Stops a running instance.  This will also stop all pgRest
    * services associated with the instance.
-   * 
+   *
    * @param {String} instNameOrId instance name or id
    * @param {String} orgNameOrId organization name or id
    * @param {Object} opts
    * @param {Boolean} opts.isArchived set to true if the instance has been archived.  will set state to ARCHIVE
-   * 
+   *
    * @returns {Promise}
    */
   async stopInstance(instNameOrId, orgNameOrId, opts={}) {
@@ -170,13 +170,13 @@ class AdminModel {
 
   /**
    * @method restoreInstance
-   * @description Restores a database instance from a backup.  This will 
+   * @description Restores a database instance from a backup.  This will
    * start the instance in restoring state and then run the restore on the
    * pg-helper container.
-   * 
+   *
    * @param {String} instNameOrId instance name or id
    * @param {String} orgNameOrId organization name or id
-   * 
+   *
    * @returns {Promise}
    **/
   async restoreInstance(instNameOrId, orgNameOrId) {
@@ -196,14 +196,14 @@ class AdminModel {
   /**
    * @method archiveInstance
    * @description Archives an instance.  This will call the archive function
-   * on the pg-helper container.  The pg-helper container will set the 
+   * on the pg-helper container.  The pg-helper container will set the
    * instance state to ARCHIVING, stop all pgRest services, and then run the
    * pg_dump for each database, check that all backups have synced to GCS, and
    * then set the instance state to ARCHIVE.
-   * 
+   *
    * @param {String} instNameOrId instance name or id
    * @param {String} orgNameOrId organization name or id
-   * 
+   *
    * @returns {Promise}
    **/
   async archiveInstance(instNameOrId, orgNameOrId) {
@@ -216,10 +216,10 @@ class AdminModel {
    * Ensures that the database users are created in postgres and that the
    * pg farm password is set to the database user password.  This function
    * can be used to rotate all passwords.
-   * 
-   * @param {String} instNameOrId 
+   *
+   * @param {String} instNameOrId
    * @param {Boolean} updatePassword update all user passwords
-   * 
+   *
    * @returns {Promise}
    */
   async syncInstanceUsers(instNameOrId, orgNameOrId, updatePassword=false) {
@@ -267,15 +267,15 @@ class AdminModel {
    * @method getDatabases
    * @description Returns a list of instances.  If username is provided, only
    * instances that the user has access to will be returned.
-   * 
+   *
    * @param {Object} opts
-   * @param {String} opts.username 
-   * @returns 
+   * @param {String} opts.username
+   * @returns
    */
   async getDatabases(opts={}) {
     let appHostname = new URL(config.appUrl).hostname;
     let databases = await client.getDatabases(opts);
-    
+
     let resp = [];
     for( let db of databases ) {
       let dbOrgName = (db.organization_name ? db.organization_name+'/' : '')+db.database_name;
@@ -321,7 +321,7 @@ class AdminModel {
     let active = await client.getInstances({state: this.models.instance.STATES.RUN});
     let availableStates = this.models.instance.AVAILABLE_STATES;
     let now = Date.now();
-    
+
     for( let instance of active ) {
       if( instance.availability === 'ALWAYS' ) {
         continue;
@@ -358,25 +358,25 @@ class AdminModel {
    * running, this function will return false unless opts.force is set to true.  Instances
    * are 'started' by applying the k8s deployment and service yaml files, then polling the
    * TCP port until it is ready and accepting connections.
-   * 
+   *
    * To use:
    * let respStart = await admin.startInstance('my-instance', 'my-org');
    * if( respStart.starting ) {
    *  await respStart.instance;
    *  await respStart.pgrest;
    * }
-   * 
+   *
    * @param {String} nameOrId Either the name or id of the instance or database.  If database, set opts.isDb=true
    * @param {String} orgNameOrId organization name or id
    * @param {Object} opts
    * @param {Boolean} opts.isDb nameOrId parameter is a database name or id
    * @param {Boolean} opts.force force start the instance even if health check passes
-   *  
-   * @returns {Promise<Object>} 
+   *
+   * @returns {Promise<Object>}
    */
   async startInstance(nameOrId, orgNameOrId, opts={}) {
     let instance;
-    
+
     // get instance by database name or instance name depending on opts
     if( opts.isDb ) {
       instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
@@ -416,8 +416,8 @@ class AdminModel {
       }
     }
 
-    if (health.state === 'RUN' && 
-        health.tcpStatus.instance?.isAlive && 
+    if (health.state === 'RUN' &&
+        health.tcpStatus.instance?.isAlive &&
         dbRestTcpAlive &&
         !opts.force) {
       logger.info('Instance running and ports are alive', instance.hostname);
@@ -440,7 +440,7 @@ class AdminModel {
       instance : null,
       pgrest : null
     }
-    
+
     response.instance = (async () => {
       // start the instance
       await this.models.instance.start(instance.instance_id, instance.organization_id);
@@ -459,7 +459,7 @@ class AdminModel {
     let proms = dbs.map(db => {
       async function start() {
         // make sure instance is ready before starting pgRest
-        // await response.instance; 
+        // await response.instance;
 
         // start pgRest
         await this.models.pgRest.start(db.database_id, db.organization_id);
@@ -499,7 +499,7 @@ class AdminModel {
   rejectStart(instance, e) {
     let id = instance.instance_id || instance.id;
     if( !this.instancesStarting[id] ) return;
-  
+
     this.instancesStarting[id].reject(e);
     delete this.instancesStarting[id];
   }
@@ -520,10 +520,10 @@ class AdminModel {
  * @function waitForPgRestDb
  * @description waits for the pgrest database to be ready.  PgRest service
  * may take a few seconds to start up after the database is ready.
- *  
- * @param {String} host 
- * @param {String} port 
- * @param {Number} maxAttempts defaults to 10 
+ *
+ * @param {String} host
+ * @param {String} port
+ * @param {Number} maxAttempts defaults to 10
  * @param {Number} delayTime default to 500ms
  */
 async function waitForPgRestDb(host, port, maxAttempts=10, delayTime=500) {
@@ -534,7 +534,7 @@ async function waitForPgRestDb(host, port, maxAttempts=10, delayTime=500) {
     try {
       let resp = await fetch(`http://${host}:${port}`);
       isAlive = (resp.status !== 503);
-      
+
       if( !isAlive ) {
         attempts++;
         await utils.sleep(delayTime);
@@ -553,7 +553,7 @@ function sortInitScripts(files) {
     if( file.match('-') ) {
       index = parseInt(file.split('-')[0]);
       name = file.split('-')[1];
-    } 
+    }
     return {file, index, name};
   });
 

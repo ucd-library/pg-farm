@@ -10,6 +10,7 @@ class OrganizationService extends BaseService {
     super();
     this.store = OrganizationStore;
     this.basePath = `${serviceUtils.host}/api/organization`;
+    this.searchId = 0;
   }
 
   async create(opts) {
@@ -106,6 +107,28 @@ class OrganizationService extends BaseService {
     );
 
     return this.store.data.isAdmin.get(id);
+  }
+
+  search(searchParams) {
+    let id = this.searchId++;
+
+    let request = this.request({
+      url: `${this.basePath}/search`,
+      fetchOptions: {
+        method : 'POST',
+        body: searchParams,
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onSearchUpdate({id, searchParams, request}),
+      onLoad: payload => this.store.onSearchUpdate({id, searchParams, payload: payload.body}),
+      onError: error => this.store.onSearchUpdate({id, searchParams, error})
+    });
+
+    return {
+      id,
+      request
+    }
   }
 
 }

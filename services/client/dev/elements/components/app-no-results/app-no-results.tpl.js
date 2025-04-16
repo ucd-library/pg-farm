@@ -36,6 +36,6 @@ return html`
   <div class='container'>
     <app-icon class='icon' slug='fa.solid.circle-exclamation'></app-icon>
     <div class='text'>${this.text}</div>
-    <div class='subtext'>${this.subtext}</div>
+    <div class='subtext' ?hidden=${this.hideSubtext}>${this.subtext}</div>
   </div>
 `;}

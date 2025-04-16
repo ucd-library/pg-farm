@@ -3,12 +3,16 @@ import { render, styles } from "./app-organizations.tpl.js";
 import { Mixin, MainDomElement } from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
+import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
+
 export default class AppOrganizations extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 
   static get properties() {
     return {
-      pageId: {type: String, attribute: 'page-id'}
+      pageId: {type: String, attribute: 'page-id'},
+      orgs: {type: Array},
+      total: {type: Number}
     }
   }
 
@@ -19,8 +23,11 @@ export default class AppOrganizations extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
+    this.dataCtl = new PageDataController(this);
+    this.orgs = [];
+    this.total = 0;
 
-    this._injectModel('AppStateModel');
+    this._injectModel('AppStateModel', 'OrganizationModel');
   }
 
   /**
@@ -28,9 +35,23 @@ export default class AppOrganizations extends Mixin(LitElement)
    * @param {Object} e - app state update event
    * @returns
    */
-  _onAppStateUpdate(e){
+  async _onAppStateUpdate(e){
     if ( e.page !== this.pageId ) return;
-    this.AppStateModel.hideLoading();
+
+    await this.dataCtl.get([
+      {
+        request: this.OrganizationModel.search(),
+        hostCallback: '_onSearchSuccess',
+        returnedResponse: 'request',
+        errorMessage: 'Unable to load organizations'
+      }
+    ]);
+  }
+
+  _onSearchSuccess(e) {
+    const data = this.OrganizationModel.getSearchResult(e.id).payload;
+    this.total = data.total;
+    this.orgs = data.items;
   }
 
 }

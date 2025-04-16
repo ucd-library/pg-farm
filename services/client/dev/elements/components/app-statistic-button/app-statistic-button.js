@@ -16,6 +16,7 @@ export default class AppStatisticButton extends LitElement {
       icon: { type: String },
       href: { type: String },
       text: { type: String },
+      transformDegrees: { type: String },
       subtext: { type: String },
       brandColor: { type: String, attribute: 'brand-color' },
       _brandColorHex: { state: true }
@@ -33,6 +34,7 @@ export default class AppStatisticButton extends LitElement {
     this.icon = '';
     this.href = '';
     this.text = '';
+    this.transformDegrees = '0';
     this.subtext = '';
     this.brandColor = '';
     this._brandColorHex = '';

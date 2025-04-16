@@ -45,7 +45,7 @@ export function render() {
   if ( !this.orgName || !this.dbName ) return html``;
   return html`
     <div ?hidden=${this.isAwake} class='container'>
-      <div class='intro-text'>Instance is currently slumbering. You must wake up the database to perform administrative functions.</div>
+      <div class='intro-text'>Instance is currently hibernating. You must wake up the database to perform administrative functions.</div>
       <div ?hidden=${!this._isWakingUp} class='starting-text'>Starting database instance. This may take a moment....</div>
       <button
         ?disabled=${this._isWakingUp}

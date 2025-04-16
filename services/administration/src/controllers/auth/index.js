@@ -54,8 +54,17 @@ function register(app) {
   }));
 
   app.get(config.oidc.loginPath, (req, res) => {
+    let urlParams = new URLSearchParams();
+    if ( req.query.redirect ){
+      urlParams.set('redirect', req.query.redirect);
+    }
+    if ( req.query['set-cookie'] ){
+      urlParams.set('set-cookie', req.query['set-cookie']);
+    }
+    urlParams = urlParams.toString();
+
     res.oidc.login({
-      returnTo: '/auth/success'+(req.query.redirect ? '?redirect='+req.query.redirect : '')
+      returnTo: '/auth/success'+(urlParams ? `?${urlParams}` : '')
     });
   });
 
@@ -66,7 +75,7 @@ function register(app) {
 
     res.set('PG-FARM-AUTHORIZED-TOKEN', jwt);
 
-    if( req.query.redirect ) {
+    if( req.query.redirect && !req.query['set-cookie'] ) {
       res.redirect(req.query.redirect+'?jwt='+jwt);
       return;
     } else if( req.query.headless === 'true' ) {
@@ -77,7 +86,7 @@ function register(app) {
       res.send(html);
     } else {
       res.cookie(config.jwt.cookieName, jwt, {httpOnly: true});
-      res.redirect('/');
+      res.redirect(req.query.redirect || '/');
     }
   });
 

@@ -3,3 +3,34 @@ select.blue {
   color: var(--ucd-blue, #022851);
   border: 1px solid var(--ucd-blue-50, #CCE0F3);
 }
+select.select-header {
+  border-style: none;
+  box-shadow: none;
+  width: auto;
+  padding-left: 0;
+  height: auto;
+  cursor: pointer;
+  border-bottom: 2px solid var(--ucd-gold-100, #FFBF00);
+  margin: 0;
+  padding: 0;
+  color: var(--forced-contrast-heading-primary, #022851);
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--forced-contrast-heading-primary, #13639e);
+  font-size: 1.6055rem;
+}
+select.select-header.select-header--h3 {
+  font-size: 1.3325rem;
+}
+@media (min-width: 768px) {
+  select.select-header {
+    font-size: 2.0995rem;
+  }
+  select.select-header.select-header--h3 {
+    font-size: 1.7425rem;
+  }
+}
+select.select-header option {
+  font-size: 1rem;
+}

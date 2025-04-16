@@ -12,9 +12,12 @@ export function styles() {
 }
 
 export function render() {
-return html`
+  const isUpdate = this.operation === 'update';
+  const isSchemaUpdate = this.operation === 'update-schema';
+  const isCreate = this.operation === 'create';
+  return html`
   <form @submit=${this._onSubmit}>
-    <div class='field-container'>
+    <div class='field-container' ?hidden=${!isCreate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
       <input
         id=${this.idGen.get('username')}
@@ -22,33 +25,31 @@ return html`
         @input=${e => this._onInput('username', e.target.value)}
         required>
     </div>
-    <div class='field-container'>
-      <label>Account Type</label>
-      <ul class="list--reset radio">
+    <div class='field-container' ?hidden=${isCreate}>
+      <label>Username</label>
+      <div>${this.payload.username || ''}</div>
+    </div>
+    <div class='field-container' ?hidden=${isSchemaUpdate}>
+      <ul class="list--reset checkbox">
         <li>
           <input
-            id=${this.idGen.get('admin.false')}
+            id=${this.idGen.get('admin')}
             name='admin'
-            type='radio'
-            @input=${e => this._onInput('admin', false)}
-            .checked=${!this.payload.admin} />
-          <label for=${this.idGen.get('admin.false')}>Standard</label>
-        </li>
-        <li>
-          <input
-            id=${this.idGen.get('admin.true')}
-            name='admin'
-            type='radio'
-            @input=${e => this._onInput('admin', true)}
-            .checked=${this.payload.admin === true} />
-          <label for=${this.idGen.get('admin.true')}>Admin</label>
+            type='checkbox'
+            @input=${e => this._onInput('admin', !this.payload.admin)}
+            .checked=${this.payload.admin} />
+          <label for=${this.idGen.get('admin')}>Enable admin access</label>
         </li>
       </ul>
     </div>
-    <div class='field-container' ?hidden=${this.payload.admin}>
-      <label>Database Access</label>
+    <div class='field-container' ?hidden=${!isSchemaUpdate}>
+      <label>Schema</label>
+      <div>${this.schema || ''}</div>
+    </div>
+    <div class='field-container'>
+      <label>${isSchemaUpdate ? 'Schema Access' : 'Database Access'}</label>
       <ul class="list--reset radio">
-        ${grantDefinitions.registry.filter(def => def.object === 'DATABASE').map(def => html`
+        ${grantDefinitions.getObjectGrants(isSchemaUpdate ? 'SCHEMA' : 'DATABASE', !isSchemaUpdate).map(def => html`
           <li>
             <input
               id=${this.idGen.get(`access.${def.action}`)}

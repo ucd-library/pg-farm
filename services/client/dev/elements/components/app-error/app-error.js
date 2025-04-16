@@ -2,13 +2,16 @@ import { LitElement } from 'lit';
 import { render, styles } from "./app-error.tpl.js";
 import { LitCorkUtils, Mixin } from '@ucd-lib/cork-app-utils';
 
+import user from '@ucd-lib/pgfarm-client/utils/user.js';
+
 export default class AppError extends Mixin(LitElement)
   .with(LitCorkUtils) {
 
   static get properties() {
     return {
       heading: {type: String},
-      errors: {state: true}
+      errors: {state: true},
+      showLoginButton: {type: Boolean}
     }
   }
 
@@ -21,6 +24,7 @@ export default class AppError extends Mixin(LitElement)
     this.render = render.bind(this);
     this.heading = 'Error';
     this.errors = [];
+    this.showLoginButton = false;
 
     this._injectModel('AppStateModel');
   }
@@ -41,9 +45,18 @@ export default class AppError extends Mixin(LitElement)
       this.errors = opts.errors.map(error => this.formatError(error));
     } else if ( opts.error ) {
       this.errors = [this.formatError({errorMessage: opts.message, response: {value: opts.error}})];
+    } else if ( opts.message ) {
+      this.errors = [this.formatError({errorMessage: opts.message, showLoginButton: opts.showLoginButton})];
     } else {
       this.errors = [];
     }
+    this.setLoginButtonVisibility();
+  }
+
+  setLoginButtonVisibility(){
+    const badAuth = this.errors.some(error => error.statusCode === 403 || error.statusCode === 401);
+    const manual = this.errors.some(error => error.showLoginButton);
+    this.showLoginButton = (badAuth || manual) && !user.loggedIn;
   }
 
   hide(){
@@ -63,13 +76,16 @@ export default class AppError extends Mixin(LitElement)
     const payload = error?.response?.value?.error?.payload || error?.response?.value?.payload || {};
     const url = error?.response?.value?.error?.response?.url ||
       error?.response?.value?.response?.url || '';
+    const statusCode = error?.response?.value?.error?.response?.status ||
+      error?.response?.value?.response?.status || '';
 
     const out = {
       heading: 'Unknown error',
       message: payload.message || '',
       stack: payload.stack || '',
       url,
-      showDetails: false
+      showDetails: false,
+      statusCode
     };
 
     if ( error.errorMessage ){
@@ -77,6 +93,10 @@ export default class AppError extends Mixin(LitElement)
     } else if ( payload.message ) {
       out.heading = payload.message;
       out.message = '';
+    }
+
+    if ( error.showLoginButton ){
+      out.showLoginButton = true;
     }
 
     return out;

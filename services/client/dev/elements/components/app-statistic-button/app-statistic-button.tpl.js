@@ -16,6 +16,7 @@ export function styles() {
       text-decoration: none;
       border: none;
       width: 100%;
+      height: 100%;
       box-sizing: border-box;
       transition: background-color .2s ease;
       padding: .875rem;
@@ -75,7 +76,7 @@ return html`
 
 function _renderContent(){
   return html`
-    <app-icon slug=${this.icon}></app-icon>
+    <app-icon slug=${this.icon} transform-degrees=${this.transformDegrees}></app-icon>
     <div class='text'>${this.text}</div>
     <div class='subtext'>${this.subtext}</div>
   `;

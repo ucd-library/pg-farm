@@ -58,7 +58,10 @@ function _renderMainContent(){
 
       <app-admin-database-overview page-id="admin-db-overview"></app-admin-database-overview>
       <app-admin-database-users page-id="admin-db-users"></app-admin-database-users>
+      <app-admin-database-user-single page-id="admin-db-user-single"></app-admin-database-user-single>
       <app-admin-database-schemas page-id="admin-db-schemas"></app-admin-database-schemas>
+      <app-admin-database-tables page-id="admin-db-tables"></app-admin-database-tables>
+      <app-admin-user-profile page-id="me"></app-admin-user-profile>
     </ucdlib-pages>
   </div>
   `;
@@ -94,6 +97,7 @@ function _renderHeader(){
         use-icon
         style-modifiers="highlight">
         <svg slot="custom-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
+        <a href='/me'>Manage Databases</a>
         <a href=${user.logoutPath}>Sign Out</a>
       </ucd-theme-quick-links>
     </ucd-theme-header>
@@ -120,7 +124,7 @@ function _renderFooter(){
                 University of California, Davis<br>
                 Davis, CA 95616
               </p>
-              <div><a href='https>//library.ucdavis.edu'>library.ucdavis.edu</a></div>
+              <div><a href='https://library.ucdavis.edu'>library.ucdavis.edu</a></div>
             </div>
             <app-build-info></app-build-info>
           </div>

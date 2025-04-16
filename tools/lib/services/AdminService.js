@@ -74,6 +74,27 @@ class AdminService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  async updateUcdIamProfile(user) {
+    let ido = {action: 'update-ucd-iam-profile', user};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/ucd-iam-profile/${user}`,
+          fetchOptions: {
+            method : 'PUT',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onUcdIamProfileUpdate(ido, {request}),
+          onLoad: payload => this.store.onUcdIamProfileUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onUcdIamProfileUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
 }
 
 const service = new AdminService();

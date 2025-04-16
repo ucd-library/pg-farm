@@ -7,11 +7,12 @@ class User {
     this.logger = getLogger('UserUtils');
 
     this.loggedIn = false;
-    this.token = null;
-    this.tokenParsed = null;
     this.isAdmin = false;
     this.loginPath = '';
     this.logoutPath = '';
+
+    this.jwt = null;
+    this.username = '';
 
     this.loadConfig();
   }
@@ -23,10 +24,13 @@ class User {
     }
 
     this.loggedIn = window.APP_CONFIG.user.loggedIn;
+    this.jwt = window.APP_CONFIG.user;
     this.isAdmin = this.user?.roles?.includes('admin');
 
     this.loginPath = window.APP_CONFIG.loginPath;
     this.logoutPath = window.APP_CONFIG.logoutPath;
+
+    this.username = this.jwt?.username || this.jwt?.preferred_username || '';
   }
 }
 

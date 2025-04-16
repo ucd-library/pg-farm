@@ -88,7 +88,7 @@ const config = {
     port : parseInt(clientPort),
     assets : (clientEnv === 'prod') ? 'dist' : 'dev',
     title : 'PG Farm',
-    appRoutes : ['search', 'db', 'features', 'contact', 'org'],
+    appRoutes : ['search', 'db', 'features', 'contact', 'org', 'me'],
     staticAssetsBaseUrl : env.CLIENT_STATIC_ASSETS_BASE_URL || 'https://storage.googleapis.com/application-static-assets',
     logger : {
       logLevel : env.CLIENT_LOG_LEVEL || 'info',
@@ -195,6 +195,7 @@ const config = {
 
     tables : {
       get ORGANIZATION() { return config.adminDb.schema+'.organization' },
+      get USER() { return config.adminDb.schema+'.user' },
       get INSTANCE() { return config.adminDb.schema+'.instance' },
       get DATABASE() { return config.adminDb.schema+'.database' },
       get DATABASE_FEATURED() { return config.adminDb.schema+'.database_featured' },
@@ -209,6 +210,7 @@ const config = {
       get INSTANCE_DATABASE_USERS() { return config.adminDb.schema+'.instance_database_user' },
       get DATABASE_EVENT() { return config.adminDb.schema+'.database_last_event_view' },
       get ORGANIZATION_USER() { return config.adminDb.schema+'.organization_user' },
+      get ORGANIZATION_DATABASE_COUNT() { return config.adminDb.schema+'.organization_with_db_count' }
     }
   },
 
@@ -296,6 +298,12 @@ const config = {
     port : parseInt(healthProbePort),
     host : env.HEALTH_PROBE_HOSTNAME || 'health-probe',
     interval : env.HEALTH_PROBE_INTERVAL || 1000*10,
+  },
+
+  ucdIamApi : {
+    url : env.UCD_IAM_API_URL || 'https://iet-ws.ucdavis.edu/api/iam',
+    key : env.UCD_IAM_API_KEY || '',
+    version: env.UCD_IAM_API_VERSION || '1.0',
   },
 
 }

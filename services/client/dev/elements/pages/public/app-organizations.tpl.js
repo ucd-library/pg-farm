@@ -1,4 +1,5 @@
 import { html, css } from 'lit';
+import '@ucd-lib/pgfarm-client/elements/components/org-teaser/org-teaser.js';
 
 export function styles() {
   const elementStyles = css`
@@ -17,9 +18,15 @@ return html`
       <div class='page-header__title'>
         <h1>Organizations</h1>
       </div>
-      <div class='page-header__description'>
-        Something will go here. There is currently no figma design and no search method, so this is a todo
-      </div>
+    </div>
+  </div>
+  <div class='l-container l-container--flush-with-page-header u-space-mt--large'>
+    <div class="l-quad">
+      ${this.orgs.map(org => html`
+        <div class='l-quad__region'>
+          <org-teaser .data=${org} class='u-space-mb--large'></org-teaser>
+        </div>
+      `)}
     </div>
   </div>
 `;}

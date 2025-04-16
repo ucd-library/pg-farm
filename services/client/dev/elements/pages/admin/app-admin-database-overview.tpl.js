@@ -58,21 +58,23 @@ export function render() {
             <app-statistic-button
               href='${window.location.pathname}/schemas'
               icon='fa.solid.diagram-project'
-              text='${this.dataCtl.schemas?.length} schemas'>
+              text='${this.counts.schemas.total} schemas'
+              subtext='${this.counts.schemas.totalPublic} public'
+              >
             </app-statistic-button>
             <app-statistic-button
               href='${window.location.pathname}/users'
               icon='fa.solid.users'
-              text='${this.dataCtl.users?.total} users'
+              text='${this.counts.users.total} users'
               brand-color='redbud'
-              subtext='${this.dataCtl.users?.totalPublic} public'>
+              subtext='${this.counts.users.totalPublic} public'>
             </app-statistic-button>
             <app-statistic-button
               href='${window.location.pathname}/tables'
               icon='fa.solid.table'
-              text='# tables'
+              text='${this.counts.tables.total} tables'
               brand-color='quad'
-              subtext='# public'>
+              subtext='${this.counts.tables.totalPublic} public'>
             </app-statistic-button>
           </div>
         </section>
@@ -107,7 +109,7 @@ export function render() {
           <div ?hidden=${!db?.url}>${db?.url}</div>
           <div ?hidden=${db?.url}>No website provided</div>
         </section>
-
+        <app-prefixed-icon-button icon='fa.solid.eye' href='/db/${this.orgName}/${this.dbName}'>View public database page</app-prefixed-icon-button>
       </div>
     </div>
 `;}
