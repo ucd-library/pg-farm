@@ -1,18 +1,26 @@
 import logger from '../lib/logger.js';
 import client from '../lib/pg-admin-client.js';
+import config from '../lib/config.js';
 
 class OrganizationModel {
 
   constructor() {
     this.METADATA_FIELDS = ['title', 'url', 'description', 'logo', 'email', 'phone'];
+    this.API_FIELDS = [
+      'organization_id', 'name', 'title', 'description', 'url',
+      'description', 'email', 'phone', 'created_at', 'updated_at',
+      'logo_file_type', 'database_count'
+    ];
   }
 
-  async get(nameOrId) {
-    const org = await client.getOrganization(nameOrId);
-    if ( org?.logo ){
-      org.logo = `data:${org['logo_file_type']};base64,${org.logo.toString('base64')}`;
+  async get(nameOrId, columns) {
+    if ( !columns ) {
+      columns = this.API_FIELDS;
     }
-    delete org['logo_file_type'];
+    const org = await client.getOrganization(nameOrId, columns);
+    if ( org.database_count !== undefined ) {
+      org.database_count = parseInt(org.database_count);
+    }
     return org;
   }
 
@@ -23,6 +31,44 @@ class OrganizationModel {
     } catch(e) {}
 
     return false;
+  }
+
+  async search(opts){
+    const columns = this.API_FIELDS.map(col => `org.${col}`).join(', ');
+
+    const params = [];
+    if (opts?.user ){
+      params.push(opts.user);
+    }
+
+
+    let sql = `
+      SELECT ${columns}
+      from ${config.adminDb.views.ORGANIZATION_DATABASE_COUNT} org
+      WHERE 1=1
+      ${opts?.user ? `
+        AND EXISTS (
+          SELECT 1
+          FROM ${config.adminDb.tables.INSTANCE_USER} iu
+          JOIN ${config.adminDb.tables.INSTANCE} i ON i.instance_id = iu.instance_id
+          JOIN ${config.adminDb.tables.USER} u ON u.user_id = iu.user_id
+          WHERE i.organization_id = org.organization_id
+            AND u.username = $1
+        )
+        ` : ''}
+      ORDER BY org.title
+    `;
+
+    let results = await client.query(sql , params);
+    const items = results.rows.map(row => {
+      row.database_count = parseInt(row.database_count);
+      return row;
+    });
+    return {
+      items : items,
+      total : results.rowCount,
+      query : opts
+    }
   }
 
   /**

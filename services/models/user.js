@@ -4,6 +4,7 @@ import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import utils from '../lib/utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
+import ucdIamApi from '../lib/ucd-iam-api.js';
 
 class User {
 
@@ -54,12 +55,18 @@ class User {
     // add user to database
     let user = await this.exists(instance.instance_id, orgNameOrId, username);
     if( !user ) {
+
       logger.info('Creating instance user: ', {
         username, type, parent,
         instance: instance.name,
         organization: orgNameOrId
       });
       await client.createInstanceUser(instance.instance_id, orgNameOrId, username, password, type, parent);
+
+      // check if user exists in UCD IAM
+      if ( !parent ){
+        await this.fetchAndUpdateUcdIamData(username);
+      }
     } else { // get current password.  make sure its set on the instance db
       logger.info('Instance user already exists: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
       password = user.password;
@@ -90,6 +97,48 @@ class User {
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
       [username, nameOrId, orgNameOrId, type]
     );
+  }
+
+  /**
+   * @description Fetches the user profile from UCD IAM and updates the user record in the database
+   * @param {String} username - username (kerberos ID) of the user
+   */
+  async fetchAndUpdateUcdIamData(username) {
+    let ucdUserProfile;
+    try {
+      ucdUserProfile = await ucdIamApi.getUserProfile(username);
+    } catch (e) {
+      logger.info('Error checking UCD IAM for user: '+username, e);
+      return;
+    }
+    if ( !ucdUserProfile ) return;
+    const firstName = ucdUserProfile?.dFirstName || '';
+    const lastName = ucdUserProfile?.dLastName || '';
+    const middleName = ucdUserProfile?.dMiddleName || '';
+    await client.query(
+      `UPDATE ${config.adminDb.tables.USER}
+      SET first_name = $2, last_name = $3, middle_name = $4, ucd_iam_payload = $5, ucd_iam_fetched_at = NOW()
+      WHERE user_id = ${this.schema}.get_user_id($1)`,
+      [username, firstName, lastName, middleName, ucdUserProfile]
+    );
+    return ucdUserProfile;
+  }
+
+  async pgFarmUserExists(username) {
+    const res = await this.getPgFarmUser(username);
+    return res ? true : false;
+  }
+
+  /**
+   * @description Gets user object without being tied to an instance or database
+  */
+  async getPgFarmUser(username) {
+    const res = await client.query(
+      `SELECT * FROM ${config.adminDb.tables.USER}
+      WHERE user_id = ${this.schema}.get_user_id($1)`,
+      [username]
+    );
+    return res.rows[0];
   }
 
   async delete(nameOrId, orgNameOrId=null, username) {

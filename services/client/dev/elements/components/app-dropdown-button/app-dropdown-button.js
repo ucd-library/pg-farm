@@ -8,7 +8,8 @@ export default class AppDropdownButton extends LitElement {
       options: { type: Array },
       buttonText: { type: String, attribute: 'button-text' },
       value: { type: String },
-      placeholder: { type: String }
+      placeholder: { type: String },
+      disabled: { type: Boolean }
     }
   }
 
@@ -23,6 +24,7 @@ export default class AppDropdownButton extends LitElement {
     this.buttonText = '';
     this.value = '';
     this.placeholder = '';
+    this.disabled = false;
   }
 
   _onSubmit(e) {

@@ -3,6 +3,8 @@ import clone from 'clone';
 import config from './config.js';
 import adminClient from './pg-admin-client.js';
 import { organization } from '../models/index.js';
+import logger from './logger.js';
+
 class KeycloakUtils {
 
   constructor() {
@@ -46,7 +48,7 @@ class KeycloakUtils {
       method: 'POST',
       headers:{
         'Content-Type': 'application/x-www-form-urlencoded'
-      },    
+      },
       body: new URLSearchParams({
         grant_type : 'password',
         client_id : config.oidc.clientId,
@@ -87,7 +89,7 @@ class KeycloakUtils {
     try {
       let result;
 
-      // if we get multiple requests at once, just make one 
+      // if we get multiple requests at once, just make one
       // request to the auth server
       if( this.tokenRequestCache.has(token) ) {
         let promise = this.tokenRequestCache.get(token);
@@ -113,7 +115,7 @@ class KeycloakUtils {
         requestReject = reject;
       });
       this.tokenRequestCache.set(token, promise);
-      
+
       let resp = await request;
       let body = await resp.text();
       clearTimeout(timeoutId);
@@ -132,10 +134,10 @@ class KeycloakUtils {
 
       requestResolve(result);
       this.tokenRequestCache.delete(token);
-      
+
       return clone(result);
     } catch(e) {
-      if( requestReject ){ 
+      if( requestReject ){
         requestReject(e);
       }
       this.tokenRequestCache.delete(token);
@@ -168,9 +170,9 @@ class KeycloakUtils {
    * @description given a express request object, return a given jwt token.
    * Method will first check the request cookies of the jwt token cookie then
    * checks the Authorization header of the token.
-   * 
+   *
    * @param {Object} req express request object
-   * 
+   *
    * @returns {String|null} null if no token found.
    */
   getJwtFromRequest(req) {
@@ -180,7 +182,7 @@ class KeycloakUtils {
       token = req.cookies[config.jwt.cookieName];
       if( token ) return token;
     }
-    
+
     token = req.get('Authorization');
     if( token && token.match(/^Bearer /i) ) {
       return token.replace(/^Bearer /i, '');
@@ -243,7 +245,7 @@ class KeycloakUtils {
         if( !req.params.instance ) req.params.instance = resp.instance_name;
       } catch(e) {}
     }
-  
+
     user.roles = Array.from(roles)
       .filter(role => config.oidc.roleIgnoreList.includes(role) === false);
 
@@ -298,7 +300,7 @@ class KeycloakUtils {
     return res.status(403).send('Unauthorized');
   }
 
-  _protectOrganization(req, res, next, types=['ADMIN']) {  
+  async _protectOrganization(req, res, next, types=['ADMIN']) {
     if( !req.user ) return res.status(403).send('Unauthorized');
 
     if( req.user.roles.includes('admin') ) {
@@ -308,7 +310,7 @@ class KeycloakUtils {
     let organization = req.params.organization;
 
     try {
-      let orgUser = adminClient.getOrganizationUser(req.user.username, organization);
+      let orgUser = await adminClient.getOrganizationUser(req.user.username, organization);
       if( types.includes(orgUser?.user_type))  {
         return next();
       }
@@ -319,7 +321,7 @@ class KeycloakUtils {
     return res.status(403).send('Unauthorized');
   }
 
-  _protectInstance(req, res, next, types=['ADMIN']) {
+ async  _protectInstance(req, res, next, types=['ADMIN']) {
     if( !req.user ) return res.status(403).send('Unauthorized');
 
     if( req.user.roles.includes('admin') ) {
@@ -331,7 +333,7 @@ class KeycloakUtils {
     if( organization === '_' ) organization = null;
 
     try {
-      let instUser = adminClient.getInstanceUser(nameOrId, organization, req.user.username);
+      let instUser = await adminClient.getInstanceUser(nameOrId, organization, req.user.username);
       if( types.includes(instUser?.user_type))  {
         return next();
       }

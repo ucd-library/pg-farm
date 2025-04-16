@@ -14,7 +14,7 @@ export function styles() {
       display: none;
     }
     admin-database-user-table .desktop .app-table .row {
-      grid-template-columns: 1fr 1fr 1fr 75px 75px;
+      grid-template-columns: 2fr 1fr 1fr 75px 75px;
     }
     admin-database-user-table .mobile {
       display: block;
@@ -22,12 +22,15 @@ export function styles() {
     admin-database-user-table .mobile .app-table .row {
       grid-template-columns: 1fr auto;
     }
-    admin-database-user-table .action-bar {
-      margin-bottom: var(--spacer, 1rem);
+    admin-database-user-table .user-name-container {
       display: flex;
-      flex-direction: column-reverse;
-      gap: 1rem;
-      justify-content: space-between;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    admin-database-user-table .user-name-container a {
+      font-weight: 700;
+      text-decoration: none;
     }
     admin-database-user-table .mobile .details {
       display: flex;
@@ -37,18 +40,6 @@ export function styles() {
       justify-content: space-between;
       max-width: 350px;
       margin-top: .75rem;
-    }
-    @container (min-width: 480px) {
-      admin-database-user-table .action-bar {
-        margin-bottom: var(--spacer--large, 2rem);
-        display: flex;
-        flex-flow: row;
-        gap: 1rem;
-        justify-content: space-between;
-      }
-        admin-database-user-table app-search-input {
-        max-width: 300px;
-      }
     }
     @container (min-width: 768px) {
       admin-database-user-table .desktop {
@@ -65,13 +56,14 @@ export function styles() {
 
 export function render() {
 return html`
-  <div class='content'>
+  <div class='content app-table-container'>
     <div class='action-bar'>
       <app-dropdown-button
         .options=${this.bulkActions}
         placeholder='Bulk changes'
         button-text='Apply'
         .value=${this.selectedBulkAction}
+        ?disabled=${!this.tableCtl.getSelectedCount()}
         @option-change=${e => this.selectedBulkAction = e.detail.value}
         @apply=${this._onBulkActionSelect}>
       </app-dropdown-button>
@@ -111,7 +103,14 @@ function _renderDesktopView(){
           </div>
           <div class='cell'>
             <div>Schema</div>
-            <div>Any Access</div>
+            <div>
+              <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Any Access</option>
+                ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('schema-access') === value}>${label}</option>
+                `)}
+              </select>
+            </div>
           </div>
           <div class='cell'>Tables</div>
           <div class='cell'>Remove</div>
@@ -122,27 +121,20 @@ function _renderDesktopView(){
             <div class='cell'>
               <div class='checkbox-container'>
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
-                <div>
-                  <div>${row.item?.name}</div>
-                  <div class='caption'>name of person</div>
-                </div>
+                ${_renderUserName.call(this, row)}
               </div>
             </div>
             <div class='cell'>
-              ${row.item?.pgFarmUser?.type === 'ADMIN' ? html`
-                <div><div class='admin-badge'>Admin</div></div>
-              ` : html`
-                <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
-                <div class='caption'>${row.item?.pgPrivileges?.join(', ') || ''}</div>
-              `}
+              <div>${grantDefinitions.getRoleLabel('DATABASE', row.item?.user)}</div>
+              <div class='caption'>${row.item?.user?.pgPrivileges?.join?.(', ') || ''}</div>
             </div>
             <div class='cell'>
-              <div>some schema role</div>
-              <div></div>
+              <div>${row.item?.schemaRole?.grant?.roleLabel}</div>
+              <div class='caption' ?hidden=${!row.item?.schemaRole?.privileges?.length}>${row.item?.schemaRole?.privileges?.join?.(', ')}</div>
             </div>
-            <div class='cell'>100</div>
+            <div class='cell'>${row.item?.tableCt}</div>
             <div class='cell cell--center'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item)}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._onRemoveUserButtonClick(row.item?.user)}></app-icon-button>
             </div>
           </div>
           `)}
@@ -172,35 +164,26 @@ function _renderMobileView(){
               <div class='checkbox-container'>
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
                 <div class='u-width-100'>
-                  <div>
-                    <div>${row.item?.name}</div>
-                    <div class='caption'>name of person</div>
-                  </div>
+                  ${_renderUserName.call(this, row)}
                   <div class='details'>
                     <div>
                       <div>Database:</div>
-                      <div>
-                        ${row.item?.pgFarmUser?.type === 'ADMIN' ? html`
-                          <div class='admin-badge'>Admin</div>
-                        ` : html`
-                          <div>${grantDefinitions.getRoleLabel('DATABASE', row.item)}</div>
-                        `}
-                      </div>
+                      <div>${grantDefinitions.getRoleLabel('DATABASE', row.item?.user)}</div>
                     </div>
                     <div>
                       <div>Schema:</div>
-                      <div>some schema role</div>
+                      <div>${row.item?.schemaRole?.grant?.roleLabel}</div>
                     </div>
                     <div>
                       <div>Tables:</div>
-                      <div>100</div>
+                      <div>${row.item?.tableCt}</div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <div class='cell cell--icon-top'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._showDeleteUserModal(row.item)}></app-icon-button>
+              <app-icon-button icon='fa.solid.trash' basic @click=${() => this._onRemoveUserButtonClick(row.item?.user)}></app-icon-button>
             </div>
           </div>
         `)}
@@ -210,16 +193,51 @@ function _renderMobileView(){
   `;
 }
 
-export function renderRemoveUserConfirmation(user){
-  if ( !Array.isArray(user) ) user = [user];
+function _renderUserName(row){
+  let href = `${window.location.pathname}/${row.item?.user?.name}`;
+  if ( this.queryCtl?.schema?.exists() ){
+    href += `?schema=${this.queryCtl.schema.value}`;
+  }
   return html`
     <div>
-      ${user.length > 1 ? html`
-        <p>Are you sure you want to delete <strong>${user.length} users</strong>?</p>
-        ` : html`
-        <p>Are you sure you want to delete user <strong>${user[0].name}</strong>?</p>
-        `}
-      <p class='double-decker'>This will revoke all database access</p>
+      <div class='user-name-container'>
+        <div>
+          <a href=${href}>${row.item?.user?.name}</a>
+        </div>
+        <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+      </div>
+      <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
+        ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
+      </div>
     </div>
-  `
+  `;
 }
+
+export function renderRmAccessForm(user){
+  return html`
+    <div class='u-space-mb'>Are you sure you want to remove access for <strong>${user?.name}</strong>?</div>
+    <div class='field-container'>
+      <ul class="list--reset radio">
+        <li>
+          <input
+            id=${this.idGen.get('rm-from-db--false')}
+            type='radio'
+            name=${this.idGen.get('rm-from-db')}
+            @input=${e => this.rmFromDb = false}
+            .checked=${!this.rmFromDb} />
+          <label for=${this.idGen.get('rm-from-db--false')}>Remove access to schema: <strong>${this.queryCtl.schema.value}</strong></label>
+        </li>
+        <li>
+          <input
+            id=${this.idGen.get('rm-from-db--true')}
+            type='radio'
+            name=${this.idGen.get('rm-from-db')}
+            @input=${e => this.rmFromDb = true}
+            .checked=${this.rmFromDb} />
+          <label for=${this.idGen.get('rm-from-db--true')}>Remove user from database (this will revoke all access)</label>
+        </li>
+      </ul>
+    </div>
+  `;
+}
+

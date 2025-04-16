@@ -5,6 +5,21 @@ import { WaitController } from "@ucd-lib/theme-elements/utils/controllers/wait.j
  * under development.
  * not sure if this even the direction i want to go.
  */
+/**
+ * @typedef {Object} RequestDefinition
+ * @property {Promise|Object} request - The request to be executed. Can be a Promise or an object.
+ * @property {Function} [func] - A function that returns a request. Used in batchGet method.
+ * @property {string} [hostCallback] - The name of the host method to call with the response value after function completion.
+ * @property {string} [hostProp] - The name of the host property to set with the response value.
+ * @property {string} [ctlProp] - The name of the controller property to set with the response value.
+ * @property {boolean} [ignoreError=false] - Whether to ignore errors for this request - aka don't show app error screen.
+ * @property {string} [returnedResponse='payload'] - Determines which part of the response to use.
+ * Can be 'payload', 'response', or 'request'.
+ * @property {Object} [response] - The response object after the request is resolved or rejected.
+ * @property {Function} [doHostCallback] - Internal function to execute the host callback with the response value.
+ * @property {Function} [setHostProp] - Internal function to set the host property with the response value.
+ * @property {Function} [setCtlProp] - Internal function to set the controller property with the response value.
+ */
 export default class PageDataController {
 
   constructor(host, opts={}) {
@@ -16,6 +31,12 @@ export default class PageDataController {
     this.opts = opts;
   }
 
+  /**
+   * @description Do API requests and update host properties
+   * @param {Array<RequestDefinition>} requests - An array of request definition objects as defined above.
+   * @param {Object} opts - Additional options for the API requests.
+   * @returns {Promise<Array<RequestDefinition>} - A promise that resolves to an array of processed request definition objects.
+   */
   async get(requests, opts={}){
     if ( !opts.ignoreLoading ){
       this.AppStateModel.showLoading();
@@ -60,6 +81,41 @@ export default class PageDataController {
     }
 
     return requests;
+
+  }
+
+  /**
+   * @description get requests in batches, returns single array of results
+   * @param {Array} requests - The same options as get method
+   * except the 'func' prop should be used instead of 'request' e.g. func: () => this.DatabaseModel.get('foo', 'bar')
+   * @param {Object} opts - options to pass to get method
+   * @param {Number} batchSize - number of requests to send at once
+   * @returns {Array} - array of results
+   */
+  async batchGet(requests, opts={}, batchSize=5) {
+    // ensure func prop is set
+    if ( !requests.every(r => r.func) ) {
+      throw new Error('All requests must have a func prop');
+    }
+
+    // chunk requests
+    const chunks = [];
+    for ( let i = 0; i < requests.length; i += batchSize ) {
+      chunks.push(requests.slice(i, i + batchSize));
+    }
+
+    // loop through chunks, call functions, and pass to get method
+    const results = [];
+    for ( const chunk of chunks ) {
+      for ( const r of chunk ) {
+        r.request = r.func();
+      }
+      const r = await this.get(chunk, opts);
+      if ( !r ) return;
+      results.push(...r);
+    }
+
+    return results;
 
   }
 
@@ -111,6 +167,4 @@ export default class PageDataController {
     }
     return _requests;
   }
-
-
 }

@@ -68,6 +68,9 @@ export function styles() {
     .menu-item.selected app-icon {
       color: var(--ucd-blue-80, #13639E);
     }
+    .menu-item.indented {
+      padding-left: 3rem;
+    }
   `;
 
   return [elementStyles];
@@ -89,8 +92,8 @@ return html`
 
 function _renderMenuItem(item){
   return html`
-    <div class='menu-item ${item.selected ? 'selected' : ''}'>
-      ${item.icon ? html`<app-icon slug=${item.icon}></app-icon>` : ''}
+    <div class='menu-item ${item.selected ? 'selected' : ''} ${item.indented ? 'indented' : ''}'>
+      ${item.icon ? html`<app-icon slug=${item.icon} transform-degrees=${item.transformDegrees || '0'}></app-icon>` : ''}
       <div>${item.label}</div>
     </div>
   `;

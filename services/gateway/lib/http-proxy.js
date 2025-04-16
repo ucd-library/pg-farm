@@ -8,6 +8,7 @@ import {ValueType} from '@opentelemetry/api';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 const swaggerUiRouteRegex = /^\/swagger-ui/;
+const adminRoutes = ['/api', '/auth', '/login', '/.well-known'];
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
@@ -79,7 +80,7 @@ async function middleware(req, res) {
   } else if( path.match(/^\/api\/health(\/|$)/) ) {
     path = path.replace(/^\/api\/health/, '/health');
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
-  } else if( path.startsWith('/api') || path.startsWith('/auth') || path.startsWith('/login') ) {
+  } else if( adminRoutes.some(route => path.startsWith(route)) ) {
     host = 'http://'+config.admin.host+':'+config.admin.port;
   } else if( swaggerUiMatch ) {
     try {

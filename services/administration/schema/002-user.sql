@@ -11,6 +11,11 @@ END $$;
 CREATE TABLE IF NOT EXISTS pgfarm.user (
     user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username text NOT NULL UNIQUE,
+    first_name text,
+    middle_name text,
+    last_name text,
+    ucd_iam_payload jsonb,
+    ucd_iam_fetched_at timestamp,
     created_at timestamp NOT NULL DEFAULT now()
 );
 
@@ -28,7 +33,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.organization_role (
     created_at timestamp NOT NULL DEFAULT now()
 );
 
-CREATE OR REPLACE FUNCTION pgfarm.get_user_id(username_in text) 
+CREATE OR REPLACE FUNCTION pgfarm.get_user_id(username_in text)
   RETURNS UUID AS $$
   DECLARE
     uid UUID;
@@ -41,7 +46,7 @@ CREATE OR REPLACE FUNCTION pgfarm.get_user_id(username_in text)
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pgfarm.ensure_user(username_in text) 
+CREATE OR REPLACE FUNCTION pgfarm.ensure_user(username_in text)
   RETURNS UUID AS $$
   DECLARE
     uid UUID;
@@ -54,7 +59,7 @@ CREATE OR REPLACE FUNCTION pgfarm.ensure_user(username_in text)
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pgfarm.purge_user(username_in text) 
+CREATE OR REPLACE FUNCTION pgfarm.purge_user(username_in text)
   RETURNS void AS $$
   DECLARE
     uid UUID;
@@ -68,7 +73,7 @@ CREATE OR REPLACE FUNCTION pgfarm.purge_user(username_in text)
   END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION pgfarm.add_organization_role(org_in text, username_in text, role_in pgfarm.organization_role_type) 
+CREATE OR REPLACE FUNCTION pgfarm.add_organization_role(org_in text, username_in text, role_in pgfarm.organization_role_type)
   RETURNS void AS $$
   DECLARE
     oid UUID;
@@ -90,7 +95,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.user_token (
 );
 CREATE INDEX IF NOT EXISTS user_token_hash_idx ON pgfarm.user_token(hash);
 
-CREATE OR REPLACE FUNCTION pgfarm.add_user_token(username_in text, token_in text, hash_in text, expires_in timestamp) 
+CREATE OR REPLACE FUNCTION pgfarm.add_user_token(username_in text, token_in text, hash_in text, expires_in timestamp)
   RETURNS void AS $$
   DECLARE
     uid UUID;

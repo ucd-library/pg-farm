@@ -29,6 +29,8 @@ export function render() {
       <style>:host { --app-icon-size: var(--spacer--${this.size}); }</style>` : ''}
     ${!this.autoHeight ? html`
       <style>:host .container {height: var(--app-icon-size, var(--spacer, 1rem));}</style>` : ''}
+    ${this.transformDegrees ? html`
+      <style>:host .container {transform: rotate(${this.transformDegrees}deg);}</style>` : ''}
     <div class='container' ?hidden=${this.invisibleIfEmpty && !this.svg}>
       ${unsafeHTML(this.svg)}
     </div>

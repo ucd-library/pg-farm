@@ -11,7 +11,8 @@ class AdminStore extends BaseStore {
     };
     this.events = {
       CONNECTIONS_UPDATE : 'admin-connections-update',
-      CONNECTION_LOG_UPDATE : 'admin-connection-log-update'
+      CONNECTION_LOG_UPDATE : 'admin-connection-log-update',
+      UCD_IAM_PROFILE_UPDATE : 'admin-ucd-iam-profile-update'
     };
   }
 
@@ -36,6 +37,14 @@ class AdminStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.CONNECTION_LOG_UPDATE
+    );
+  }
+
+  onUcdIamProfileUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.UCD_IAM_PROFILE_UPDATE
     );
   }
 

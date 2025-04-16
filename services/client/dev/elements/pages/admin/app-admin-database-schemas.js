@@ -12,7 +12,8 @@ export default class AppAdminDatabaseSchemas extends Mixin(LitElement)
     return {
       pageId: { type: String, attribute: 'page-id' },
       orgName: { type: String},
-      dbName: { type: String}
+      dbName: { type: String},
+      schemas: { type: Array }
     }
   }
 
@@ -25,6 +26,7 @@ export default class AppAdminDatabaseSchemas extends Mixin(LitElement)
     this.render = render.bind(this);
     this.orgName = '';
     this.dbName = '';
+    this.schemas = [];
 
     this.dataCtl = new PageDataController(this);
 
@@ -64,11 +66,54 @@ export default class AppAdminDatabaseSchemas extends Mixin(LitElement)
     // get data that requires the database to be awake
     r = await this.dataCtl.get([
       {
+        request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
+        ctlProp: 'users',
+        errorMessage: 'Unable to get database users'
+      },
+      {
         request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
         ctlProp: 'schemas',
         errorMessage: 'Unable to load schemas'
       }
-    ]);
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+
+    // get tables for each schema
+    const tables = await this.dataCtl.get(this.dataCtl.schemas.map(schema => {
+      return {
+        request: this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, schema),
+        errorMessage: `Unable to load tables for schema ${schema}`,
+      }
+    }
+    ), {ignoreLoading: true});
+    if ( !tables ) return;
+
+    // get user schema access
+    const userSchemaProduct = this.dataCtl.schemas.flatMap(schema =>
+      this.dataCtl.users.map(user => ({ schema, user: user.name }))
+    );
+    const schemaAccess = await this.dataCtl.batchGet(userSchemaProduct.map(({ schema, user }) => ({
+      func: () => this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, schema, user),
+      errorMessage: `Unable to get access for user ${user} on schema ${schema}`
+    })), {ignoreLoading: true});
+    if ( !schemaAccess ) return;
+
+    // put it all together
+    this.schemas = this.dataCtl.schemas.map(schema => {
+      const access = schemaAccess.filter(r => r.response?.value?.schema === schema).map(r => r.response.value);
+      const userCt = access.filter(r => r.payload.schema.length).length;
+      const isPublic = access.find(r => r.user === 'pgfarm-public' && r.payload.schema.length ) ? true : false;
+      const publicTableCt = Object.keys(access.find(r => r.user === 'pgfarm-public')?.payload?.tables || {}).length;
+      return {
+        name: schema,
+        tables: tables.find(t => t.response.value.schema === schema).response.value.payload,
+        userCt,
+        isPublic,
+        publicTableCt
+      }
+    });
+
+    this.AppStateModel.hideLoading();
   }
 
 }

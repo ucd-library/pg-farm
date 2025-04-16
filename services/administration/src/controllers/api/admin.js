@@ -2,7 +2,11 @@ import {Router} from 'express';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import pgClient from '../../../../lib/pg-admin-client.js';
+<<<<<<< HEAD
 import { admin } from '../../../../models/index.js';
+=======
+import {user} from '../../../../models/index.js';
+>>>>>>> main
 
 const router = Router();
 
@@ -45,5 +49,18 @@ router.get('/sleep-instances', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.put('/ucd-iam-profile/:username', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let success = false;
+    if ( ! await user.pgFarmUserExists(req.params.username) ) {
+      return res.status(404).json({error: 'User is not a pgFarm user'});
+    }
+    let resp = await user.fetchAndUpdateUcdIamData(req.params.username);
+    if ( resp ) success = true;
+    res.json({success, resp});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
 
 export default router;

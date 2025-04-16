@@ -130,6 +130,14 @@ export default class TableController {
   }
 
   /**
+   * @description Get the number of selected rows
+   * @returns {Number} - The number of selected rows
+   */
+  getSelectedCount(){
+    return this.getRows().filter( item => item.selected ).length;
+  }
+
+  /**
    * @description Set the value of a filter
    * @param {*} filterId - The unique identifier of the filter defined in controller initialization
    * @param {*} value

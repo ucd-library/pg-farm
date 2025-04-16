@@ -20,7 +20,8 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     return {
       pageId: { type: String, attribute: 'page-id' },
       orgName: { type: String},
-      dbName: { type: String}
+      dbName: { type: String},
+      counts: { type: Object }
     }
   }
 
@@ -33,10 +34,25 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     this.render = render.bind(this);
     this.orgName = '';
     this.dbName = '';
+    this.resetCounts();
 
     this.dataCtl = new PageDataController(this);
 
     this._injectModel('AppStateModel', 'DatabaseModel');
+  }
+
+  /**
+   * @description Reset the counts object to default values
+   */
+  resetCounts(){
+    const counts = {};
+    ['schemas', 'users', 'tables'].forEach(key => {
+      counts[key] = {
+        total: 0,
+        totalPublic: 0
+      }
+    })
+    this.counts = counts;
   }
 
   /**
@@ -50,6 +66,7 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     this.dbName = e.location?.path?.[2] || '';
     this.dataCtl.isFeatured = false;
     this.AppStateModel.showLoading();
+    this.resetCounts();
     let r = await this.dataCtl.get([
       {
         request: this.DatabaseModel.isAdmin(this.orgName, this.dbName),
@@ -78,7 +95,7 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     r = await this.dataCtl.get([
       {
         request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
-        hostCallback: '_onGetUsers',
+        ctlProp: 'users',
         errorMessage: 'Unable to get database users'
       },
       {
@@ -86,7 +103,42 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
         ctlProp: 'schemas',
         errorMessage: 'Unable to load schemas'
       },
-    ]);
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+
+    this.counts.users.total = this.dataCtl.users.length;
+    this.counts.users.totalPublic = this.dataCtl.users.filter(u => u.pgFarmUser?.type === 'PUBLIC').length;
+    this.counts.schemas.total = this.dataCtl.schemas.length;
+
+    // get tables for each schema
+    const tables = (await this.dataCtl.batchGet(this.dataCtl.schemas.map(schema => {
+      return {
+        func: () => this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, schema),
+        errorMessage: `Unable to load tables for schema ${schema}`,
+      }
+    }
+    ), {ignoreLoading: true})).flatMap(t => t.response.value.payload);
+    if ( !tables ) return;
+    this.counts.tables.total = tables.length;
+
+    // get schema access for all public users
+    const userSchemaProduct = this.dataCtl.schemas.flatMap(schema =>
+      this.dataCtl.users
+        .filter(u => u.pgFarmUser?.type === 'PUBLIC')
+        .map(user => ({ schema, user: user.name }))
+    );
+    const schemaAccess = (await this.dataCtl.batchGet(userSchemaProduct.map(({ schema, user }) => ({
+      func: () => this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, schema, user),
+      errorMessage: `Unable to get access for user ${user} on schema ${schema}`
+    })), {ignoreLoading: true})).map(r => r.response.value);
+    if ( !schemaAccess ) return;
+
+    // get counts of public schemas and tables
+    this.counts.schemas.totalPublic = this.dataCtl.schemas.filter(schema => schemaAccess.find(r => r.schema == schema && r.payload.schema.length)).length;
+    this.counts.tables.totalPublic = tables.filter(t => schemaAccess.find(r => r.schema == t.table_schema && r.payload.tables[t.table_name])).length;
+
+    this.requestUpdate();
+    this.AppStateModel.hideLoading();
   }
 
   /**
@@ -128,15 +180,6 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
    */
   _onFeaturedList(payload){
     this.dataCtl.isFeatured = payload.some(db => `${db?.organization?.name}/${db?.name}` === `${this.orgName}/${this.dbName}`);
-  }
-
-  _onGetUsers(payload){
-    this.dataCtl.users = {
-      list: payload,
-      total: payload.length,
-      totalPublic: payload.filter(u => u.pgFarmUser?.type === 'PUBLIC').length
-    };
-    this.requestUpdate();
   }
 
 }
