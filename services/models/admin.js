@@ -339,13 +339,22 @@ class AdminModel {
       }
 
       let newPriority = parseInt(resources.name.split('-')[1]);
-      if( newPriority !== instance.priority ) {
+      if( newPriority !== instance.priority_state ) {
         logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`,{
           instance
         });
         await client.updateInstancePriority(instance.instance_id, instance.organization_id, newPriority);
         await this.models.instance.apply(instance.instance_id, instance.organization_id);
-        changed.push({instance, newState : newPriority});
+        
+        let query = await client.getLastDatabaseEvent(instance.instance_id);
+        changed.push({
+          instance, 
+          newState : newPriority,
+          lastDatabaseEvent : {
+            event_type : query.event_type,
+            timestamp : query.timestamp
+          }
+        });
       }
     }
 

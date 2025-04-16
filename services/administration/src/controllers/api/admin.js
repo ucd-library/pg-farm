@@ -2,11 +2,7 @@ import {Router} from 'express';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import pgClient from '../../../../lib/pg-admin-client.js';
-<<<<<<< HEAD
-import { admin } from '../../../../models/index.js';
-=======
-import {user} from '../../../../models/index.js';
->>>>>>> main
+import { admin, user } from '../../../../models/index.js';
 
 const router = Router();
 
@@ -43,7 +39,7 @@ router.get('/connection-log/:sessionId', keycloak.protect('admin'), async (req, 
 router.get('/sleep-instances', keycloak.protect('admin'), async (req, res) => {
   try {
     let resp = await admin.sleepInstances();
-    res.json(resp.rows);
+    res.json(resp);
   } catch(e) {
     handleError(res, e);
   }
