@@ -320,6 +320,8 @@ class AdminModel {
   async sleepInstances() {
     let active = await client.getInstances({state: this.models.instance.STATES.RUN});
     
+    let changed = [];
+
     for( let instance of active ) {
       if( instance.availability === 'ALWAYS' ) {
         continue;
@@ -331,19 +333,23 @@ class AdminModel {
         logger.info('Instance has been idle for too long, shutting down',{
           instance
         });
+        changed.push({instance, newState: 'SLEEP'});
         await this.stopInstance(instance.instance_id, instance.organization_id);
         continue;
       }
 
-      let newPriority = resources.name.split('-')[1];
+      let newPriority = parseInt(resources.name.split('-')[1]);
       if( newPriority !== instance.priority ) {
-        logger.info(`Instance priority has changed from ${instance.priority} to ${newPriority}, updating instance`,{
+        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`,{
           instance
         });
         await client.updateInstancePriority(instance.instance_id, instance.organization_id, newPriority);
         await this.models.instance.apply(instance.instance_id, instance.organization_id);
+        changed.push({instance, newState : newPriority});
       }
     }
+
+    return changed;
   }
 
   /**

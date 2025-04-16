@@ -49,6 +49,17 @@ const XLOW_RESOURCES = {
   }
 }
 
+const GENERAL_RESOURCES = {
+  limits : {
+    cpu : '2',
+    memory : '2Gi'
+  },
+  requests : {
+    cpu : '250m',
+    memory : '500Mi'
+  }
+}
+
 const SLEEP_AT = {
   'HIGH' : msPerDay*60, // 60 days
   'MEDIUM' : msPerDay*35, // 35 days
@@ -221,6 +232,6 @@ async function getInstanceResources(instance, onStart) {
 
 export {
   getInstanceResources, getResources, getMaxPriority,
-  STATES, ALLOWED_LEVELS, 
+  STATES, ALLOWED_LEVELS, GENERAL_RESOURCES,
   HIGH_RESOURCES, MEDIUM_RESOURCES, LOW_RESOURCES, XLOW_RESOURCES
 };

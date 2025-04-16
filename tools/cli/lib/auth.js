@@ -62,7 +62,7 @@ class Auth {
     let body = await resp.json();
 
     config.token = body.access_token;
-    const hash = 'urn:md5:'+crypto.createHash('md5').update(body.access_token).digest('base64');
+    const hash = crypto.createHash('md5').update(body.access_token).digest('base64');
     config.tokenHash = hash;
 
     saveConfig();

@@ -720,7 +720,7 @@ class PgFarmAdminClient {
    * @returns {Promise<String>}
    */
   async setUserToken(token) {
-    const hash = 'urn:md5:'+crypto.createHash('md5').update(token).digest('base64');
+    const hash = crypto.createHash('md5').update(token).digest('base64');
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
     const expires = new Date(payload.exp * 1000);
     const username = payload.username || payload.preferred_username;
