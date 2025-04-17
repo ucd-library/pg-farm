@@ -37,7 +37,7 @@ class LocalLoginServer {
       if( !jwt ) return;
 
       config.token = jwt;
-      const hash = 'urn:md5:'+crypto.createHash('md5').update(jwt).digest('base64');
+      const hash = crypto.createHash('md5').update(jwt).digest('base64');
       config.tokenHash = hash;
 
       saveConfig();

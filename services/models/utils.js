@@ -42,9 +42,6 @@ class ModelUtils {
         if( container.resources ) {
           delete container.resources;
         }
-        if( container?.image?.match('/pgfarm-') ) {
-          container.image = 'localhost/local-dev/'+container.image.split('/').pop();
-        }
       });
     }
 

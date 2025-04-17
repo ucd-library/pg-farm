@@ -5,6 +5,7 @@ import kubectl from '../lib/kubectl.js';
 import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
+import { getInstanceResources, getMaxPriority, GENERAL_RESOURCES } from '../lib/instance-resources.js';
 
 class Instance {
 
@@ -263,8 +264,33 @@ class Instance {
       return;
     }
 
-    logger.info('Apply k8s config for instance', instNameOrId, orgNameOrId);
+    let instance = await this.get(instNameOrId, orgNameOrId);
 
+    // JM - perhaps we just add a now shutdown delay time after start.
+    let maxPriority = await getMaxPriority(instance.availability);
+    client.updateInstancePriority(instance.instance_id, instance.organization_id, maxPriority);
+
+    let applyResp = await this.apply(instNameOrId, orgNameOrId);
+
+    if( opts.isRestoring ) {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RESTORING);
+    } else {
+      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
+    }
+
+    return applyResp;
+  }
+
+  /**
+   * @method apply
+   * @description Apply the k8s config for the instance from the current
+   * instance state.
+   * 
+   * @param {String} instNameOrId 
+   * @param {String} orgNameOrId 
+   * @returns {Promise<Object>}
+   */
+  async apply(instNameOrId, orgNameOrId) {
     let instance = await this.get(instNameOrId, orgNameOrId);
     let customProps = await client.getInstanceConfig(instNameOrId, orgNameOrId);
     let instanceImage = customProps.image || config.pgInstance.image;
@@ -272,6 +298,7 @@ class Instance {
     let hostname = instance.hostname;
 
     let templates = await modelUtils.getTemplate('postgres');
+    let priorityResources = await getInstanceResources(instance);
 
     // Postgres
     let k8sConfig = templates.find(t => t.kind === 'StatefulSet');
@@ -288,10 +315,19 @@ class Instance {
     let template = spec.template;
     template.metadata.labels.app = hostname;
 
+    // set the priority class name for the instance based on the instance priority
+    template.spec.priorityClassName = priorityResources.name;
+
     // main pg container
     let container = template.spec.containers[0];
     container.image = instanceImage;
     container.volumeMounts.find(i => i.mountPath == '/var/lib/postgresql/data').name = hostname+'-ps';
+    
+    // set the requests and limits for the container resources based on the instance priority
+    // container.resources = priorityResources.resources;
+    // above cause a pod restart but features are coming where this won't be the cause
+    // for now using general resources
+    container.resources = GENERAL_RESOURCES;
 
     // helper container
     container = template.spec.containers[1];
@@ -332,14 +368,8 @@ class Instance {
     });
     logger.info('Applied instance k8s service config', hostname);
 
-    if( opts.isRestoring ) {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RESTORING);
-    } else {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
-    }
-
     return {pgResult, pgServiceResult};
-  }
+  }  
 
   /**
    * @method stop

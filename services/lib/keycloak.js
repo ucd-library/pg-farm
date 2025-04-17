@@ -71,19 +71,10 @@ class KeycloakUtils {
     this.initTls();
 
     token = token.replace(/^Bearer /i, '');
-
-    if( token.match(/^urn:/) ) {
-      token = await adminClient.getUserTokenFromHash(token);
-      if( !token ) {
-        return {
-          active : false,
-          status : 404,
-          user : null,
-          error : true,
-          message : 'Token not found from hash'
-        }
-      }
-    }
+    
+    // check if we have a token hash
+    let jwtToken = await adminClient.getUserTokenFromHash(token);
+    if( jwtToken ) token = jwtToken;
 
     // 30 second caching
     if( this.tokenCache.has(token) ) {

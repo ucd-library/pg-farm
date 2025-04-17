@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
-import { start } from 'repl';
+import { getInstanceResources  } from '../lib/instance-resources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -311,7 +311,7 @@ class AdminModel {
   }
 
   /**
-   * @method sleepInstances
+   * @method updateInstancesPriorityState
    * @description Sleep instances that have been idle for too long.  Query
    * all running instances.  Then check the last database event for each
    * instance.  If the instance has been idle for longer than the availibility
@@ -319,35 +319,46 @@ class AdminModel {
    */
   async sleepInstances() {
     let active = await client.getInstances({state: this.models.instance.STATES.RUN});
-    let availableStates = this.models.instance.AVAILABLE_STATES;
-    let now = Date.now();
+    
+    let changed = [];
 
     for( let instance of active ) {
       if( instance.availability === 'ALWAYS' ) {
         continue;
       }
 
-      let e = await client.getLastDatabaseEvent(instance.instance_id);
-      if( !e ) {
-        logger.warn('No database events found for instance, shutting down', instance.instance_id);
+      let resources = await getInstanceResources(instance);
+
+      if( resources.sleep ) {
+        logger.info('Instance has been idle for too long, shutting down',{
+          instance
+        });
+        changed.push({instance, newState: 'SLEEP'});
         await this.stopInstance(instance.instance_id, instance.organization_id);
         continue;
       }
 
-      let lastEvent = new Date(e.timestamp).getTime();
-      let diff = now - lastEvent;
-      let allowedTime = availableStates[instance.availability] || availableStates.LOW;
-
-      if( diff > allowedTime ) {
-        logger.info('Instance has been idle for too long, shutting down',{
-          instance,
-          lastEvent: e,
-          availability: instance.availability,
-          now, diff, allowedTime
+      let newPriority = parseInt(resources.name.split('-')[1]);
+      if( newPriority !== instance.priority_state ) {
+        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`,{
+          instance
         });
-        await this.stopInstance(instance.instance_id, instance.organization_id);
+        await client.updateInstancePriority(instance.instance_id, instance.organization_id, newPriority);
+        await this.models.instance.apply(instance.instance_id, instance.organization_id);
+        
+        let query = await client.getLastDatabaseEvent(instance.instance_id);
+        changed.push({
+          instance, 
+          newState : newPriority,
+          lastDatabaseEvent : {
+            event_type : query.event_type,
+            timestamp : query.timestamp
+          }
+        });
       }
     }
+
+    return changed;
   }
 
   /**
