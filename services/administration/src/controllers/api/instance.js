@@ -1,6 +1,7 @@
 import {Router} from 'express';
-import {admin as model, instance as instanceModel, backup} from '../../../../models/index.js';
+import {admin as model, instance as instanceModel, backup, database} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
+import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
 import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
 
@@ -18,6 +19,15 @@ router.get('/', async (req, res) => {
 router.get('/:organization/:instance', async (req, res) => {
   try {
     let resp = await instanceModel.get(req.params.instance);
+    let lastEvent = await client.getLastDatabaseEvent(resp.instance_id);
+    if( lastEvent ) {
+      resp.lastDatabaseEvent = {
+        event_type : lastEvent.event_type,
+        timestamp : lastEvent.timestamp,
+        database_name : lastEvent.database_name,
+        database_id : lastEvent.database_id
+      }
+    }
     res.json(resp);
   } catch(e) {
     handleError(res, e);

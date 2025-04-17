@@ -226,7 +226,7 @@ const config = {
       password : env.PG_INSTANCE_PUBLIC_PASSWORD || 'go-aggies',
     },
     // this should be a couple hours after the backup cron
-    shutdownCron : env.PG_INSTANCE_SHUTDOWN_CRON || '0 4 * * *',
+    shutdownCron : env.PG_INSTANCE_SHUTDOWN_CRON || '0 */1 * * *',
     states : {
       CREATING : 'CREATING',
       RUN : 'RUN',
