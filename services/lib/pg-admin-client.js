@@ -258,6 +258,14 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
+  async updateInstancePriority(nameOrId, orgNameOrId, priority) {
+    return client.query(`
+      UPDATE ${config.adminDb.tables.INSTANCE}
+      SET priority_state = $1
+      WHERE instance_id = ${this.schema}.get_instance_id($2, $3)
+    `, [priority, nameOrId, orgNameOrId]);
+  }
+
   /**
    * @method getInstanceDatabases
    * @description get all databases for an instance
@@ -724,7 +732,7 @@ class PgFarmAdminClient {
    * @returns {Promise<String>}
    */
   async setUserToken(token) {
-    const hash = 'urn:md5:'+crypto.createHash('md5').update(token).digest('base64');
+    const hash = crypto.createHash('md5').update(token).digest('base64');
     const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
     const expires = new Date(payload.exp * 1000);
     const username = payload.username || payload.preferred_username;
@@ -738,15 +746,16 @@ class PgFarmAdminClient {
 
   /**
    * @method getUserTokenFromHash
-   * @description get the full JWT token from the md5 hash of the token
+   * @description get the full JWT token from the md5 hash of the token, also checks the
+   * jwt token exists
    *
-   * @param {String} hash md5 hash of the
+   * @param {String} token md5 hash of the token or the token itself
    * @returns {Promise<String>}
    */
   async getUserTokenFromHash(hash) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.USER_TOKEN}
-      WHERE hash = $1
+      WHERE hash = $1 OR token = $1
     `, [hash]);
 
     if( resp.rows.length === 0 ) {
@@ -754,6 +763,10 @@ class PgFarmAdminClient {
     }
 
     return resp.rows[0].token;
+  }
+
+  async purgeExpiredTokens() {
+    return client.query(`Select * from ${this.schema}.purge_old_user_tokens()`);
   }
 
   /**

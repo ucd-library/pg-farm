@@ -66,6 +66,8 @@ const config = {
 
   appUrl,
 
+  caChainPem : env.CA_CHAIN_PEM || '',
+
   metrics : {
     enabled : env.METRICS_ENABLED === 'true',
   },
@@ -153,10 +155,10 @@ const config = {
   // Keycloak configuration
   oidc : {
     tokenCacheTTL : env.OIDC_TOKEN_CACHE_TTL || 1000*60*5,
-    baseUrl : env.OIDC_BASE_URL || 'https://sandbox.auth.library.ucdavis.edu/realms/pg-farm',
+    baseUrl : env.OIDC_BASE_URL || 'https://auth.library.ucdavis.edu/realms/pg-farm',
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',
-    scopes : env.OIDC_SCOPES || 'roles openid profile email',
+    scopes : env.OIDC_SCOPES || 'identityProvider roles openid profile email',
     roleIgnoreList : [],
     loginPath : env.PGFARM_LOGIN_PATH || '/login',
     logoutPath : env.PGFARM_LOGOUT_PATH || '/auth/logout'
@@ -224,7 +226,7 @@ const config = {
       password : env.PG_INSTANCE_PUBLIC_PASSWORD || 'go-aggies',
     },
     // this should be a couple hours after the backup cron
-    shutdownCron : env.PG_INSTANCE_SHUTDOWN_CRON || '0 4 * * *',
+    shutdownCron : env.PG_INSTANCE_SHUTDOWN_CRON || '0 */1 * * *',
     states : {
       CREATING : 'CREATING',
       RUN : 'RUN',

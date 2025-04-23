@@ -9,6 +9,7 @@ let stdin = '';
 program.command('login')
   .description('Login using UCD CAS Authentication')
   .option('-h, --headless', 'Login without local browser (ie you are in a pure shell, no Desktop UI), copy and paste token')
+  .option('--force-remote-cert', 'Force use of remote certificate instead of system.  Mac/Linux only. Windows will always use this option.')
   .action(options => {
     auth.login(options);
   });

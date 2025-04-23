@@ -1,6 +1,6 @@
 {
   "name": "@ucd-lib/pgfarm",
-  "version": "0.0.11",
+  "version": "0.0.13",
   "description": "PG Farm client; library, cli and desktop applicaiton",
   "main": "index.js",
   "type": "module",

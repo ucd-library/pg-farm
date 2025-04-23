@@ -1,20 +1,31 @@
 import fetch from 'node-fetch';
 import clone from 'clone';
 import config from './config.js';
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
 import adminClient from './pg-admin-client.js';
-import { organization } from '../models/index.js';
 import logger from './logger.js';
 
 class KeycloakUtils {
 
   constructor() {
     this.tokenCache = new Map();
-    this.tokenRequestCache = new Map();
+    // this.tokenRequestCache = new Map();
     this.tokenCacheTTL = config.oidc.tokenCacheTTL;
 
     this.setUser = this.setUser.bind(this);
     this.protect = this.protect.bind(this);
+    this.getkeyFromJwks = this.getkeyFromJwks.bind(this);
+
+
+    this.jwksClient = jwksClient({
+      jwksUri: config.oidc.baseUrl+'/protocol/openid-connect/certs',
+      cache: true,
+      cacheMaxEntries: 50, 
+      cacheMaxAge: 60 * 60 * 1000
+    });
   }
+
 
   initTls() {
     if( this.tlsInitialized ) return;
@@ -24,21 +35,6 @@ class KeycloakUtils {
     if( process.env.LOCAL_KEYCLOAK === 'true' ) {
       process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
     }
-  }
-
-  async getJWKS() {
-    this.initTls();
-
-    if( this.jwks ) {
-      return this.jwks;
-    }
-
-    let resp = await fetch(config.oidc.baseUrl+'/protocol/openid-connect/certs')
-    this.jwks = await resp.json();
-
-    setTimeout(() => this.jwks = null, 1000 * 60 * 60);
-
-    return this.jwks;
   }
 
   async loginServiceAccount(username, secret) {
@@ -68,22 +64,46 @@ class KeycloakUtils {
   }
 
   async verifyActiveToken(token='') {
+    token = token.replace(/^Bearer /i, '');
+    
+    // check if we have a token hash
+    let jwtToken = await adminClient.getUserTokenFromHash(token);
+    if( jwtToken ) token = jwtToken;
+
+    // 30 second caching
+    if( this.tokenCache.has(token) ) {
+      let result = this.tokenCache.get(token);
+      return clone(result);
+    }
+
+    return new Promise((resolve) => {
+      jwt.verify(token, this.getkeyFromJwks, {}, (error, decoded) => {
+        if( error ) {
+          resolve({active : false, error, user : null});
+        } else {
+          let resp = {active : true, user : decoded, jwt : token};
+          this.tokenCache.set(token, resp);
+          resolve(resp);
+        }
+      });
+    });
+  }
+
+  getkeyFromJwks(header, callback) {
+    this.jwksClient.getSigningKey(header.kid, function(err, key) {
+      var signingKey = key.publicKey || key.rsaPublicKey;
+      callback(err, signingKey);
+    });
+  }
+
+  async verifyActiveTokenKeycloak(token='') {
     this.initTls();
 
     token = token.replace(/^Bearer /i, '');
-
-    if( token.match(/^urn:/) ) {
-      token = await adminClient.getUserTokenFromHash(token);
-      if( !token ) {
-        return {
-          active : false,
-          status : 404,
-          user : null,
-          error : true,
-          message : 'Token not found from hash'
-        }
-      }
-    }
+    
+    // check if we have a token hash
+    let jwtToken = await adminClient.getUserTokenFromHash(token);
+    if( jwtToken ) token = jwtToken;
 
     // 30 second caching
     if( this.tokenCache.has(token) ) {

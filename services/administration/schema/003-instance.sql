@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.instance (
     description text,
     port integer NOT NULL DEFAULT 5432,
     state instance_state NOT NULL DEFAULT 'CREATING',
+    priority_state INTEGER NOT NULL DEFAULT 0,
     availability instance_availability NOT NULL DEFAULT 'LOW',
     organization_id UUID REFERENCES pgfarm.organization(organization_id),
     created_at timestamp NOT NULL DEFAULT now(),
