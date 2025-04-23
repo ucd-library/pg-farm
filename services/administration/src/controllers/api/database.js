@@ -414,6 +414,42 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
   }
 });
 
+router.post('/:organization/:database/grant',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let body = req.body;
+    for( let grant of body ) {
+      if( grant.schema === '_' ) {
+        resp = await user.grantDatabaseAccess(
+          req.params.database,
+          organization,
+          grant.user,
+          grant.permission
+        );
+      } else {
+        resp = await user.grant(
+          req.params.database,
+          organization,
+          grant.schema,
+          grant.user,
+          grant.permission
+        );
+      }
+    }
+
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 /** Revoke user schema access **/
 router.delete('/:organization/:database/revoke/:schema/:user/:permission',
   keycloak.protect('instance-admin'),
@@ -441,6 +477,42 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
         req.params.user,
         req.params.permission
       );
+    }
+
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.post('/:organization/:database/revoke',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let body = req.body;
+    for( let grant of body ) {
+      if( grant.schema === '_' ) {
+        resp = await user.revokeDatabaseAccess(
+          req.params.database,
+          organization,
+          grant.user,
+          grant.permission
+        );
+      } else {
+        resp = await user.revoke(
+          req.params.database,
+          organization,
+          grant.schema,
+          grant.user,
+          grant.permission
+        );
+      }
     }
 
     res.status(200).json({success: true});

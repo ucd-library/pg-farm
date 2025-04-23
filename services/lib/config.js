@@ -106,6 +106,14 @@ const config = {
       secretKey : env.CLIENT_RECAPTCHA_SECRET_KEY || ''
     },
     systemSchemas : ['topology', 'pg_toast'],
+    schemaDescriptions : {
+      api : {
+        short : 'This schema is accessible via the PostgREST API',
+      },
+      public : {
+        short : 'This is the default schema for PostgreSQL',
+      }
+    },
     buildInfo: {
       remote: BUILD_INFO.remote,
       commit: BUILD_INFO.commit,
