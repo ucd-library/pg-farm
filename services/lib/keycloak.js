@@ -18,6 +18,7 @@ class KeycloakUtils {
     this.getkeyFromJwks = this.getkeyFromJwks.bind(this);
 
 
+    logger.info('Using jwks keys from', config.oidc.baseUrl+'/protocol/openid-connect/certs');
     this.jwksClient = jwksClient({
       jwksUri: config.oidc.baseUrl+'/protocol/openid-connect/certs',
       cache: true,
@@ -91,8 +92,9 @@ class KeycloakUtils {
 
   getkeyFromJwks(header, callback) {
     this.jwksClient.getSigningKey(header.kid, function(err, key) {
+      if( err ) return callback(err);
       var signingKey = key.publicKey || key.rsaPublicKey;
-      callback(err, signingKey);
+      callback(null, signingKey);
     });
   }
 

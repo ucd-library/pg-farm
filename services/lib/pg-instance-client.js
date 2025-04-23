@@ -264,6 +264,7 @@ class PGInstance {
       permission = permission.join(', ');
     }
     let query = pgFormat(`REVOKE ${permission} ON SCHEMA "%s" FROM "%s"`, schemaName, roleName);
+    logger.info('Running revoke schema access query', query);
     return this.query(connection, query);
   }
 
