@@ -105,6 +105,7 @@ const config = {
       siteKey : env.CLIENT_RECAPTCHA_SITE_KEY || '',
       secretKey : env.CLIENT_RECAPTCHA_SECRET_KEY || ''
     },
+    systemSchemas : ['topology', 'pg_toast'],
     buildInfo: {
       remote: BUILD_INFO.remote,
       commit: BUILD_INFO.commit,

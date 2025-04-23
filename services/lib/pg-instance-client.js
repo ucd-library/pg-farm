@@ -71,10 +71,27 @@ class PGInstance {
     let resp = await this.query(connection, query);
     let exists = (resp.rows.length > 0);
 
-    if( exists ) return;
+    if( exists ) {
+      await this.revokePublicOnPublic(connection);
+      return;
+    }
 
     logger.info('Creating database '+dbName+' on instance', connection.host);
     query = pgFormat(`CREATE DATABASE %I`, dbName);
+    await this.query(connection, query);
+
+    await this.revokePublicOnPublic(connection);
+  }
+
+  /**
+   * @method revokePublicOnPublic
+   * @description Revoke all privileges on the public schema from the public role.
+   * By default ALL users have usage on the public schema and we dont want that.
+   * 
+   * @returns 
+   */
+  async revokePublicOnPublic(connection) {
+    let query = `REVOKE ALL ON SCHEMA public FROM public`;
     return this.query(connection, query);
   }
 
@@ -377,6 +394,41 @@ class PGInstance {
     return this.query(connection, query);
   }
 
+  getTableAccessOverview(connection, databaseName, schemaName) {
+    let schemaFilter = '';
+    if( schemaName ) {
+      schemaFilter = pgFormat(`t.table_schema = %L AND`, schemaName);
+    } else {
+      schemaFilter = `t.table_schema NOT IN ('pg_catalog', 'information_schema') AND`;
+    }
+
+    let query = pgFormat(`
+      SELECT 
+          t.table_schema, 
+          t.table_name, 
+          t.table_type,
+          ARRAY_AGG(DISTINCT rtg.grantee) AS user_access_list
+      FROM 
+          information_schema.tables t
+      LEFT JOIN
+          information_schema.role_table_grants rtg ON 
+              t.table_schema = rtg.table_schema AND 
+              t.table_name = rtg.table_name
+      WHERE 
+          t.table_catalog = %L AND
+          ${schemaFilter}
+          rtg.grantee NOT IN ('PUBLIC', 'postgres')
+      GROUP BY 
+          t.table_schema, 
+          t.table_name, 
+          t.table_type
+      ORDER BY
+          t.table_schema, 
+          t.table_name;`,
+      databaseName);
+    return this.query(connection, query);
+  }
+
   /**
    * @method getTableAccess
    * @description Get the access for a table
@@ -424,6 +476,35 @@ class PGInstance {
 
   getUsageAccess(connection, schemaName) {
     let query = pgFormat(`SELECT * FROM information_schema.usage_privileges WHERE schema_name = %L`, schemaName);
+    return this.query(connection, query);
+  }
+
+  getSchemasOverview(connection) {
+    let query = pgFormat(`WITH schema_info AS (
+    SELECT
+        n.nspname AS schema_name,
+        COUNT(c.oid) FILTER (WHERE c.relkind = 'r') AS table_count,
+        COUNT(DISTINCT c.relowner) AS user_count
+    FROM pg_namespace n
+    LEFT JOIN pg_class c ON c.relnamespace = n.oid
+    WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
+    GROUP BY n.nspname
+),
+usage_check AS (
+    SELECT
+        n.nspname AS schema_name,
+        has_schema_privilege(%L, n.nspname, 'USAGE') AS is_public
+    FROM pg_namespace n
+    WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
+)
+SELECT 
+    s.schema_name,
+    s.table_count,
+    s.user_count,
+    u.is_public
+FROM schema_info s
+JOIN usage_check u ON s.schema_name = u.schema_name
+ORDER BY s.schema_name;`, config.pgInstance.publicRole.username);
     return this.query(connection, query);
   }
 
