@@ -62,6 +62,7 @@ function _renderMainContent(){
       <app-admin-database-schemas page-id="admin-db-schemas"></app-admin-database-schemas>
       <app-admin-database-tables page-id="admin-db-tables"></app-admin-database-tables>
       <app-admin-user-profile page-id="me"></app-admin-user-profile>
+      <app-admin-database-table-single page-id="admin-db-table-single"></app-admin-database-table-single>
     </ucdlib-pages>
   </div>
   `;
