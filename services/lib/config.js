@@ -155,10 +155,10 @@ const config = {
   // Keycloak configuration
   oidc : {
     tokenCacheTTL : env.OIDC_TOKEN_CACHE_TTL || 1000*60*5,
-    baseUrl : env.OIDC_BASE_URL || 'https://sandbox.auth.library.ucdavis.edu/realms/pg-farm',
+    baseUrl : env.OIDC_BASE_URL || 'https://auth.library.ucdavis.edu/realms/pg-farm',
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',
-    scopes : env.OIDC_SCOPES || 'roles openid profile email',
+    scopes : env.OIDC_SCOPES || 'identityProvider roles openid profile email',
     roleIgnoreList : [],
     loginPath : env.PGFARM_LOGIN_PATH || '/login',
     logoutPath : env.PGFARM_LOGOUT_PATH || '/auth/logout'

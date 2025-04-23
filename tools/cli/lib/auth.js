@@ -119,15 +119,17 @@ class Auth {
 
     let found = false;
     for( let serviceName in pgService ) {
-      if( pgService[serviceName].host === hostname && !hostname.startsWith('localhost') ) {
+      let serviceDef = pgService[serviceName];
+
+      if( serviceDef.host === hostname && !hostname.startsWith('localhost') ) {
         if( serviceName === this.PG_SERVICE_NAME ) {
           found = true;
         }
 
-        pgService[serviceName] = Object.assign(pgService[serviceName], {
-          port : 5432,
-          user : pgService[serviceName].username || username,
-          sslmode: 'verify-full',
+        pgService[serviceName] = Object.assign(serviceDef, {
+          port : serviceDef.port || 5432,
+          user : serviceDef.username || username,
+          sslmode: serviceDef.sslmode || 'verify-full',
           sslrootcert: this.ROOT_CERT,
           password : config.tokenHash
         });

@@ -104,3 +104,10 @@ CREATE OR REPLACE FUNCTION pgfarm.add_user_token(username_in text, token_in text
     INSERT INTO pgfarm.user_token (user_id, token, hash, expires) VALUES (uid, token_in, hash_in, expires_in);
   END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION pgfarm.purge_old_user_tokens()
+  RETURNS void AS $$
+  BEGIN
+    DELETE FROM pgfarm.user_token WHERE (expires - INTERVAL '1 month') < now();
+  END;
+$$ LANGUAGE plpgsql;

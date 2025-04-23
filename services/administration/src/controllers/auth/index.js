@@ -66,6 +66,18 @@ function register(app) {
     res.oidc.login({
       returnTo: '/auth/success'+(urlParams ? `?${urlParams}` : '')
     });
+    // console.log('LOGOUT!!!!!!!!!')
+    // res.oidc.logout({
+    //   returnTo: config.oidc.loginPath+'-postclear'+(urlParams ? `?${urlParams}` : '')
+    // })
+  });
+
+  app.get(config.oidc.loginPath+'-postclear', (req, res) => {
+    let urlParams = new URLSearchParams(req.query).toString();
+    console.log('post login urlParams', urlParams);
+    res.oidc.login({
+      returnTo: '/auth/success'+(urlParams ? `?${urlParams}` : '')
+    });
   });
 
   app.get('/auth/success', async (req, res) => {

@@ -746,15 +746,16 @@ class PgFarmAdminClient {
 
   /**
    * @method getUserTokenFromHash
-   * @description get the full JWT token from the md5 hash of the token
+   * @description get the full JWT token from the md5 hash of the token, also checks the
+   * jwt token exists
    *
-   * @param {String} hash md5 hash of the
+   * @param {String} token md5 hash of the token or the token itself
    * @returns {Promise<String>}
    */
   async getUserTokenFromHash(hash) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.USER_TOKEN}
-      WHERE hash = $1
+      WHERE hash = $1 OR token = $1
     `, [hash]);
 
     if( resp.rows.length === 0 ) {
@@ -762,6 +763,10 @@ class PgFarmAdminClient {
     }
 
     return resp.rows[0].token;
+  }
+
+  async purgeExpiredTokens() {
+    return client.query(`Select * from ${this.schema}.purge_old_user_tokens()`);
   }
 
   /**
