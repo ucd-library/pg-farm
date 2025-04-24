@@ -501,10 +501,45 @@ class Database {
     return resp.rows.map(row => row.schema_name);
   }
 
+  async getSchemasOverview(orgNameOrId, dbNameOrId) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    let resp = await pgInstClient.getSchemasOverview(con);
+    return resp.rows.map(row => {
+      return {
+        name : row.schema_name,
+        tableCount : parseInt(row.table_count),
+        userCount : parseInt(row.user_count),
+        isPublic : row.is_public
+      }
+    });
+  }
+
   async listTables(orgNameOrId, dbNameOrId, schemaName) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
     let resp = await pgInstClient.listTables(con, schemaName);
     return resp.rows;
+  }
+
+  /**
+   * @method getTableAccessOverview
+   * @description Get an overview of all tables in a database
+   * 
+   * @param {*} orgNameOrId 
+   * @param {*} dbNameOrId 
+   * @param {*} schemaName Optional.  If not provided, will return all tables
+   * @returns 
+   */
+  async getTableAccessOverview(orgNameOrId, dbNameOrId, schemaName) {
+    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    let resp = await pgInstClient.getTableAccessOverview(con, dbNameOrId, schemaName);
+    return resp.rows.map(row => {
+      return {
+        schema : row.table_schema,
+        tableName : row.table_name,
+        tableType : row.table_type,
+        userAccess : row.user_access_list.replace(/(^{|}$)/g, '').split(','),
+      }
+    });
   }
 
   async getTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
@@ -524,6 +559,7 @@ class Database {
 
   async getTableAccessByUser(orgNameOrId, dbNameOrId, schemaName, username) {
     let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    let tables = await this.listTables(orgNameOrId, dbNameOrId, schemaName);
     let resp = await pgInstClient.getTableAccessByUser(con, con.database, schemaName, username);
 
     let tableMap = {};
@@ -532,6 +568,12 @@ class Database {
         tableMap[row.table_name] = [];
       }
       tableMap[row.table_name].push(row.privilege_type);
+    }
+
+    for( let table of tables ) {
+      if( !tableMap[table.table_name] ) {
+        tableMap[table.table_name] = [];
+      }
     }
 
     resp = await pgInstClient.getSchemaAccess(con, schemaName, username);

@@ -1,6 +1,7 @@
 import {Router} from 'express';
 import {database, pgRest, instance, user, organization, admin} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
+import pgInstClient from '../../../../lib/pg-instance-client.js'
 import handleError from '../handle-errors.js';
 
 const router = Router();
@@ -291,11 +292,38 @@ router.get('/:organization/:database/schemas',
 });
 
 /** Get Tables **/
+router.get('/:organization/:database/tables-overview',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.getTableAccessOverview(
+      req.params.organization,
+      req.params.database
+    ));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.get('/:organization/:database/schema/:schema/tables',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     res.json(await database.listTables(
+      req.params.organization,
+      req.params.database,
+      req.params.schema
+    ));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/:organization/:database/schema/:schema/tables-overview',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.getTableAccessOverview(
       req.params.organization,
       req.params.database,
       req.params.schema
@@ -321,6 +349,19 @@ router.get('/:organization/:database/schema/:schema/table/:tableName/access',
   }
 });
 
+router.get('/:organization/:database/schemas-overview',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    let result = await database.getSchemasOverview(
+      req.params.organization,
+      req.params.database
+    );
+    res.json(result);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
 
 /** Get User Schema Access **/
 router.get('/:organization/:database/schema/:schema/access/:username',
@@ -373,6 +414,42 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
   }
 });
 
+router.post('/:organization/:database/grant',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let body = req.body;
+    for( let grant of body ) {
+      if( grant.schema === '_' ) {
+        resp = await user.grantDatabaseAccess(
+          req.params.database,
+          organization,
+          grant.user,
+          grant.permission
+        );
+      } else {
+        resp = await user.grant(
+          req.params.database,
+          organization,
+          grant.schema,
+          grant.user,
+          grant.permission
+        );
+      }
+    }
+
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 /** Revoke user schema access **/
 router.delete('/:organization/:database/revoke/:schema/:user/:permission',
   keycloak.protect('instance-admin'),
@@ -400,6 +477,42 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
         req.params.user,
         req.params.permission
       );
+    }
+
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.post('/:organization/:database/revoke',
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+
+  try {
+    let organization = req.params.organization;
+    if( organization === '_' ) {
+      organization = null;
+    }
+
+    let body = req.body;
+    for( let grant of body ) {
+      if( grant.schema === '_' ) {
+        resp = await user.revokeDatabaseAccess(
+          req.params.database,
+          organization,
+          grant.user,
+          grant.permission
+        );
+      } else {
+        resp = await user.revoke(
+          req.params.database,
+          organization,
+          grant.schema,
+          grant.user,
+          grant.permission
+        );
+      }
     }
 
     res.status(200).json({success: true});

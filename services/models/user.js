@@ -426,7 +426,7 @@ class User {
     // grant schema access
     } else {
       if( permission === 'READ' ) {
-        await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES);
+        await pgInstClient.revokeSchemaAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGE);
         await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.TABLES);
         await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.FUNCTIONS);
         await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, pgInstClient.ALL.SEQUENCES);
