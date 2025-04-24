@@ -2,6 +2,7 @@ import {Router} from 'express';
 import {organization} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
 import crypto from 'crypto';
 
 const router = Router();
@@ -24,27 +25,28 @@ async function search(req, res) {
   }
 }
 
-router.post('/', keycloak.protect('admin'), async (req, res) => {
+router.post('/', keycloak.protect('admin'), contextMiddleware, async (req, res) => {
   try {
-    let org = await organization.create(req.body.title, req.body);
+    req.context.organization = req.body;
+    let org = await organization.create(req.context);
     res.status(201).json(org);
   } catch(e) {
     handleError(res, e);
   }
 });
 
-router.get('/:organization', async (req, res) => {
+router.get('/:organization', contextMiddleware, async (req, res) => {
   try {
-    let org = await organization.get(req.params.organization);
+    let org = await organization.get(req.context);
     res.status(200).json(org);
   } catch(e) {
     handleError(res, e);
   }
 });
 
-router.get('/:organization/users', async (req, res) => {
+router.get('/:organization/users', contextMiddleware, async (req, res) => {
   try {
-    let resp = await organization.getUsers(req.params.organization);
+    let resp = await organization.getUsers(req.context);
 
     let users = {};
 
@@ -77,13 +79,13 @@ router.get('/:organization/users', async (req, res) => {
 router.patch(
   '/:organization',
   keycloak.protect('organization-admin'),
+  contextMiddleware,
   async (req, res) => {
 
+  req.context.organization = Object.assign({}, req.context.organization, req.body);
+
   try {
-    let resp = await organization.setMetadata(
-      req.params.organization,
-      req.body
-    );
+    let resp = await organization.update(req.context);
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
@@ -94,9 +96,9 @@ router.get('/:organization/is-admin', keycloak.protect('organization-admin'), as
   return res.json({isAdmin: true});
 });
 
-router.get('/:organization/logo', async (req, res) => {
+router.get('/:organization/logo', contextMiddleware, async (req, res) => {
   try {
-    let org = await organization.get(req.params.organization, ['logo_file_type', 'logo', 'updated_at', 'name']);
+    let org = await organization.get(req.context, ['logo_file_type', 'logo', 'updated_at', 'name']);
 
     if (!org.logo) {
       res.status(404).send('Not found');

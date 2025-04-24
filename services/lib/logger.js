@@ -7,5 +7,13 @@ let logger = createLogger({
     'serverSocketState', 'database', 'user', 'instance', 'organization'],
 });
 
+logger.objToString = function(obj) {
+  let t = [];
+  for( let key in obj ) {
+    t.push(`${key}="${obj[key]}"`);
+  }
+  return t.join(', ');
+}
+
 
 export default logger;

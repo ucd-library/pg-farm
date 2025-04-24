@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import config from './config.js';
 import logger from './logger.js';
 import utils from './utils.js';
+import { getContext } from './context.js';
 import pgFormat from 'pg-format';
 
 const client = new PG.Pool({
@@ -153,12 +154,15 @@ class PgFarmAdminClient {
    *
    * @returns {Promise<Object>}
    */
-  async createOrganization(title, opts) {
+  async createOrganization(ctx) {
+    ctx = getContext(ctx);
+    let org = ctx.organization;
+
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.ORGANIZATION} (title, name, description, url)
       VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [title, opts.name, opts.description, opts.url]);
+    `, [org.title, org.name, org.description, org.url]);
 
     return resp.rows[0];
   }
@@ -545,7 +549,7 @@ class PgFarmAdminClient {
   }
 
   /**
-   * @method setOrganizationMetadata
+   * @method updateOrganization
    * @description update organization metadata properties
    *
    * @param {String} orgId organization ID
@@ -556,7 +560,7 @@ class PgFarmAdminClient {
    *
    * @returns {Promise<Object>}
    */
-  setOrganizationMetadata(orgId, metadata) {
+  updateOrganization(orgId, metadata) {
     let keys = [];
     let values = [];
     let templateParams = [];
@@ -591,35 +595,38 @@ class PgFarmAdminClient {
    * @method createInstanceUser
    * @description create a new database instance user
    *
-   * @param {String} instNameOrId instance name or ID
-   * @param {String} orgNameOrId organization name or ID
-   * @param {String} username username of the user.  will be added to the pgfarm.users table if not exists
-   * @param {String} password password for this user on this instance
-   * @param {String} type pgfarm user type (instance_user_type enum)
-   * @param {String} parent optional.  parent user to create this user under
+   * @param {String|Object} ctx context object or id
+   * @param {Object} user
+   * @param {String} user.username username of the user.  will be added to the pgfarm.users table if not exists
+   * @param {String} user.password password for this user on this instance
+   * @param {String} user.type pgfarm user type (instance_user_type enum)
+   * @param {String} user.parent optional.  parent user to create this user under
    * @returns {Promise<Object>}
    */
-  async createInstanceUser(instNameOrId, orgNameOrId, username, password, type, parent) {
+  async createInstanceUser(ctx, user) {
+    ctx = getContext(ctx);
+
     return client.query(`SELECT * FROM ${this.schema}.add_instance_user($1, $2, $3, $4, $5, $6)`,
-    [instNameOrId, orgNameOrId, username, password, type, parent]);
+    [ctx.instance.name, ctx.organization.name, user.username, user.password, user.type, user.parent]);
   }
 
   /**
    * @method deleteInstanceUser
    * @description delete a user from an instance
    *
-   * @param {String} instNameOrId
-   * @param {String} orgNameOrId
+   * @param {Object|String} ctx context object or id
    * @param {String} username
    * @returns
    */
-  async deleteInstanceUser(instNameOrId, orgNameOrId, username) {
+  async deleteInstanceUser(ctx, username) {
+    ctx = getContext(ctx);
+
     return client.query(`
       DELETE FROM
         ${this.schema}.instance_user
       WHERE
         instance_user_id = (SELECT * FROM ${this.schema}.get_instance_user_id($1, $2, $3))`,
-    [username, instNameOrId, orgNameOrId]);
+    [username, ctx.instance.name, ctx.organization.name]);
   }
 
   /**

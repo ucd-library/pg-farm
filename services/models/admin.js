@@ -4,6 +4,7 @@ import utils from '../lib/utils.js';
 import kubectl from '../lib/kubectl.js';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
+import { getContext } from '../lib/context.js';
 import modelUtils from './utils.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -42,17 +43,19 @@ class AdminModel {
    * @description Creates a new user in the database.  This will also grant
    * the role to the pgrest authenticator user.
    *
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
-   * @param {String} user username
-   * @param {String} type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
-   * @param {Object} opts
-   * @param {String} opts.parent parent username.  Required for SERVICE_ACCOUNT
+   * @param {String|Object} ctx context object or id 
+   * @param {Object} user 
+   * @param {Object} user.username username
+   * @param {Object} user.type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
+   * @param {Object} user.parent parent username.  Required for SERVICE_ACCOUNT
    */
-  async createUser(instNameOrId, orgNameOrId, user, type='USER', opts={}) {
-    await this.models.user.create(instNameOrId, orgNameOrId, user, type, null, null, opts.parent);
-    if( ['USER', 'ADMIN'].includes(type) ) {
-      await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user);
+  async createUser(ctx, user) {
+    ctx = getContext(ctx);
+    if( !user.type ) user.type = 'USER'
+
+    await this.models.user.create(ctx, user);
+    if( ['USER', 'ADMIN'].includes(user.type) ) {
+      await this.models.pgRest.grantUserAccess(ctx, user);
     }
   }
 
@@ -77,20 +80,18 @@ class AdminModel {
    * will always run even if the database already exists.  Ensuring all users, roles, and
    * schema are up to date.
    *
-   * @param {Object} opts
-   * @param {String} opts.name name of database
-   * @param {String} opts.database alias for name
-   * @param {String} opts.organization name or id of organization
-   * @param {String} opts.instance name or id of instance
+   * @param {Object|String} ctx context trace id or context object
    */
-  async ensureDatabase(opts={}) {
-    let name = modelUtils.cleanInstDbName(opts.name || opts.database);
+  async ensureDatabase(ctx) {
+    ctx = getContext(ctx);
+
+    let name = modelUtils.cleanInstDbName(ctx.database.name);
     let organization;
 
-    if( opts.organization ) {
-      organization = await this.models.organization.exists(opts.organization);
+    if( ctx.organization ) {
+      organization = await this.models.organization.exists(ctx);
       if( !organization ) {
-        organization = await this.models.organization.create(opts.organization);
+        organization = await this.models.organization.create(ctx);
         // make sure we are using the actual name of the org after cleanup
         opts.organization = organization.name;
       }

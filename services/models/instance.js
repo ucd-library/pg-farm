@@ -20,12 +20,11 @@ class Instance {
    * postgres database for a given instance name and organization
    * 
    * 
-   * @param {String} instNameOrId 
-   * @param {String} orgNameOrId 
-   * @returns 
+   * @param {String|Object} ctx context object or id
+   * @returns {Promise<Object>} connection object
    */
-  async getConnection(instNameOrId, orgNameOrId=null) {
-    let instance = await this.get(instNameOrId, orgNameOrId);
+  async getConnection(ctx) {
+    let instance = await this.get(ctx);
 
     let pgUser = {};
     try {

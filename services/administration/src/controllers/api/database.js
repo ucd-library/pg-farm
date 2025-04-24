@@ -3,6 +3,7 @@ import {database, pgRest, instance, user, organization, admin} from '../../../..
 import keycloak from '../../../../lib/keycloak.js';
 import pgInstClient from '../../../../lib/pg-instance-client.js'
 import handleError from '../handle-errors.js';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
 
 const router = Router();
 
@@ -195,10 +196,10 @@ router.get('/:organization/:database', async (req, res) => {
 });
 
 /** Create **/
-router.post('/', keycloak.protect('admin'), async (req, res) => {
+router.post('/', keycloak.protect('admin'), contextMiddleware, async (req, res) => {
   try {
-    await admin.ensureDatabase(req.body);
-    res.status(201).json(await database.get(req.body.name || req.body.database, req.body.organization));
+    await admin.ensureDatabase(req.context);
+    res.status(201).json(await database.get(req.body.database, req.body.organization));
   } catch(e) {
     handleError(res, e);
   }
