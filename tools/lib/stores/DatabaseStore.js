@@ -22,7 +22,8 @@ class DatabaseStore extends BaseStore {
       getFeaturedList : new LruStore({name: 'database.getFeaturedList'}),
       isAdmin : new LruStore({name: 'database.isAdmin'}),
       tablesOverview : new LruStore({name: 'database.tablesOverview'}),
-      schemasOverview : new LruStore({name: 'database.schemasOverview'})
+      schemasOverview : new LruStore({name: 'database.schemasOverview'}),
+      schemaTablesOverview : new LruStore({name: 'database.schemaTablesOverview'})
     };
 
     this.events = {
@@ -45,7 +46,8 @@ class DatabaseStore extends BaseStore {
       DATABASE_GET_FEATURED_LIST_UPDATE : 'database-get-featured-list-update',
       DATABASE_IS_ADMIN_UPDATE : 'database-is-admin-update',
       DATABASE_TABLES_OVERVIEW_UPDATE : 'database-tables-overview-update',
-      DATABASE_SCHEMAS_OVERVIEW_UPDATE : 'database-schemas-overview-update'
+      DATABASE_SCHEMAS_OVERVIEW_UPDATE : 'database-schemas-overview-update',
+      DATABASE_SCHEMA_TABLES_OVERVIEW_UPDATE : 'database-schema-tables-overview-update'
     };
   }
 
@@ -206,6 +208,14 @@ class DatabaseStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.schemasOverview,
       this.events.DATABASE_SCHEMAS_OVERVIEW_UPDATE
+    );
+  }
+
+  onSchemaTablesOverviewUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.schemaTablesOverview,
+      this.events.DATABASE_SCHEMA_TABLES_OVERVIEW_UPDATE
     );
   }
 
