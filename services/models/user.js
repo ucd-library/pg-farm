@@ -301,7 +301,7 @@ class User {
    */
   async grantDatabaseAccess(ctx, roleName, permission='READ') {
     ctx = getContext(ctx);
-    
+
     this.checkPermissionType(permission);
 
     let database = await this.models.database.get(ctx);
@@ -358,8 +358,7 @@ class User {
    * @method grant
    * @description Simplified helper to grant a user access to a schema or table.
    *
-   * @param {String} dbNameOrId name or id of the database
-   * @param {String} orgNameOrId name or id of the organization
+   * @param {String|Object} ctx context object or id
    * @param {String} schemaName can include table name
    * @param {String} roleName username to give access
    * @param {String} permission must be one of 'READ' or 'WRITE'.
@@ -367,11 +366,11 @@ class User {
    *
    * @returns
    */
-  async grant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
+  async grant(ctx, schemaName, roleName, permission='READ') {
+    ctx = getContext(ctx);
+
     permission = permission.toUpperCase();
     this.checkPermissionType(permission);
-
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
 
     let tableName = null;
     if( schemaName.includes('.') ) {
@@ -380,18 +379,15 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user grant', {
-      database,
-      schemaName,
-      tableName,
-      roleName,
-      permission,
-    });
-
-    let con = await this.models.database.getConnection(
-      database.database_name,
-      database.organization_name
+    logger.info('running user grant', 
+      logger.objToString({schemaName, tableName, roleName, permission}), 
+      ctx.logSignal
     );
+
+    // TODO: collect all responses and return them
+
+
+    let con = await this.models.database.getConnection(ctx);
 
     // grant table access
     if( tableName ) {
@@ -429,19 +425,22 @@ class User {
     }
   }
 
-  async revoke(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
-    let con;
+  /**
+   * @method revoke
+   * @description Revoke a user's access to a schema or table.
+   * 
+   * @param {String|Object} ctx context object or id 
+   * @param {*} schemaName 
+   * @param {*} roleName 
+   * @param {*} permission 
+   */
+  async revoke(ctx, schemaName, roleName, permission='READ') {
+    ctx = getContext(ctx);
+    
+    permission = permission.toUpperCase();
+    this.checkPermissionType(permission);
 
-    if ( typeof dbNameOrId === 'object' ) {
-      con = dbNameOrId;
-    } else {
-      let database = await this.models.database.get(dbNameOrId, orgNameOrId);
-
-      con = await this.models.database.getConnection(
-        database.database_name,
-        database.organization_name
-      );
-    }
+    let con = await this.models.database.getConnection(ctx);
 
     let tableName = null;
     if( schemaName.includes('.') ) {
@@ -450,12 +449,12 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user revoke', {
-      database: con.database,
-      schemaName,
-      tableName,
-      roleName
-    });
+    logger.info('running user revoke', 
+      logger.objToString({schemaName, tableName, roleName, permission}),
+      ctx.logSignal
+    );
+
+    // TODO: collect all responses and return them
 
     // revoke table access
     if( tableName ) {

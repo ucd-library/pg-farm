@@ -95,10 +95,7 @@ class OrganizationModel {
    * @method create
    * @description create a new organization
    *
-   * @param {String} title name of the organization
-   * @param {Object} opts
-   * @param {String} opts.description description of the organization
-   * @param {String} opts.url url of the organization
+   * @param {String|Object} ctx
    *
    * @returns {Promise<Object>}
    */

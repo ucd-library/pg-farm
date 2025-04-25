@@ -171,17 +171,19 @@ class PgFarmAdminClient {
    * @method getInstance
    * @description get instance by name or ID
    *
-   * @param {String} nameOrId instance name or ID
-   * @param {String} orgNameOrId organization name or ID, can be null
+   * @param {String} ctx context object or id
+   * @param {Boolean} useView default false.  If true, use the view instead of the table
    * @returns
    */
-  async getInstance(nameOrId='', orgNameOrId=null, useView=false) {
+  async getInstance(ctx, useView=false) {
+    ctx = getContext(ctx);
+
     let table = useView ? config.adminDb.views.INSTANCE : config.adminDb.tables.INSTANCE;
 
     let res = await client.query(
       `SELECT * FROM ${table}
        WHERE instance_id = ${this.schema}.get_instance_id($1, $2)`,
-      [nameOrId, orgNameOrId]
+      [ctx.instance.name, ctx.organization.name]
     );
 
     if( res.rows.length === 0 ) {
@@ -274,16 +276,15 @@ class PgFarmAdminClient {
    * @method getInstanceDatabases
    * @description get all databases for an instance
    *
-   * @param {*} nameOrId
-   * @param {*} orgNameOrId
+   * @param {Object|String} ctx context object or id
    * @returns
    */
-  async getInstanceDatabases(nameOrId='', orgNameOrId=null) {
-    let instance = await this.getInstance(nameOrId, orgNameOrId);
+  async getInstanceDatabases(ctx) {
+    ctx = getContext(ctx);
 
     let res = await client.query(
       `select * from ${config.adminDb.views.INSTANCE_DATABASE} where instance_id = $1;`,
-      [instance.instance_id]
+      [ctx.instance.instance_id]
     );
 
     return res.rows;
@@ -293,18 +294,18 @@ class PgFarmAdminClient {
    * @method createInstance
    * @description create a new instance
    *
-   * @param {String} name Instance name
-   * @param {Object} opts
-   * @param {String} opts.hostname hostname of the instance.
-   * @param {String} opts.description description of the instance
-   * @param {String} opts.port port of the instance
-   * @param {String} opts.organization Optional. name or ID of the organization
+   * @param {String} inst 
+   * @param {Object} inst.name Instance name
+   * @param {String} inst.hostname hostname of the instance.
+   * @param {String} inst.description description of the instance
+   * @param {String} inst.port port of the instance
+   * @param {String} inst.organization Optional. name or ID of the organization
    *
    * @returns
    */
-  async createInstance(name, opts) {
-    if( opts.organization ) {
-      opts.organization = (await this.getOrganization(opts.organization)).organization_id;
+  async createInstance(inst) {
+    if( inst.organization ) {
+      inst.organization = (await this.getOrganization(inst.organization)).organization_id;
     }
 
     let resp = await client.query(`
@@ -312,12 +313,12 @@ class PgFarmAdminClient {
       (name, hostname, description, organization_id)
       VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [name, opts.hostname, opts.description, opts.organization]);
+    `, [inst.name, inst.hostname, inst.description, inst.organization]);
 
     // TODO: where does node pg report errors?
     if( resp.rows.length === 0 ) {
-      logger.error('Instance not created: '+name, resp);
-      throw new Error('Instance not created: '+name+'. Please check logs');
+      logger.error('Instance not created: '+inst.name, resp);
+      throw new Error('Instance not created: '+inst.name+'. Please check logs');
     }
 
     return resp.rows[0];
@@ -327,13 +328,12 @@ class PgFarmAdminClient {
    * @method updateInstanceProperty
    * @description update instance property
    *
-   * @param {String} nameOrId instance name or ID
-   * @param {String} orgNameOrId organization name or ID
+   * @param {String|Object} ctx context object or id
    * @param {String} property property to update
    * @param {String} value value to set
    * @returns {Promise<Object>}
    */
-  async updateInstanceProperty(nameOrId, orgNameOrId, property, value) {
+  async updateInstanceProperty(ctx, property, value) {
     if( this.INVALID_UPDATE_PROPS.INSTANCE.includes(property) ) {
       throw new Error('Cannot update '+property);
     }
@@ -342,44 +342,42 @@ class PgFarmAdminClient {
       UPDATE ${config.adminDb.tables.INSTANCE}
       SET ${pgFormat('%s', property)} = $1
       WHERE instance_id = ${this.schema}.get_instance_id($2, $3)
-    `, [value, nameOrId, orgNameOrId]);
+    `, [value, ctx.instance.name, ctx.organization.name]);
   }
 
   /**
    * @method setInstancek8sConfig
    * @description set k8s config for an instance
    *
-   * @param {String} nameOrId name or ID of the instance
-   * @param {String} orgNameOrId name or ID of the organization
+   * @param {String|Object} ctx context object or id
    * @param {String} property property to set
    * @param {String} value value to set
    *
    * @returns {Promise<Object>}
    */
-  async setInstanceConfig(nameOrId, orgNameOrId, property, value) {
+  async setInstanceConfig(ctx, property, value) {
     return client.query(`
       INSERT INTO ${config.adminDb.tables.INSTANCE_CONFIG}
       (instance_id, name, value)
       VALUES (${this.schema}.get_instance_id($1, $2), $3, $4)
       ON CONFLICT (instance_id, name)
       DO UPDATE SET value = EXCLUDED.value
-    `, [nameOrId, orgNameOrId, property, value]);
+    `, [ctx.instance.name, ctx.organization.name, property, value]);
   }
 
   /**
    * @method getInstanceConfig
    * @description get instance config, all properties
    *
-   * @param {String} nameOrId instance name or ID
-   * @param {String} orgNameOrId organization name or ID
+   * @param {String|Object} ctx context object or id
    *
    * @returns {Promise<Object>}
    */
-  async getInstanceConfig(nameOrId, orgNameOrId) {
+  async getInstanceConfig(ctx) {
     let resp = await client.query(`
       SELECT * FROM ${config.adminDb.tables.INSTANCE_CONFIG}
       WHERE instance_id = ${this.schema}.get_instance_id($1, $2)
-    `, [nameOrId, orgNameOrId]);
+    `, [ctx.instance.name, ctx.organization.name]);
 
     let iconfig = {};
     for( let row of resp.rows ) {

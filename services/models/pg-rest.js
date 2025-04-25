@@ -6,12 +6,28 @@ import keycloak from '../lib/keycloak.js';
 import pgInstClient from '../lib/pg-instance-client.js';
 import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
+import {getContext, createContext} from '../lib/context.js';
 
 class PgRest {
 
+  /**
+   * @method generateConfigFile
+   * @description Generate the PostgREST config file for the given database and organization.
+   * Called by the pg-rest service to generate the config file for the PostgREST container
+   * on startup.  These params are passed in via env vars so they are not passed as ctx.
+   * 
+   * @param {String} dbNameOrId database name or id
+   * @param {String} orgNameOrId organization name or id
+   * @returns 
+   */
   async generateConfigFile(dbNameOrId, orgNameOrId=null) {
-    let user = await this.models.user.get(dbNameOrId, orgNameOrId, config.pgRest.authenticator.username);
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+    let ctx = await createContext({
+      database : dbNameOrId,
+      organization : orgNameOrId,
+    });
+
+    let user = await this.models.user.get(ctx, config.pgRest.authenticator.username);
+    let database = await this.models.database.get(ctx);
     let keys = JSON.stringify(JSON.stringify(await keycloak.getJWKS()));
 
     let escapedPass = encodeURIComponent(user.password);
@@ -40,32 +56,35 @@ server-port = ${config.pgRest.port}`
    * @method initDb
    * @description Initialize the database for PostgREST roles and schema
    * 
-   * @param {String} dbNameOrId
-   * @param {String} instNameOrId 
-   * @param {String} orgNameOrId
+   * @param {String|Object} ctx context object or id
    * 
    * @returns {Promise}
    */
-  async initDb(dbNameOrId, instNameOrId, orgNameOrId=null) {
-    let con = await this.models.database.getConnection(dbNameOrId, orgNameOrId);
+  async initDb(ctx) {
+    logger.info('Initializing database for PostgREST', ctx.logSignal);
+
+    let con = await this.models.database.getConnection(ctx);
 
     // add authenticator user
-    logger.info('Ensuring authenticator user: '+config.pgRest.authenticator.username+' on instance: '+instNameOrId+' for organization: '+orgNameOrId)
-    await this.models.user.create(instNameOrId, orgNameOrId, config.pgRest.authenticator.username);
+    logger.info('Ensuring authenticator user', config.pgRest.authenticator.username, ctx.logSignal);
+    await this.models.user.create(ctx, config.pgRest.authenticator.username);
 
     // create the api schema
-    logger.info('Ensuring schema: '+config.pgRest.schema+' on instance: '+instNameOrId+', database: '+dbNameOrId+' for organization: '+orgNameOrId)
+    logger.info('Ensuring schema', config.pgRest.schema, ctx.logSignal);
     await pgInstClient.ensurePgSchema(con, config.pgRest.schema);
 
     // grant usage on the api schema to the public role
-    logger.info('Granting usage on schema: '+config.pgRest.schema+' to public role on instance: '+instNameOrId+', database: '+dbNameOrId+' for organization: '+orgNameOrId)
+    logger.info('Granting usage on schema to public role',
+      logger.objToString({schema: config.pgRest.schema, user: config.pgInstance.publicRole.username}),
+      ctx.logSignal
+    );
     let formattedQuery = pgFormat('GRANT USAGE ON SCHEMA %s TO "%s"', 
       config.pgRest.schema, config.pgInstance.publicRole.username
     );
     await pgInstClient.query(con, formattedQuery);
 
     // grant the public role to the authenticator user
-    await this.grantUserAccess(instNameOrId, orgNameOrId, config.pgInstance.publicRole.username, con);
+    await this.grantUserAccess(ctx, config.pgInstance.publicRole.username, con);
   }
 
   /**
@@ -73,42 +92,51 @@ server-port = ${config.pgRest.port}`
    * @description Grant pgrest authenticator the role of the given user.  This allows the authenticator
    * to impersonate the user when making requests to the database via a JWT token.
    * 
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or id
    * @param {String} username username to grant access
    * @param {Object} con optional.  A postgres connection object
    * 
    * @returns {Promise}
    */
-  async grantUserAccess(instNameOrId, orgNameOrId=null, username, con=null) {
+  async grantUserAccess(ctx, username, con=null) {
     if( username === config.pgInstance.adminRole ) {
       logger.warn('Cannot grant authenticator access to admin role: '+username);
       return;
     }
     
     if( !con ) {
-      con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
+      con = await this.models.instance.getConnection(ctx);
     }
 
-    logger.info('Granting role "'+username+'" to authenticator user on instance: '+instNameOrId+' for organization: '+orgNameOrId)
+    logger.info('Granting role to authenticator user',
+      logger.objToString({username, role: config.pgRest.authenticator.username}),
+      ctx.logSignal
+    );
     let formattedQuery = pgFormat('GRANT "%s" TO "%s"', 
       username, config.pgRest.authenticator.username
     );
     await pgInstClient.query(con, formattedQuery);
   }
 
-  async start(dbNameOrId, orgNameOrId=null) {
+  /**
+   * @method start
+   * @description Start the PostgREST service for the given database and organization.
+   * 
+   * @param {String|Object} ctx context object or id
+   * @returns 
+   */
+  async start(ctx) {
+    ctx = getContext(ctx);
+
     if( config.k8s.enabled === false ) {
       logger.warn('K8s is not enabled, just setting state to RUN');
       return;
     }
 
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
-    let orgName = '';
-    if( orgNameOrId ) {
-      let org = await client.getOrganization(orgNameOrId);
-      orgName = org.name;
-    }
+    logger.info('Starting PostgREST', ctx.logSignal);
+
+    let database = ctx.database;
+    let orgName = ctx.organization?.name || '';
 
     let templates = await modelUtils.getTemplate('pgrest');
 
@@ -127,7 +155,7 @@ server-port = ${config.pgRest.port}`
     container.image = config.pgRest.image;
     container.name = 'pgrest';
 
-    container.env[0].value = database.database_name;
+    container.env[0].value = database.name;
     container.env[1].value = orgName;
     container.env.push({
       name : 'APP_URL',
@@ -154,13 +182,35 @@ server-port = ${config.pgRest.port}`
     return {pgrestResult, pgrestServiceResult, hostname};
   }
 
-  async restart(dbNameOrId, orgNameOrId=null) {
-    let {hostname} = await this.start(dbNameOrId, orgNameOrId);
+  /**
+   * @method restart
+   * @description Restart the PostgREST service for the given database and organization.
+   * 
+   * @param {String|Object} ctx context object or id
+   * @returns 
+   */
+  async restart(ctx) {
+    ctx = getContext(ctx);
+
+    logger.info('Restarting PostgREST', ctx.logSignal);
+
+    let {hostname} = await this.start(ctx);
     await kubectl.restart('deployment', hostname);
   }
 
-  async stop(dbNameOrId, orgNameOrId=null) {
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+  /**
+   * @method stop
+   * @description Stop the PostgREST service for the given database and organization.
+   * 
+   * @param {String|Object} ctx context object or id
+   * @returns
+   */
+  async stop(ctx) {
+    ctx = getContext(ctx);
+
+    logger.info('Stopping PostgREST', ctx.logSignal);
+
+    let database = ctx.database;
     let hostname = database.pgrest_hostname;
 
     logger.info('Stopping PostgREST: '+hostname);

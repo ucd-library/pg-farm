@@ -5,6 +5,7 @@ import kubectl from '../lib/kubectl.js';
 import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
+import { getContext } from '../lib/context.js';
 import { getInstanceResources, getMaxPriority, GENERAL_RESOURCES } from '../lib/instance-resources.js';
 
 class Instance {
@@ -24,11 +25,11 @@ class Instance {
    * @returns {Promise<Object>} connection object
    */
   async getConnection(ctx) {
-    let instance = await this.get(ctx);
+    ctx = getContext(ctx);
 
     let pgUser = {};
     try {
-      pgUser = await this.models.user.get(instNameOrId, orgNameOrId, config.pgInstance.adminRole);
+      pgUser = await this.models.user.get(ctx, config.pgInstance.adminRole);
     } catch(e) {}
 
     return {
@@ -66,25 +67,8 @@ class Instance {
    * 
    * @returns {Promise<Object>}
    **/
-  async get(nameOrId='', orgNameOrId=null) {
-    if( !modelUtils.isUUID(nameOrId) && !nameOrId.match(/^inst-/) ) {
-      nameOrId = 'inst-'+nameOrId;
-    }
-    return client.getInstance(nameOrId, orgNameOrId, true);
-  }
-
-  /**
-   * @method getByDatabase
-   * @description get instance by database name or id
-   * 
-   * @param {String} nameOrId database name or id
-   * @param {Stromg} orgNameOrId organization name or id
-   * 
-   * @returns {Promise<Object>}
-   */
-  async getByDatabase(nameOrId, orgNameOrId) {
-    let database = await this.models.database.get(nameOrId, orgNameOrId);
-    return this.get(database.instance_id);
+  async get(ctx) {
+    return client.getInstance(ctx, true);
   }
 
   /**
@@ -92,14 +76,13 @@ class Instance {
    * @description check if an instance exists.  Wraps the get method
    * and catches the error if the instance does not exist.
    * 
-   * @param {String} name instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or id
    * 
    * @returns {Promise<Boolean>}
    **/
-  async exists(name, orgNameOrId) {
+  async exists(ctx) {
     try {
-      let instance = await this.get(name, orgNameOrId);
+      let instance = await this.get(ctx);
       return instance;
     } catch(e) {}
 
@@ -118,110 +101,111 @@ class Instance {
    * 
    * @returns {Promise<Object>}
    */
-  async create(name, opts) {
+  async create(ctx) {
+    ctx = getContext(ctx);
+    let instance = ctx.instance;
+    
+    // set a real context
+    ctx = {
+      instance : {name: instance.name}, 
+      organization : {name: instance.organization}
+    }
     
     // make sure instance's always start with 'inst-'
     // this lets us know its an instance and not a database by name
-    name = 'inst-'+modelUtils.cleanInstDbName(name);
+    instance.name = 'inst-'+modelUtils.cleanInstDbName(instance.name);
     
-    let shortName = name.replace(/^inst-/, '');
+    let shortName = instance.name.replace(/^inst-/, '');
 
-    let exists = await this.exists(name, opts.organization);
+    let exists = await this.exists();
     if( exists ) {
-      throw new Error('Instance already exists: '+name);
+      throw new Error('Instance already exists: '+instance.name);
     }
 
     // look up organization name to use in hostname
-    let orgName = '';
-    if( opts.organization ) {
-      let org = await this.models.organization.get(opts.organization);
-      orgName = org.name+'-';
-    }
-
-    // if( !opts.hostname ) {
-    //   opts.hostname = orgName+name.replace(/^inst-/, '');
-    // } else {
-    //   opts.hostname = orgName+opts.hostname.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    let orgName = instance.organization || '';
+    // if( opts.organization ) {
+    //   let org = await this.models.organization.get(opts.organization);
+    //   orgName = org.name+'-';
     // }
 
     opts.hostname = 'inst-'+orgName+shortName;
 
-    logger.info('Creating instance', name, opts);
-    await client.createInstance(name, opts);
+    logger.info('Creating instance', {instance});
+    await client.createInstance(instance);
 
-    return this.get(name, opts.organization);
+    return this.get(ctx);
   }
 
   /**
    * @method initInstanceDb
    * @description Initialize the database pgfarm public user and postgres user
    * 
-   * @param {String} nameOrId instance name or id 
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or id 
    */
-  async initInstanceDb(nameOrId, orgNameOrId) {
+  async initInstanceDb(ctx) {
+    ctx = getContext(ctx);
+
     // create postgres user to admin database, resets password
     try {
-      logger.info('Ensuring postgres user on', orgNameOrId, nameOrId)
-      await this.models.user.create(nameOrId, orgNameOrId, 'postgres');
+      logger.info('Ensuring postgres user', ctx.logSignal)
+      await this.models.user.create(ctx, 'postgres');
     } catch(e) {
-      logger.warn(`Failed to create postgres user for on instance ${orgNameOrId}/${nameOrId}`, e.message, e.stack);
+      logger.warn(`Failed to create postgres user for on instance`, {e}, ctx.logSignal);
     }
 
     // add public user
     try {
-      logger.info('Ensuring public user', nameOrId)
-      await this.models.user.create(nameOrId, orgNameOrId, config.pgInstance.publicRole.username);
+      logger.info('Ensuring public user', 
+        config.pgInstance.publicRole.username,
+        ctx.logSignal
+      )
+      await this.models.user.create(ctx, config.pgInstance.publicRole.username);
     } catch(e) {
-      logger.warn(`Failed to create public user ${config.pgInstance.publicRole.username}: ${orgNameOrId}/${nameOrId}`, e.message, e.stack);
+      logger.warn(`Failed to create public user`,  config.pgInstance.publicRole.username, {e}, ctx.logSignal);
     }
   }
 
   /**
-   * @method updateInstance
+   * @method update
    * @description update instance property, e.g. hostname, description
    * 
-   * @param {String} nameOrId 
-   * @param {String} orgNameOrId
+   * @param {String|Object} ctx context object or id
    * @param {String} property 
    * @param {String} value 
    * @returns 
    */
-  async updateInstance(nameOrId, orgNameOrId=null, property, value) {
-    let organizationId = null;
-    if( orgNameOrId ) {
-      let org = await client.getOrganization(orgNameOrId);
-      organizationId = org.organization_id;
-    }
-
-    return client.updateInstanceProperty(nameOrId, organizationId, property, value);
+  async update(ctx, property, value) {
+    ctx = getContext(ctx);
+    logger.info('Updating instance property', `${property}="${value}"`, ctx.logSignal);
+    return client.updateInstanceProperty(ctx, property, value);
   }
 
   /**
    * @method setInstanceState
    * @description set the state of the instance
    * 
-   * @param {String} nameOrId
-   * @param {String} orgNameOrId 
+   * @param {String|Object} ctx context object or id
    * @param {String} state 
    * @returns 
    */
-  async setInstanceState(nameOrId, orgNameOrId=null, state) {
-    return client.updateInstanceProperty(nameOrId, orgNameOrId, 'state', state);
+  async setInstanceState(ctx, state) {
+    ctx = getContext(ctx);
+    logger.info('Setting instance state', state, ctx.logSignal);
+    return client.updateInstanceProperty(ctx, 'state', state);
   }
 
   /**
    * @method checkInstanceState
    * @description check if the instance is in the given state
    * 
-   * @param {String} nameOrId Instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or id
    * @param {String|Array} states instance state or array of states
    * 
    * @returns {Promise<Boolean>}
    */
-  async checkInstanceState(nameOrId, orgNameOrId=null, states) {
-    let instance = await this.get(nameOrId, orgNameOrId);
+  async checkInstanceState(ctx, states) {
+    let instance = ctx.instance;
     if( !Array.isArray(states) ) {
       states = [states];
     }
@@ -235,46 +219,50 @@ class Instance {
     return false;
   }
 
-  async setInstanceConfig(nameOrId, orgNameOrId=null, name, value) {
-    let organizationId = null;
-    if( orgNameOrId ) {
-      let org = await client.getOrganization(orgNameOrId);
-      organizationId = org.organization_id;
-    }
-
-    return client.setInstanceConfig(nameOrId, organizationId, name, value);
+  /**
+   * @method setInstanceConfig
+   * @description set the instance k8s config value
+   * 
+   * @param {String|Object} ctx context object or id
+   * @param {String} name name of the config property
+   * @param {String} value value of the config
+   */
+  async setInstanceConfig(ctx, name, value) {
+    ctx = getContext(ctx);
+    return client.setInstanceConfig(ctx, name, value);
   }
 
   /**
    * @method start
    * @description Starts a postgres instance and service in k8s
    * 
-   * @param {String} instNameOrId PG Farm instance name or ID 
-   * @param {String} orgNameOrId PG Farm organization name or ID
+   * @param {String|Object} ctx context object or id
    * @param {Object} opts
    * @param {Boolean} opts.isRestoring set to true if the instance is being restored.  Will set state to RESTORING
    * 
    * @returns {Promise}
    */
-  async start(instNameOrId, orgNameOrId, opts={}) {
+  async start(ctx, opts={}) {
+    ctx = getContext(ctx);
+
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to RUN');
-      this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
+      await this.setInstanceState(ctx, this.STATES.RUN);
       return;
     }
 
-    let instance = await this.get(instNameOrId, orgNameOrId);
+    let instance = ctx.instance;
 
     // JM - perhaps we just add a now shutdown delay time after start.
     let maxPriority = await getMaxPriority(instance.availability);
-    client.updateInstancePriority(instance.instance_id, instance.organization_id, maxPriority);
+    client.updateInstancePriority(ctx, maxPriority);
 
-    let applyResp = await this.apply(instNameOrId, orgNameOrId);
+    let applyResp = await this.apply(ctx);
 
     if( opts.isRestoring ) {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RESTORING);
+      await this.setInstanceState(ctx, this.STATES.RESTORING);
     } else {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.RUN);
+      await this.setInstanceState(ctx, this.STATES.RUN);
     }
 
     return applyResp;
@@ -285,13 +273,15 @@ class Instance {
    * @description Apply the k8s config for the instance from the current
    * instance state.
    * 
-   * @param {String} instNameOrId 
-   * @param {String} orgNameOrId 
+   * @param {String|Object} ctx context object or id
    * @returns {Promise<Object>}
    */
-  async apply(instNameOrId, orgNameOrId) {
-    let instance = await this.get(instNameOrId, orgNameOrId);
-    let customProps = await client.getInstanceConfig(instNameOrId, orgNameOrId);
+  async apply(ctx) {
+    ctx = getContext(ctx);
+    logger.info('Applying instance k8s config', ctx.logSignal);
+
+    let instance = ctx.instance;
+    let customProps = await client.getInstanceConfig(ctx);
     let instanceImage = customProps.image || config.pgInstance.image;
 
     let hostname = instance.hostname;
@@ -352,7 +342,7 @@ class Instance {
       stdin:true,
       isJson: true
     });
-    logger.info('Applied instance k8s config', hostname);
+    logger.info('Applied instance k8s config', hostname, ctx.logSignal);
 
     // Postgres Service
     k8sConfig = templates.find(t => t.kind === 'Service');
@@ -365,7 +355,7 @@ class Instance {
       stdin:true,
       isJson: true
     });
-    logger.info('Applied instance k8s service config', hostname);
+    logger.info('Applied instance k8s service config', hostname, ctx.logSignal);
 
     return {pgResult, pgServiceResult};
   }  
@@ -374,8 +364,7 @@ class Instance {
    * @method stop
    * @description Stop a postgres instance and service in k8s (kubectl delete)
    * 
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or id
    * @param {Object} opts
    * @param {Boolean} opts.isArchived set to true if the instance has been archived.  will set state to ARCHIVE
    * 
@@ -384,22 +373,22 @@ class Instance {
   async stop(instNameOrId, orgNameOrId, opts={}) {
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to SLEEP');
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.SLEEP);
+      await this.setInstanceState(ctx, this.STATES.SLEEP);
       return;
     }
 
-    let instance = await this.get(instNameOrId, orgNameOrId);
+    let instance = ctx.instance;
     let hostname = instance.hostname;
 
-    logger.info('Stopping instance', hostname);
-    await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.STOPPING);
+    logger.info('Stopping instance', hostname, ctx.logSignal);
+    await this.setInstanceState(ctx, this.STATES.STOPPING);
 
     let pgResult, pgServiceResult;
 
     try {
       pgResult = await kubectl.delete('statefulset', hostname);
     } catch(e) {
-      logger.warn('Error deleting statefulset', e.message);
+      logger.warn('Error deleting statefulset', {e}, ctx.logSignal);
       pgResult = {
         message : e.message,
         stack : e.stacks
@@ -409,7 +398,7 @@ class Instance {
     try {
       pgServiceResult = await kubectl.delete('service', hostname);
     } catch(e) {
-      logger.warn('Error deleting service', e.message);
+      logger.warn('Error deleting service', {e}, ctx.logSignal);
       pgServiceResult = {
         message : e.message,
         stack : e.stacks
@@ -417,9 +406,9 @@ class Instance {
     }
 
     if( opts.isArchived ) {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.ARCHIVE);
+      await this.setInstanceState(ctx, this.STATES.ARCHIVE);
     } else {
-      await this.setInstanceState(instNameOrId, orgNameOrId, this.STATES.SLEEP);
+      await this.setInstanceState(ctx, this.STATES.SLEEP);
     }
 
     return  {pgResult, pgServiceResult};
@@ -430,12 +419,11 @@ class Instance {
    * @description Restart an instance.  This will run the kubectl
    * rollout restart command on the statefulset for the instance.
    * 
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx
    * @returns 
    */
-  async restart(instNameOrId, orgNameOrId=null) {
-    let instance = await this.get(instNameOrId, orgNameOrId);
+  async restart(ctx) {
+    let instance = ctx.instance;
     let hostname = instance.hostname;
 
     let pgResult;
@@ -443,7 +431,7 @@ class Instance {
     try {
       pgResult = await kubectl.restart('statefulset', hostname);
     } catch(e) {
-      logger.warn('Error deleting service', e.message);
+      logger.warn('Error deleting service', {e}, ctx.logSignal);
       pgResult = {
         message : e.message,
         stack : e.stacks
@@ -453,29 +441,24 @@ class Instance {
     return pgResult;
   }
 
-  async remoteSyncUsers(instNameOrId, orgNameOrId=null, updatePassword, hardReset=false) {
-    let instance = await client.getInstance(instNameOrId, orgNameOrId);
+  async remoteSyncUsers(ctx, updatePassword, hardReset=false) {
+    let instance = ctx.instance;
     if( instance.state !== 'RUN' ) {
       throw new Error('Instance must be RUN state to sync users: '+instance.name);
     }
 
-    let logInfo = {
-      instance : instance.name,
-      organization : instance.organization_name
-    }
-
-    logger.info(`Rpc request to resync users for instance ${instance.hostname}`, logInfo);
+    logger.info(`Rpc request to resync users for instance`, instance.hostname, ctx.logSignal);
 
 
     let users = await client.getInstanceUsers(instance.instance_id);
     let data = [];
     for( let user of users ) {
       if( !['ADMIN', 'PUBLIC', 'USER', 'PGREST'].includes(user.type) ) {
-        logger.warn(`Skipping user ${user.username} of type ${user.type}`, logInfo);
+        logger.warn(`Skipping user ${user.username} of type ${user.type}`, ctx.logSignal);
         continue;
       }
       if( user.type === 'PGREST' && (updatePassword == false || hardReset == false) ) {
-        logger.warn(`Skipping user ${user.username} of type ${user.type}, no hard reset`, logInfo);
+        logger.warn(`Skipping user ${user.username} of type ${user.type}, no hard reset`, ctx.logSignal);
         continue;
       }
 
@@ -513,18 +496,21 @@ class Instance {
       });
 
       if( resp.status > 299 ) {
-        logger.error(`Error syncing user ${user.username} to instance ${instance.hostname}`, resp.status, body, logInfo);
+        logger.error(`Error syncing user ${user.username} to instance ${instance.hostname}`, resp.status, body, ctx.logSignal);
         return data;
       }
 
       if( updatePassword && hardReset && user.type === 'PGREST' ) {
-        let dbs = await client.getInstanceDatabases(instance.instance_id, instance.organization_id);
+        let dbs = await client.getInstanceDatabases(ctx);
         for( let db of dbs ) {
-          await this.models.pgRest.restart(db.database_name, db.organization_name);
+          await this.models.pgRest.restart({
+            database : {name: db.database_name}, 
+            organization : {name: db.organization_name}
+          });
         }
       }
 
-      logger.info(`Synced user ${user.username} to instance ${instance.hostname}`, resp.status, logInfo);
+      logger.info(`Synced user ${user.username} to instance ${instance.hostname}`, resp.status, ctx.logSignal);
     }
 
     return data;

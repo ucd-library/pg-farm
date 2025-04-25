@@ -1,4 +1,4 @@
-import { create } from 'domain';
+import modelUtils from '../models/utils.js'
 import pgAdminClient from './pg-admin-client.js';
 
 const store = new WeakMap();
@@ -69,6 +69,9 @@ async function createContext(obj) {
   }
 
   if( obj.instance ) {
+    if( !modelUtils.isUUID(obj.instance) && !obj.instance.match(/^inst-/) ) {
+      obj.instance = 'inst-'+obj.instance;
+    }
     try {
       context.instance = await pgAdminClient.getInstance(obj.instance, context.organization?.name);
     } catch(e) {
@@ -102,9 +105,6 @@ async function createContext(obj) {
 
 function getContext(obj) {
   if( typeof obj !== 'string' ) {
-    if( obj.corkTraceId && store.has(obj.corkTraceId) ) {
-      return store.get(obj.corkTraceId);
-    }
     return obj;
   }
   return store.get(obj);
