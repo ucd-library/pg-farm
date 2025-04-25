@@ -116,6 +116,9 @@ export default class AppIcon extends Mixin(LitElement)
         this.appPageId = pageId;
         return el.selected === pageId;
       }
+      if ( el.tagName === 'APP-DIALOG-MODAL' ){
+        return true;
+      }
       if ( el.parentElement ){
         el = el.parentElement;
       } else if ( el.parentNode?.host ) {

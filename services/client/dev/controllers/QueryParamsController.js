@@ -31,11 +31,11 @@ export default class QueryParamsController {
    */
   getCurrentPage(){
     if ( this.limit === undefined ){
-      this.logger.warning('getCurrentPage called before limit is set');
+      this.logger.warn('getCurrentPage called before limit is set');
       return 1;
     }
     if ( this.offset === undefined ){
-      this.logger.warning('getCurrentPage called before offset is set');
+      this.logger.warn('getCurrentPage called before offset is set');
       return 1;
     }
     return Math.floor(this.offset.getProperty() / this.limit.getProperty()) + 1;
@@ -48,7 +48,7 @@ export default class QueryParamsController {
    */
   getMaxPage(total){
     if( this.limit === undefined ){
-      this.logger.warning('getMaxPage called before limit is set');
+      this.logger.warn('getMaxPage called before limit is set');
       return 1;
     }
     return Math.ceil(total / this.limit.getProperty());
@@ -61,7 +61,7 @@ export default class QueryParamsController {
    */
   setPage(page){
     if ( this.limit === undefined ){
-      this.logger.warning('doPageChange called before limit is set');
+      this.logger.warn('doPageChange called before limit is set');
       return;
     }
     this.offset.setProperty((page-1) * this.limit.getProperty(), true);

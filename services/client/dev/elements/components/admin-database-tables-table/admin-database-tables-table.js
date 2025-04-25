@@ -1,8 +1,10 @@
-import { LitElement } from 'lit';
+import { LitElement, html } from 'lit';
 import {render, styles} from "./admin-database-tables-table.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
+
+import '@ucd-lib/pgfarm-client/elements/components/admin-database-user-table-form/admin-database-user-table-form.js';
 
 export default class AdminDatabaseTablesTable extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -25,8 +27,8 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     this.render = render.bind(this);
     this.tables = [];
     this.bulkActions = [
-      {value: 'add-users', label: 'Add Users'},
-      {value: 'remove-users', label: 'Remove Users'}
+      {value: 'add-users', label: 'Add Users', showUserAccessForm: true},
+      {value: 'remove-users', label: 'Remove Users', showUserAccessForm: true}
     ];
     this.selectedBulkAction = '';
 
@@ -35,7 +37,6 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
       filters: [{id: 'table-access', cb: this._onTableAccessFilterChange}]
     }
     this.tableCtl = new TableController(this, 'tables', ctlOptions);
-    console.log({ tableCtl: this.tableCtl });
 
     this._injectModel('AppStateModel');
   }
@@ -53,12 +54,58 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
   }
 
   _onBulkActionSelect() {
-    console.log('TODO: ' + this.selectedBulkAction);
+    const action = this.bulkActions.find( a => a.value === this.selectedBulkAction );
+    if ( action.showUserAccessForm ) {
+      this._showUserAccessForm();
+      return;
+    }
+  }
+
+  _showUserAccessForm(){
+    let selectedTables = this.tableCtl.getSelectedItems();
+
+    let modalTitle = this.selectedBulkAction === 'add-users' ? 'Add User to' : 'Remove User from';
+    if ( selectedTables.length > 1 ) {
+      modalTitle += ` ${selectedTables.length} Tables`;
+    } else {
+      modalTitle += ` Table: ${selectedTables[0]?.table?.tableName}`;
+    }
+
+    const actionText = this.selectedBulkAction === 'add-users' ? 'Add Table Access' : 'Remove Table Access';
+
+    this.AppStateModel.showDialogModal({
+      title: modalTitle,
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: actionText, value: 'db-edit-table-access', color: 'secondary', disableOnLoading: true}
+      ],
+      content: html`
+        <admin-database-user-table-form
+          .orgName=${this.orgName}
+          .dbName=${this.dbName}
+          operation=${this.selectedBulkAction}
+          >
+        </admin-database-user-table-form>`,
+      actionCallback: this._onEditAccessModalAction
+    });
   }
 
   _onTableAccessFilterChange(table, value) {
     if ( !value ) return true;
     return table.accessSummary == value;
+  }
+
+  async _onEditAccessModalAction(action, modalEle) {
+    if ( action === 'dismiss' ){
+      return;
+    }
+    // const form = modalEle.renderRoot.querySelector('admin-database-user-table-form');
+    // if ( !form.reportValidity() ) return {abortModalAction: true};
+    // modalEle._loading = true;
+    // const r = await form.submit();
+    // modalEle._loading = false;
+    // form.payload = {};
+    // if ( r ) this.AppStateModel.refresh();
   }
 
 }

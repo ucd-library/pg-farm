@@ -47,7 +47,9 @@ export default class AppSearchInput extends Mixin(LitElement)
   connectedCallback() {
     super.connectedCallback();
     this.queryCtl = new QueryParamController(this, this.queryParam, {hostProperty: 'value'});
-    this.queryCtl.setFromLocation();
+    if ( this.queryParam ){
+      this.queryCtl.setFromLocation();
+    }
   }
 
   willUpdate(props){
@@ -58,7 +60,9 @@ export default class AppSearchInput extends Mixin(LitElement)
   }
 
   _onAppStateUpdate(){
-    this.queryCtl.setFromLocation();
+    if ( this.queryParam ){
+      this.queryCtl.setFromLocation();
+    }
   }
 
   _onFormSubmit(e) {
