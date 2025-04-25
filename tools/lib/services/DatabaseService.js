@@ -280,6 +280,40 @@ class DatabaseService extends BaseService {
     return this.store.data.schemaTableAccess.get(id);
   }
 
+  async getTablesOverview(org, db) {
+    let id = payload.getKey({org, db});
+    await this.checkRequesting(
+      id, this.store.data.tablesOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/tables-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onTablesOverviewUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onTablesOverviewUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onTablesOverviewUpdate({org, db}, {error})
+        })
+    );
+    return this.store.data.tablesOverview.get(id);
+  }
+
+  async getSchemasOverview(org, db) {
+    let id = payload.getKey({org, db});
+    await this.checkRequesting(
+      id, this.store.data.schemasOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/schemas-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onSchemasOverviewUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onSchemasOverviewUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onSchemasOverviewUpdate({org, db}, {error})
+        })
+    );
+    return this.store.data.schemasOverview.get(id);
+  }
+
   async grantAccess(org, db, schemaTable, user, access) {
     let ido = {org, db, schemaTable, user, access, action: 'grantAccess'};
     let id = payload.getKey(ido);

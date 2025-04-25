@@ -58,23 +58,23 @@ export function render() {
             <app-statistic-button
               href='${window.location.pathname}/schemas'
               icon='fa.solid.diagram-project'
-              text='${this.counts.schemas.total} schemas'
-              subtext='${this.counts.schemas.totalPublic} public'
+              text='${this.dataCtl.schemasOverview.length} schemas'
+              subtext='${this.dataCtl.schemasOverview.filter(s => s.isPublic).length} public'
               >
             </app-statistic-button>
             <app-statistic-button
               href='${window.location.pathname}/users'
               icon='fa.solid.users'
-              text='${this.counts.users.total} users'
+              text='${this.dataCtl.users.length} users'
               brand-color='redbud'
-              subtext='${this.counts.users.totalPublic} public'>
+              subtext='${this.dataCtl.users.filter(u => u.pgFarmUser?.type === 'PUBLIC').length} public'>
             </app-statistic-button>
             <app-statistic-button
               href='${window.location.pathname}/tables'
               icon='fa.solid.table'
-              text='${this.counts.tables.total} tables'
+              text='${this.dataCtl.tablesOverview.length} tables'
               brand-color='quad'
-              subtext='${this.counts.tables.totalPublic} public'>
+              subtext='${this.dataCtl.tablesOverview.filter(t => this.tableIsPublic(t)).length} public'>
             </app-statistic-button>
           </div>
         </section>
