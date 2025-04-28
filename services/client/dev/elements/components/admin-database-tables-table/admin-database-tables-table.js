@@ -13,6 +13,7 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
   static get properties() {
     return {
       tables: {type: Array},
+      users: {type: Array},
       bulkActions: {type: Array},
       selectedBulkAction: {type: String}
     }
@@ -26,6 +27,7 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.tables = [];
+    this.users = [];
     this.bulkActions = [
       {value: 'add-users', label: 'Add Users', showUserAccessForm: true},
       {value: 'remove-users', label: 'Remove Users', showUserAccessForm: true}
@@ -81,9 +83,9 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
       ],
       content: html`
         <admin-database-user-table-form
-          .orgName=${this.orgName}
-          .dbName=${this.dbName}
           operation=${this.selectedBulkAction}
+          .users=${this.users}
+          .tables=${selectedTables.map( t => t.table )}
           >
         </admin-database-user-table-form>`,
       actionCallback: this._onEditAccessModalAction
@@ -96,16 +98,18 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
   }
 
   async _onEditAccessModalAction(action, modalEle) {
+    const form = modalEle.renderRoot.querySelector('admin-database-user-table-form');
     if ( action === 'dismiss' ){
+      form.reset();
       return;
     }
-    // const form = modalEle.renderRoot.querySelector('admin-database-user-table-form');
-    // if ( !form.reportValidity() ) return {abortModalAction: true};
-    // modalEle._loading = true;
-    // const r = await form.submit();
-    // modalEle._loading = false;
-    // form.payload = {};
-    // if ( r ) this.AppStateModel.refresh();
+
+    if ( !form.reportValidity() ) return {abortModalAction: true};
+    modalEle._loading = true;
+    const r = await form.submit();
+    modalEle._loading = false;
+    form.reset();
+    //if ( r ) this.AppStateModel.refresh();
   }
 
 }

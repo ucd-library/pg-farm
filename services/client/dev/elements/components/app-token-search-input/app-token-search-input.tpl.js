@@ -67,10 +67,10 @@ return html`
       return html`
         <button class='result' @click=${() => this._onSelect(opt)}>
           <div class='label'>
-            ${_highlightText.call(this, this.invertValueAndLabel ? opt.label : opt.value)}
+            ${_highlightText.call(this, this.invertValueAndLabel ? opt.value : opt.label)}
           </div>
           <div class='value' ?hidden=${!this.showValueInResults}>
-            ${_highlightText.call(this, this.invertValueAndLabel ? opt.value : opt.label)}
+            ${_highlightText.call(this, this.invertValueAndLabel ? opt.label : opt.value)}
           </div>
         </button>
       `;

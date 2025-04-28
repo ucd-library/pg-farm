@@ -2,7 +2,7 @@ import QueryParamController from "./QueryParamController";
 import { getLogger } from '@ucd-lib/cork-app-utils';
 
 export default class QueryParamsController {
-  constructor(host, queryParams, opts={}) {
+  constructor(host, queryParams=[], opts={}) {
     this._host = host;
     host.addController(this);
 

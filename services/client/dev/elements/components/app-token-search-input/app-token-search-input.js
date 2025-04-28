@@ -133,7 +133,7 @@ export default class AppTokenSearchInput extends Mixin(LitElement)
    */
   _emitChange(){
     const selected = this._options.filter(opt => opt.selected);
-    this.dispatchEvent(new CustomEvent('change', {
+    this.dispatchEvent(new CustomEvent('token-select', {
       detail: {value: selected.map(opt => opt.data)},
       bubbles: true,
       composed: true
