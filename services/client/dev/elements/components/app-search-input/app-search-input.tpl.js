@@ -74,7 +74,8 @@ return html`
         placeholder=${this.placeholder}
         .value="${this.value || ''}"
         ?disabled=${this.disabled}
-        @input="${e => this.value = e.target.value}">
+        autocomplete="off"
+        @input="${this._onInput}">
       <button type="submit">
         <app-icon slug='fa.solid.magnifying-glass' fetch-method='page-load'></app-icon>
       </button>

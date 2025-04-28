@@ -65,6 +65,15 @@ export default class AppSearchInput extends Mixin(LitElement)
     }
   }
 
+  _onInput(e) {
+    this.value = e.target.value;
+    this.dispatchEvent(new CustomEvent('search-input', {
+      detail: {
+        value: this.value
+      }
+    }));
+  }
+
   _onFormSubmit(e) {
     e.preventDefault();
     if ( this.disabled ) return;

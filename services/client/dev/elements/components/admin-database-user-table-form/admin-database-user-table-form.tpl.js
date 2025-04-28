@@ -13,8 +13,9 @@ export function styles() {
 
 export function render() {
 return html`
-  <p>hello world</p>
+  <p>hello world!</p>
   <app-token-search-input
+    .options=${['foo', 'bar', 'baz']}
     placeholder='Search users'
   ></app-token-search-input>
 
