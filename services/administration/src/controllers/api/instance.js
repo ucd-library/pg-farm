@@ -16,9 +16,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:organization/:instance', async (req, res) => {
+router.get('/:organization/:instance', keycloak.protect('instance-user'), async (req, res) => {
   try {
-    let resp = await instanceModel.get(req.params.instance);
+    let resp = req.context.instance;
     let lastEvent = await client.getLastDatabaseEvent(resp.instance_id);
     if( lastEvent ) {
       resp.lastDatabaseEvent = {
@@ -36,9 +36,8 @@ router.get('/:organization/:instance', async (req, res) => {
 
 router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
-    let instance = req.body;
-    let id = await model.createInstance(instance.name, instance);
-    res.status(201).json({id});
+    let result = await instanceModel.create(req.ctx, req.body);
+    res.status(201).json(result);
   } catch(e) {
     handleError(res, e);
   }
@@ -49,8 +48,6 @@ router.put('/:organization/:instance/:user',
   async (req, res) => {
   
     try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    // let user = req.params.user.replace(/@.*$/, '');
     let user = req.params.user;
     let parent = req.query.parent;
 
@@ -60,7 +57,7 @@ router.put('/:organization/:instance/:user',
       throw new Error('Invalid type: '+type);
     }
 
-    await model.createUser(instance, organization, user, type, {parent});
+    await model.createUser(req.context, user, type, {parent});
     res.json({success: true});
   } catch(e) {
     handleError(res, e);
@@ -72,7 +69,6 @@ router.patch('/:organization/:instance/:user',
   async (req, res) => {
   
     try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
     let user = req.params.user;
 
     // do not let api create special users, for now
@@ -81,7 +77,7 @@ router.patch('/:organization/:instance/:user',
       throw new Error('Invalid type: '+type);
     }
 
-    await model.updateUser(instance, organization, user, type);
+    await model.updateUser(req.context, user, type);
     res.json({success: true});
   } catch(e) {
     handleError(res, e);
@@ -93,14 +89,13 @@ router.delete('/:organization/:instance/:user',
   async (req, res) => {
 
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
     let user = req.params.user;
 
     if( user === (req.user.username || req.user.preferred_username) ) {
       throw new Error('Cannot delete yourself');
     }
 
-    let success = await model.deleteUser(instance, organization, user);
+    let success = await model.deleteUser(req.context, user);
     res.status(204).json({success});
   } catch(e) {
     handleError(res, e);
@@ -109,8 +104,7 @@ router.delete('/:organization/:instance/:user',
 
 router.post('/:organization/:instance/stop', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await model.stopInstance(instance, organization);
+    let resp = await model.stopInstance(req.context);
     
     res.status(200).json({success: true});
   } catch(e) {
@@ -120,10 +114,9 @@ router.post('/:organization/:instance/stop', keycloak.protect('admin'), async (r
 
 router.post('/:organization/:instance/start', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
     let force = req.query.force === 'true';
 
-    let resp = await model.startInstance(instance, organization, {
+    let resp = await model.startInstance(req.context, {
       force,
       waitForPgRest: true,
       startPgRest: true
@@ -136,8 +129,7 @@ router.post('/:organization/:instance/start', keycloak.protect('admin'), async (
 
 router.post('/:organization/:instance/restart', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await instanceModel.restart(instance, organization);
+    let resp = await instanceModel.restart(req.context);
     res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);
@@ -146,10 +138,7 @@ router.post('/:organization/:instance/restart', keycloak.protect('admin'), async
 
 router.post('/:organization/:instance/backup', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    instance = await instanceModel.get(instance, organization);
-
-    let resp = await remoteExec(instance.hostname, '/backup');
+    let resp = await remoteExec(req.context.instance.hostname, '/backup');
 
     res.status(resp.status).send(await resp.text());
   } catch(e) {
@@ -159,9 +148,8 @@ router.post('/:organization/:instance/backup', keycloak.protect('admin'), async 
 
 router.post('/:organization/:instance/sync-users', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
 
-    let result = await instanceModel.remoteSyncUsers(instance, organization, 
+    let result = await instanceModel.remoteSyncUsers(req.context, 
       req.query['update-passwords'] === 'true',
       req.query['hard-reset'] === 'true'
     );
@@ -182,8 +170,8 @@ router.post('/:organization/:instance/sync-users', keycloak.protect('admin'), as
 
 router.post('/:organization/:instance/archive', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await backup.remoteArchive(instance, organization);
+    let {instance, organization} = req.context;
+    let resp = await backup.remoteArchive(instance.name, organization.name);
     res.status(resp.status).send(await resp.text());
   } catch(e) {
     handleError(res, e);
@@ -192,8 +180,7 @@ router.post('/:organization/:instance/archive', keycloak.protect('admin'), async
 
 router.post('/:organization/:instance/restore', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await model.restoreInstance(instance, organization);
+    let resp = await model.restoreInstance(req.context);
     res.status(resp.status).send(await resp.text());
   } catch(e) {
     handleError(res, e);
@@ -202,7 +189,7 @@ router.post('/:organization/:instance/restore', keycloak.protect('admin'), async
 
 router.post('/sleep', keycloak.protect('admin'), async (req, res) => {
   try {
-    await model.sleepInstances();
+    await model.sleepInstances(req.context);
     res.status(200).send('ok');
   } catch(e) {
     handleError(res, e);
@@ -211,25 +198,12 @@ router.post('/sleep', keycloak.protect('admin'), async (req, res) => {
 
 router.post('/:organization/:instance/resize', keycloak.protect('admin'), async (req, res) => {
   try {
-    let {instance, organization} = getOrgAndIsntFromReq(req);
-    let resp = await instanceModel.resizeVolume(instance, organization, req.query.size);
+    let resp = await instanceModel.resizeVolume(req.context, req.query.size);
     res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);
   }
 });
 
-
-function getOrgAndIsntFromReq(req) {
-  let organization = req.params.organization;
-  if( organization === '_' ) {
-    organization = null;
-  }
-  let instance = req.params.instance;
-  if( !instance.startsWith('inst-') ) {
-    instance = 'inst-'+instance;
-  }
-  return {organization, instance};
-}
 
 export default router;

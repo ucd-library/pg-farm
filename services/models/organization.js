@@ -43,13 +43,9 @@ class OrganizationModel {
    * @returns {Promise<Boolean>}
    */
   async exists(ctx) {
-    ctx = getContext(ctx);
-
     try {
-      let org = await this.get(ctx?.organization?.name);
-      return org;
+      return await this.get(ctx);
     } catch(e) {}
-
     return false;
   }
 
@@ -99,24 +95,23 @@ class OrganizationModel {
    *
    * @returns {Promise<Object>}
    */
-  async create(ctx) {
+  async create(ctx, organization) {
     ctx = getContext(ctx);
-    let org = ctx.organization;
 
-    if( !org.name && org.title ) {
-      org.name = org.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+    if( !organization.name && organization.title ) {
+      organization.name = organization.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
     }
 
-    let exists = await this.exists(ctx);
+    let exists = await this.exists(organization);
     if( exists ) {
-      throw new Error('Organization already exists: '+org.name);
+      throw new Error('Organization already exists: '+organization.name);
     }
-    this._convertLogoToBytes(org);
+    this._convertLogoToBytes(organization);
 
     logger.info('Creating organization', ctx.logSignal);
-    await client.createOrganization(title, opts);
+    await client.createOrganization(organization);
 
-    return this.get(org.name);
+    return this.get(organization.name);
   }
 
   async update(ctx) {

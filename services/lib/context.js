@@ -1,7 +1,9 @@
 import modelUtils from '../models/utils.js'
 import pgAdminClient from './pg-admin-client.js';
+import clone from 'clone';
+import {v4 as uui4} from 'uuid';
 
-const store = new WeakMap();
+const store = new Map();
 
 async function middleware(req, res, next) {
   let organization = req.params.organization || req.query.organization || req.body?.organization;
@@ -9,7 +11,6 @@ async function middleware(req, res, next) {
   let instance = req.params.instance || req.query.instance || req.body?.instance;
 
   let context = await createContext({
-    user : req.user,
     corkTraceId : req.corkTraceId,
     organization,
     database,
@@ -42,66 +43,155 @@ async function middleware(req, res, next) {
  * @returns {Promise<Object>} context object
  */
 async function createContext(obj) {
-  let context = {
-    user : obj.user,
-    corkTraceId : obj.corkTraceId
-  };
+  if( !obj.corkTraceId ) {
+    obj.corkTraceId = uui4();
+  }
 
-  if( obj.organization ) {
-    if( obj.organization === '_' ) {
-      context.organization = {name : null};
-    } else {
-      try {
-        context.organization = await pgAdminClient.getOrganization(obj.organization);
-      } catch(e) {
-        context.organization = {name : obj.organization};
+  let context = new InstanceDatabaseContext(obj);
+  await context.update(obj);
+  return context;
+}
+
+class InstanceDatabaseContext {
+  
+  constructor() {
+    this._corkTraceId = null;
+    this._organization = null;
+    this._database = null;
+    this._instance = null;
+    this._requestor = null;
+
+    this.fullDatabaseName = null;
+    this.logSignal = {};
+  }
+
+  // setters and getters for updating the logSignal object
+
+  // corkTraceId is used for logging and tracing
+  set corkTraceId(corkTraceId) {
+    this._corkTraceId = corkTraceId;
+    this.logSignal.corkTraceId = corkTraceId;
+  }
+  get corkTraceId() {
+    return this._corkTraceId;
+  }
+
+  set organization(organization) {
+    this._organization = organization;
+    this.logSignal.organization = organization?.name;
+  }
+  get organization() {
+    return this._organization;
+  }
+
+  set database(database) {
+    this._database = database;
+    this.fullDatabaseName = (this?.organization?.name || '_') + '/' + database?.name;
+    this.logSignal.database = this.fullDatabaseName;
+  }
+  get database() {
+    return this._database;
+  }
+
+  set instance(instance) {
+    this._instance = instance;
+    this.logSignal.instance = instance?.name;
+  }
+  get instance() {
+    return this._instance;
+  }
+
+  set requestor(requestor) {
+    this._requestor = requestor;
+    this.logSignal.requestor = requestor;
+  }
+  get requestor() {
+    return this._requestor;
+  }
+
+  cleanLogSignal() {
+    for( let key in this.logSignal ) {
+      if( this.logSignal[key] === undefined ) {
+        delete this.logSignal[key];
       }
     }
   }
 
-  if( obj.database ) {
-    try {
-      context.database = await pgAdminClient.getDatabase(obj.database, context.organization?.name);
-    } catch(e) {
-      context.database = {name : obj.database};
-    }
-    context.fullDatabaseName = (context?.organization?.name || '_') + '/' + context.database?.name;
+
+  clone() {
+    let context = new InstanceDatabaseContext();
+    context.corkTraceId = this.corkTraceId;
+    context.organization = clone(this.organization);
+    context.database = clone(this.database);
+    context.instance = clone(this.instance);
+    context.fullDatabaseName = this.fullDatabaseName;
+    context.requestor = this.requestor;
+    context.logSignal = clone(this.logSignal);
+    return context;
   }
 
-  if( obj.instance ) {
-    if( !modelUtils.isUUID(obj.instance) && !obj.instance.match(/^inst-/) ) {
-      obj.instance = 'inst-'+obj.instance;
+  async update(obj) {
+    if( obj.corkTraceId ) {
+      this.corkTraceId = obj.corkTraceId;
     }
-    try {
-      context.instance = await pgAdminClient.getInstance(obj.instance, context.organization?.name);
-    } catch(e) {
-      context.instance = {name : obj.instance};
+  
+    if( obj.organization ) {
+      if( obj.organization === '_' ) {
+        this.organization = {name : null};
+      } else {
+        try {
+          this.organization = await pgAdminClient.getOrganization({organization: {name: obj.organization}});
+        } catch(e) {
+          this.organization = {name : obj.organization};
+        }
+      }
     }
-  } else if( context.database ) {
-    try {
-      context.instance = await pgAdminClient.getInstance(
-        context.database.instance_name || context.database.instance_id, 
-        context.organization?.name
-      );
-    } catch(e) {}
+
+    if( obj.database ) {
+      try {
+        this.database = await pgAdminClient.getDatabase({
+          database: {name: obj.database}, 
+          organization: {name: this.organization?.name
+        }});
+      } catch(e) {
+        this.database = {name : obj.database};
+      }
+    }
+  
+    if( obj.instance ) {
+      if( !modelUtils.isUUID(obj.instance) && !obj.instance.match(/^inst-/) ) {
+        obj.instance = 'inst-'+obj.instance;
+      }
+      try {
+        this.instance = await pgAdminClient.getInstance({
+          instance: {name: obj.instance}, 
+          organization: {name: this.organization?.name}
+        });
+      } catch(e) {
+        this.instance = {name : obj.instance};
+      }
+    } else if( this.database ) {
+      try {
+        this.instance = await pgAdminClient.getInstance({
+          instance: {name: this.database.instance_name || this.database.instance_id}, 
+          organization: {name: this.organization?.name}
+        });
+      } catch(e) {}
+    }
+
+    if( obj.requestor ) {
+      if( typeof obj.requestor === 'string' ) {
+        this.requestor = obj.requestor;
+      } else if( typeof obj.requestor === 'object' ) {
+        this.requestor = obj.requestor.username;
+      }
+    }
+
+    this.cleanLogSignal();
   }
 
-  context.logSignal = {
-    organization : context.organization?.name,
-    database : context.fullDatabaseName,
-    instance : context.instance?.name,
-    user : obj.user?.username,
-    corkTraceId : obj.corkTraceId
-  }
-
-  for( let key in context.logSignal ) {
-    if( context.logSignal[key] === undefined ) {
-      delete context.logSignal[key];
-    }
-  }
-
-  return context;
 }
+
 
 function getContext(obj) {
   if( typeof obj !== 'string' ) {
@@ -110,4 +200,4 @@ function getContext(obj) {
   return store.get(obj);
 }
 
-export default {middleware, getContext, createContext, store};
+export {middleware, getContext, createContext, store};

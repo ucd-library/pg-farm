@@ -7,6 +7,7 @@ import modelUtils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
 import { getContext } from '../lib/context.js';
 import { getInstanceResources, getMaxPriority, GENERAL_RESOURCES } from '../lib/instance-resources.js';
+import { organization } from './index.js';
 
 class Instance {
 
@@ -62,13 +63,13 @@ class Instance {
    * @description get instance by name or id.  The name can
    * omit the 'inst-' prefix and it will be added automatically.
    * 
-   * @param {String} nameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or id
    * 
    * @returns {Promise<Object>}
    **/
   async get(ctx) {
-    return client.getInstance(ctx, true);
+    ctx = getContext(ctx);
+    return client.getInstance(ctx);
   }
 
   /**
@@ -82,8 +83,7 @@ class Instance {
    **/
   async exists(ctx) {
     try {
-      let instance = await this.get(ctx);
-      return instance;
+      return await this.get(ctx);
     } catch(e) {}
 
     return false;
@@ -93,24 +93,17 @@ class Instance {
    * @method create
    * @description create a new instance
    * 
-   * @param {String} name name of the instance 
-   * @param {Object} opts
-   * @param {String} opts.description description of the instance
-   * @param {String} opts.hostname hostname of the instance
-   * @param {String} opts.organization Optional. name or ID of the organization 
+   * @param {Object} instance
+   * @param {String} instance.name name of the instance
+   * @param {String} instance.description description of the instance
+   * @param {String} instance.hostname hostname of the instance
+   * @param {String} instance.organization Optional. name or ID of the organization 
    * 
    * @returns {Promise<Object>}
    */
-  async create(ctx) {
+  async create(ctx, instance) {
     ctx = getContext(ctx);
-    let instance = ctx.instance;
-    
-    // set a real context
-    ctx = {
-      instance : {name: instance.name}, 
-      organization : {name: instance.organization}
-    }
-    
+
     // make sure instance's always start with 'inst-'
     // this lets us know its an instance and not a database by name
     instance.name = 'inst-'+modelUtils.cleanInstDbName(instance.name);
@@ -124,15 +117,20 @@ class Instance {
 
     // look up organization name to use in hostname
     let orgName = instance.organization || '';
-    // if( opts.organization ) {
-    //   let org = await this.models.organization.get(opts.organization);
-    //   orgName = org.name+'-';
-    // }
+    if( typeof orgName === 'object' ) {
+      orgName = orgName.name;
+    }
 
-    opts.hostname = 'inst-'+orgName+shortName;
+    instance.hostname = 'inst-'+orgName+shortName;
 
-    logger.info('Creating instance', {instance});
+    logger.info('Creating instance', ctx.logSignal, {instance, organization: orgName});
     await client.createInstance(instance);
+
+    // set a context
+    await ctx.update({
+      instance : instance.name, 
+      organization : instance.organization
+    });
 
     return this.get(ctx);
   }
@@ -204,7 +202,7 @@ class Instance {
    * 
    * @returns {Promise<Boolean>}
    */
-  async checkInstanceState(ctx, states) {
+  checkInstanceState(ctx, states) {
     let instance = ctx.instance;
     if( !Array.isArray(states) ) {
       states = [states];
@@ -245,6 +243,8 @@ class Instance {
   async start(ctx, opts={}) {
     ctx = getContext(ctx);
 
+    logger.info('Starting instance', ctx.logSignal);
+
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to RUN');
       await this.setInstanceState(ctx, this.STATES.RUN);
@@ -255,7 +255,7 @@ class Instance {
 
     // JM - perhaps we just add a now shutdown delay time after start.
     let maxPriority = await getMaxPriority(instance.availability);
-    client.updateInstancePriority(ctx, maxPriority);
+    await client.updateInstancePriority(ctx, maxPriority);
 
     let applyResp = await this.apply(ctx);
 
@@ -287,7 +287,7 @@ class Instance {
     let hostname = instance.hostname;
 
     let templates = await modelUtils.getTemplate('postgres');
-    let priorityResources = await getInstanceResources(instance);
+    let priorityResources = await getInstanceResources(ctx);
 
     // Postgres
     let k8sConfig = templates.find(t => t.kind === 'StatefulSet');
@@ -370,7 +370,7 @@ class Instance {
    * 
    * @returns {Promise<Object>}
    */
-  async stop(instNameOrId, orgNameOrId, opts={}) {
+  async stop(ctx, opts={}) {
     if( !config.k8s.enabled ) {
       logger.warn('K8s is not enabled, just setting state to SLEEP');
       await this.setInstanceState(ctx, this.STATES.SLEEP);
@@ -523,13 +523,12 @@ class Instance {
    * instance's database. If the user already exists, the password will be
    * updated.  This should be run by the PG Helper container on the instance.
    * 
-   * @param {*} instNameOrId 
-   * @param {*} orgNameOrId 
-   * @param {*} password 
+   * @param {String|Object} ctx context object or id
+   * @param {Object} user 
    */
-  async syncUser(instNameOrId, orgNameOrId, user) {
+  async syncUser(ctx, user) {
     // this establishes a socket connection to the instance 'postgres' database
-    let con = await this.models.database.getConnection('postgres');
+    let con = await this.models.database.getConnection(ctx, {database: 'postgres', useSocket: true});
 
     logger.info('Syncing user', user.username);
     await pgInstClient.createOrUpdatePgUser(con, user)
@@ -540,8 +539,16 @@ class Instance {
     }
   }
 
-  async resizeVolume(instNameOrId, orgNameOrId, size) {
-    let customProps = await client.getInstanceConfig(instNameOrId, orgNameOrId);
+  /**
+   * @method resizeVolume
+   * @description Resize the volume for the instance.  This will update the k8s
+   * config for the instance and then resize the volume in k8s.
+   * 
+   * @param {String|Object} ctx context object or id
+   * @param {Number} size integer size in GiB or string size with GiB suffix 
+   */
+  async resizeVolume(ctx, size) {
+    let customProps = await client.getInstanceConfig(ctx);
     
     // convert size to Gi
     if( typeof size === 'number' ) {
@@ -556,9 +563,9 @@ class Instance {
       throw new Error('New volume size must be greater than current size');
     }
 
-    await client.setInstanceConfig(instNameOrId, orgNameOrId, 'volumeSize', size);
+    await client.setInstanceConfig(ctx, 'volumeSize', size);
 
-    let instance = await this.get(instNameOrId, orgNameOrId);
+    let instance = ctx.instance;
     let pvcName = instance.hostname+'-ps-'+instance.hostname+'-0';
 
     let currentConfig = await kubectl.get('pvc', pvcName);

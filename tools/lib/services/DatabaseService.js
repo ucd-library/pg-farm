@@ -74,8 +74,8 @@ class DatabaseService extends BaseService {
     return this.store.data.update.get(id);
   }
 
-  async updateFeaturedList(org, db, opts={}) {
-    const ido = {org, db, ...opts};
+  async updateFeaturedList(organization, database, opts={}) {
+    const ido = {organization, database, ...opts};
     let id = payload.getKey(ido);
     let url = `${this.basePath}/featured`;
     if ( opts.organizationList ) url += `/${org}`;

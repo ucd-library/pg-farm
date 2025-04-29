@@ -146,18 +146,15 @@ class PgFarmAdminClient {
    * @method createOrganization
    * @description create a new organization
    *
-   * @param {String} title long name of the organization
-   * @param {Object} opts
-   * @param {String} opts.name short name of the organization
-   * @param {String} opts.description description of the organization
-   * @param {String} opts.url url of the organization
+   * @param {Object} org
+   * @param {String} org.title long name of the organization
+   * @param {String} org.name short name of the organization
+   * @param {String} org.description description of the organization
+   * @param {String} org.url url of the organization
    *
    * @returns {Promise<Object>}
    */
-  async createOrganization(ctx) {
-    ctx = getContext(ctx);
-    let org = ctx.organization;
-
+  async createOrganization(org) {
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.ORGANIZATION} (title, name, description, url)
       VALUES ($1, $2, $3, $4)
@@ -183,11 +180,11 @@ class PgFarmAdminClient {
     let res = await client.query(
       `SELECT * FROM ${table}
        WHERE instance_id = ${this.schema}.get_instance_id($1, $2)`,
-      [ctx.instance.name, ctx.organization.name]
+      [ctx?.instance?.name, ctx?.organization?.name]
     );
 
     if( res.rows.length === 0 ) {
-      throw new Error('Instance not found: '+nameOrId);
+      throw new Error('Instance not found: '+ctx?.instance?.name+' for org: '+ctx?.organization?.name);
     }
 
     return res.rows[0];
@@ -264,12 +261,12 @@ class PgFarmAdminClient {
     return res.rows[0];
   }
 
-  async updateInstancePriority(nameOrId, orgNameOrId, priority) {
+  async updateInstancePriority(ctx, priority) {
     return client.query(`
       UPDATE ${config.adminDb.tables.INSTANCE}
       SET priority_state = $1
       WHERE instance_id = ${this.schema}.get_instance_id($2, $3)
-    `, [priority, nameOrId, orgNameOrId]);
+    `, [priority, ctx.instance.name, ctx.organization.name]);
   }
 
   /**
@@ -283,7 +280,7 @@ class PgFarmAdminClient {
     ctx = getContext(ctx);
 
     let res = await client.query(
-      `select * from ${config.adminDb.views.INSTANCE_DATABASE} where instance_id = $1;`,
+      `select * from ${config.adminDb.tables.DATABASE} where instance_id = $1;`,
       [ctx.instance.instance_id]
     );
 
@@ -305,7 +302,8 @@ class PgFarmAdminClient {
    */
   async createInstance(inst) {
     if( inst.organization ) {
-      inst.organization = (await this.getOrganization(inst.organization)).organization_id;
+      let orgName = (typeof inst.organization === 'string') ? inst.organization : inst.organization.name;
+      inst.organization = (await this.getOrganization(orgName)).organization_id;
     }
 
     let resp = await client.query(`
@@ -451,28 +449,30 @@ class PgFarmAdminClient {
    * @method getDatabase
    * @description get database by name or ID
    *
-   * @param {String} nameOrId database name or ID
-   * @param {String} orgNameOrId organization name or ID
+   * @param {String} ctx  context object or id
+   * @param {String} columns optional.  columns to return
    *
    * @returns {Promise<Object>}
    */
-  async getDatabase(nameOrId, orgNameOrId, columns=null) {
-    if( !columns ) {
-      columns = ["organization_name", "organization_title","organization_id",
-        "instance_hostname","instance_name","instance_state","instance_id",
-        "instance_port","database_name","database_title","database_short_description",
-        "database_description","database_url","database_tags",
-        "pgrest_hostname","database_id","tsv_content"
-      ];
-    }
+  async getDatabase(ctx, columns=null) {
+    ctx = getContext(ctx);
+
+    // if( !columns ) {
+    //   columns = ["organization_name", "organization_title","organization_id",
+    //     "instance_hostname","instance_name","instance_state","instance_id",
+    //     "instance_port","database_name","database_title","database_short_description",
+    //     "database_description","database_url","database_tags",
+    //     "pgrest_hostname","database_id","tsv_content"
+    //   ];
+    // }
 
     let res = await client.query(`
-      SELECT ${columns.join(', ')} FROM ${config.adminDb.views.INSTANCE_DATABASE}
+      SELECT * FROM ${config.adminDb.tables.DATABASE}
       WHERE database_id = ${this.schema}.get_database_id($1, $2)
-    `, [nameOrId, orgNameOrId]);
+    `, [ctx.database.name, ctx.organization.name]);
 
     if( res.rows.length === 0 ) {
-      throw new Error('Database not found: '+(orgNameOrId || '_')+'/'+nameOrId);
+      throw new Error('Database not found: '+ctx.fullDatabaseName);
     }
 
     return res.rows[0];
@@ -482,8 +482,8 @@ class PgFarmAdminClient {
    * @method createDatabase
    * @description create a new database
    *
-   * @param {String} title long name of the database
    * @param {Object} opts
+   * @param {String} opts.title long name of the database
    * @param {String} opts.name short name of the database
    * @param {String} opts.instance name or ID of the instance
    * @param {String} opts.organization name or ID of the organization
@@ -493,13 +493,13 @@ class PgFarmAdminClient {
    *
    * @returns {Promise<Object>}
    **/
-  async createDatabase(title, opts) {
+  async createDatabase(opts) {
     let resp = await client.query(`
       INSERT INTO ${config.adminDb.tables.DATABASE}
       (title, name, instance_id, organization_id, pgrest_hostname, short_description, description, tags, url)
       VALUES ($1, $2, ${this.schema}.get_instance_id($3, $4), ${this.schema}.get_organization_id($4), $5, $6, $7, $8, $9)
       RETURNING *
-    `, [title, opts.name, opts.instance, opts.organization, opts.pgrest_hostname,
+    `, [opts.title, opts.name, opts.instance, opts.organization, opts.pgrest_hostname,
         opts.short_description, opts.description, opts.tags, opts.url]);
 
     return resp.rows[0];
@@ -509,8 +509,7 @@ class PgFarmAdminClient {
    * @method setDatabaseMetadata
    * @description update database metadata properties
    *
-   * @param {String} nameOrId database name or ID
-   * @param {String} orgNameOrId organization name or ID
+   * @param {String} dbId database ID
    * @param {Object} metadata properties to update
    *
    * @returns {Promise<Object>}
@@ -631,12 +630,11 @@ class PgFarmAdminClient {
    * @method getInstanceUser
    * @description get instance user by instance name/id or database name/id.
    *
-   * @param {String} nameOrId instance or database, name or ID
-   * @param {String} orgNameOrId organization name or ID
+   * @param {String|Object} ctx context object or id
    * @param {String} username
    * @returns {Promise<Object>}
    */
-  async getInstanceUser(nameOrId, orgNameOrId=null, username) {
+  async getInstanceUser(ctx, username) {
     // let resp = await client.query(`
     //   SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE_USERS}
     //   WHERE instance_user_id = ${this.schema}.get_instance_user($1, $2, $3)
@@ -651,11 +649,10 @@ class PgFarmAdminClient {
       WHERE
         (organization_name = $2 OR organization_id=try_cast_uuid($2)) AND
         (
-          (instance_name = $1 OR instance_id=try_cast_uuid($1)) OR
-          (database_name = $1 OR database_id=try_cast_uuid($1))
+          instance_name = $1 OR instance_id=try_cast_uuid($1)
         ) AND
         username = $3
-    `, [nameOrId, orgNameOrId, username]);
+    `, [ctx.instance.name, ctx.organization.name, username]);
 
     if( resp.rows.length === 0 ) {
       throw new Error('User not found: '+username);

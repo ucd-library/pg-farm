@@ -2,7 +2,6 @@ import {Router} from 'express';
 import {organization} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
-import {middleware as contextMiddleware} from '../../../../lib/context.js';
 import crypto from 'crypto';
 
 const router = Router();
@@ -25,7 +24,7 @@ async function search(req, res) {
   }
 }
 
-router.post('/', keycloak.protect('admin'), contextMiddleware, async (req, res) => {
+router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
     req.context.organization = req.body;
     let org = await organization.create(req.context);
@@ -35,7 +34,7 @@ router.post('/', keycloak.protect('admin'), contextMiddleware, async (req, res) 
   }
 });
 
-router.get('/:organization', contextMiddleware, async (req, res) => {
+router.get('/:organization', async (req, res) => {
   try {
     let org = await organization.get(req.context);
     res.status(200).json(org);
@@ -44,7 +43,7 @@ router.get('/:organization', contextMiddleware, async (req, res) => {
   }
 });
 
-router.get('/:organization/users', contextMiddleware, async (req, res) => {
+router.get('/:organization/users', async (req, res) => {
   try {
     let resp = await organization.getUsers(req.context);
 
@@ -79,7 +78,6 @@ router.get('/:organization/users', contextMiddleware, async (req, res) => {
 router.patch(
   '/:organization',
   keycloak.protect('organization-admin'),
-  contextMiddleware,
   async (req, res) => {
 
   req.context.organization = Object.assign({}, req.context.organization, req.body);
@@ -96,7 +94,7 @@ router.get('/:organization/is-admin', keycloak.protect('organization-admin'), as
   return res.json({isAdmin: true});
 });
 
-router.get('/:organization/logo', contextMiddleware, async (req, res) => {
+router.get('/:organization/logo', async (req, res) => {
   try {
     let org = await organization.get(req.context, ['logo_file_type', 'logo', 'updated_at', 'name']);
 

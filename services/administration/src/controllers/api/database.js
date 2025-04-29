@@ -3,7 +3,6 @@ import {database, pgRest, instance, user, organization, admin} from '../../../..
 import keycloak from '../../../../lib/keycloak.js';
 import pgInstClient from '../../../../lib/pg-instance-client.js'
 import handleError from '../handle-errors.js';
-import {middleware as contextMiddleware} from '../../../../lib/context.js';
 
 const router = Router();
 
@@ -106,15 +105,13 @@ async function aggregations(req, res) {
 router.patch('/featured', keycloak.protect('admin'), async (req, res) => patchFeatured(req, res));
 router.patch('/featured/:organization', keycloak.protect('organization-admin'),  async (req, res) => patchFeatured(req, res, true));
 async function patchFeatured(req, res, organizationList){
-  const db = req.body.db;
-  const org = req.body.org;
   req.body.organizationList = organizationList;
 
   try {
     if ( req.body.action === 'remove' ) {
-      await database.removeFeatured(db, org, req.body.organizationList);
+      await database.removeFeatured(ctx, req.body.organizationList);
     } else {
-      await database.makeFeatured(db, org, req.body);
+      await database.makeFeatured(ctx, req.body);
     }
     res.status(200).json({success: true});
   } catch(e) {
@@ -166,7 +163,7 @@ async function getFeatured(res, organization){
 router.get('/:organization/:database', async (req, res) => {
   try {
 
-    let db = await database.get(req.params.database, req.params.organization, GET_DB_COLUMNS);
+    let db = await database.get(req.context, GET_DB_COLUMNS);
     let resp = {
       id : db.database_id,
       name : db.database_name,
@@ -196,7 +193,7 @@ router.get('/:organization/:database', async (req, res) => {
 });
 
 /** Create **/
-router.post('/', keycloak.protect('admin'), contextMiddleware, async (req, res) => {
+router.post('/', keycloak.protect('admin'), async (req, res) => {
   try {
     await admin.ensureDatabase(req.context);
     res.status(201).json(await database.get(req.body.database, req.body.organization));
@@ -217,11 +214,7 @@ router.patch(
       organization = null;
     }
 
-    await database.setMetadata(
-      req.params.database,
-      organization,
-      req.body
-    );
+    await database.update(req.context, req.body);
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
@@ -231,13 +224,7 @@ router.patch(
 /** Restart db pgrest instance **/
 router.post('/:organization/:database/restart/api', keycloak.protect('admin'), async (req, res) => {
   try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-
-    let database = req.params.database;
-    await pgRest.restart(database, organization);
+    await pgRest.restart(req.context);
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
@@ -247,16 +234,9 @@ router.post('/:organization/:database/restart/api', keycloak.protect('admin'), a
 /** rerun db init **/
 router.post('/:organization/:database/init', keycloak.protect('admin'), async (req, res) => {
   try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-    let dbName = req.params.database;
-
-    let inst = await instance.getByDatabase(dbName, organization);
-    await instance.initInstanceDb(inst.instance_id, organization);
-    await database.ensurePgDatabase(inst.name, organization, dbName);
-    await pgRest.initDb(dbName, inst.instance_id, organization);
+    await instance.initInstanceDb(req.context);
+    await database.ensurePgDatabase(req.context);
+    await pgRest.initDb(req.context);
 
     res.status(200).json({success: true});
   } catch(e) {
@@ -274,7 +254,7 @@ router.get('/:organization/:database/users',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
-    let dbUsers = await database.getDatabaseUsers(req.params.organization, req.params.database)
+    let dbUsers = await database.getDatabaseUsers(req.context)
     res.json(dbUsers);
   } catch(e) {
     handleError(res, e);
@@ -286,7 +266,7 @@ router.get('/:organization/:database/schemas',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
-    res.json(await database.listSchema(req.params.organization, req.params.database));
+    res.json(await database.listSchema(req.ctx));
   } catch(e) {
     handleError(res, e);
   }
@@ -297,10 +277,7 @@ router.get('/:organization/:database/tables-overview',
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
-    res.json(await database.getTableAccessOverview(
-      req.params.organization,
-      req.params.database
-    ));
+    res.json(await database.getTableAccessOverview(req.context));
   } catch(e) {
     handleError(res, e);
   }
@@ -311,8 +288,7 @@ router.get('/:organization/:database/schema/:schema/tables',
   async (req, res) => {
   try {
     res.json(await database.listTables(
-      req.params.organization,
-      req.params.database,
+      req.context,
       req.params.schema
     ));
   } catch(e) {
@@ -325,8 +301,7 @@ router.get('/:organization/:database/schema/:schema/tables-overview',
   async (req, res) => {
   try {
     res.json(await database.getTableAccessOverview(
-      req.params.organization,
-      req.params.database,
+      req.context,
       req.params.schema
     ));
   } catch(e) {
@@ -340,8 +315,7 @@ router.get('/:organization/:database/schema/:schema/table/:tableName/access',
   async (req, res) => {
   try {
     res.json(await database.getTableAccess(
-      req.params.organization,
-      req.params.database,
+      req.context,
       req.params.schema,
       req.params.tableName
     ));
@@ -355,8 +329,7 @@ router.get('/:organization/:database/schemas-overview',
   async (req, res) => {
   try {
     let result = await database.getSchemasOverview(
-      req.params.organization,
-      req.params.database
+      req.context
     );
     res.json(result);
   } catch(e) {
@@ -370,8 +343,7 @@ router.get('/:organization/:database/schema/:schema/access/:username',
   async (req, res) => {
   try {
     res.json(await database.getTableAccessByUser(
-      req.params.organization,
-      req.params.database,
+      req.params.context,
       req.params.schema,
       req.params.username
     ));
@@ -386,23 +358,16 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
   async (req, res) => {
 
   try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-
     let resp;
     if( req.params.schema === '_' ) {
       resp = await user.grantDatabaseAccess(
-        req.params.database,
-        organization,
+        req.context,
         req.params.user,
         req.params.permission
       );
     } else {
       resp = await user.grant(
-        req.params.database,
-        organization,
+        req.context,
         req.params.schema,
         req.params.user,
         req.params.permission
@@ -420,24 +385,17 @@ router.post('/:organization/:database/grant',
   async (req, res) => {
 
   try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-
     let body = req.body;
     for( let grant of body ) {
       if( grant.schema === '_' ) {
         resp = await user.grantDatabaseAccess(
-          req.params.database,
-          organization,
+          req.context,
           grant.user,
           grant.permission
         );
       } else {
         resp = await user.grant(
-          req.params.database,
-          organization,
+          req.context,
           grant.schema,
           grant.user,
           grant.permission
@@ -457,23 +415,16 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
   async (req, res) => {
 
   try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-
     let resp;
     if( req.params.schema === '_' ) {
       resp = await user.revokeDatabaseAccess(
-        req.params.database,
-        organization,
+        req.context,
         req.params.user,
         req.params.permission
       );
     } else {
       resp = await user.revoke(
-        req.params.database,
-        organization,
+        req.context,
         req.params.schema,
         req.params.user,
         req.params.permission
@@ -491,24 +442,17 @@ router.post('/:organization/:database/revoke',
   async (req, res) => {
 
   try {
-    let organization = req.params.organization;
-    if( organization === '_' ) {
-      organization = null;
-    }
-
     let body = req.body;
     for( let grant of body ) {
       if( grant.schema === '_' ) {
         resp = await user.revokeDatabaseAccess(
-          req.params.database,
-          organization,
+          req.context,
           grant.user,
           grant.permission
         );
       } else {
         resp = await user.revoke(
-          req.params.database,
-          organization,
+          req.context,
           grant.schema,
           grant.user,
           grant.permission

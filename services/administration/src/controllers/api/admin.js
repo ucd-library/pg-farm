@@ -38,7 +38,7 @@ router.get('/connection-log/:sessionId', keycloak.protect('admin'), async (req, 
 
 router.get('/sleep-instances', keycloak.protect('admin'), async (req, res) => {
   try {
-    let resp = await admin.sleepInstances();
+    let resp = await admin.sleepInstances(req.context);
     res.json(resp);
   } catch(e) {
     handleError(res, e);
