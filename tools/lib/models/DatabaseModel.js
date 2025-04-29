@@ -147,6 +147,10 @@ class DatabaseModel extends BaseModel {
     return this.service.getUsers(org, db);
   }
 
+  getTablesOverview(org, db) {
+    return this.service.getTablesOverview(org, db);
+  }
+
   getSchemas(org, db) {
     return this.service.getSchemas(org, db);
   }
