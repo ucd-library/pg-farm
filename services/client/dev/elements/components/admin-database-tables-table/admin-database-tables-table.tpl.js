@@ -114,12 +114,12 @@ function _renderDesktopView(){
             <div class='checkbox-container'>
               <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
               <div class='table-name-container'>
-                <a href='${this.tableUrl}/${row.item?.table?.table_name}'>${row.item?.table?.table_name}</a>
+                <a href='${this.tableUrl}/${row.item?.table?.tableName}'>${row.item?.table?.tableName}</a>
               </div>
             </div>
           </div>
           <div class='cell'>
-            <div>${row.item?.table?.table_schema}</div>
+            <div>${row.item?.table?.schema}</div>
           </div>
           <div class='cell'>${row.item?.userCt}</div>
           <div class='cell'>${row.item?.accessSummary}</div>
@@ -155,13 +155,13 @@ function _renderMobileView(){
                 <div class='u-width-100'>
                   <div>
                     <div class='table-name-container'>
-                      <a href='${this.tableUrl}/${row.item?.table?.table_name}'>${row.item?.table?.table_name}</a>
+                      <a href='${this.tableUrl}/${row.item?.table?.tableName}'>${row.item?.table?.tableName}</a>
                     </div>
                   </div>
                   <div class='details'>
                     <div>
                       <div>Schema:</div>
-                      <div>${row.item?.table?.table_schema}</div>
+                      <div>${row.item?.table?.schema}</div>
                     </div>
                     <div>
                       <div>Users:</div>
