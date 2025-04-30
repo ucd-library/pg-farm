@@ -124,7 +124,11 @@ function _renderDesktopView(){
           <div class='cell'>${row.item?.userCt}</div>
           <div class='cell'>${row.item?.accessSummary}</div>
           <div class='cell cell--center'>
-            <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete table', row.item)}></app-icon-button>
+            <app-icon-button
+              icon='fa.solid.trash'
+              ?disabled=${row.item?.userCt == 0}
+              basic @click=${() => this._onSingleRemoveClick(row.item)}>
+            </app-icon-button>
           </div>
         </div>
       `)}
