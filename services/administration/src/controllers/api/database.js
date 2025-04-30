@@ -424,6 +424,7 @@ router.post('/:organization/:database/grant',
       organization = null;
     }
 
+    let resp;
     let body = req.body;
     for( let grant of body ) {
       if( grant.schema === '_' ) {
@@ -495,6 +496,7 @@ router.post('/:organization/:database/revoke',
       organization = null;
     }
 
+    let resp;
     let body = req.body;
     for( let grant of body ) {
       if( grant.schema === '_' ) {

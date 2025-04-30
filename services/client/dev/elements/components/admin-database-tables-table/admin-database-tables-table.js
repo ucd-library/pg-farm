@@ -88,7 +88,7 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
           .tables=${selectedTables.map( t => t.table )}
           >
         </admin-database-user-table-form>`,
-      actionCallback: this._onEditAccessModalAction
+      actionCallback: this._onEditAccessModalAction.bind(this)
     });
   }
 
@@ -109,7 +109,10 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     const r = await form.submit();
     modalEle._loading = false;
     form.reset();
-    //if ( r ) this.AppStateModel.refresh();
+    if ( r ) {
+      this.AppStateModel.refresh();
+      this.tableCtl.reset();
+    }
   }
 
 }
