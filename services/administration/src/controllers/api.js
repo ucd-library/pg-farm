@@ -6,11 +6,8 @@ import admin from './api/admin.js';
 import icon from './api/icon/icon.js';
 import contact from './api/contact.js';
 import user from './api/user.js';
-import {middleware as contextMiddleware} from '../../../lib/context.js';
 
 const router = Router();
-
-router.use(contextMiddleware);
 
 router.use('/admin', admin);
 router.use('/organization', organization);

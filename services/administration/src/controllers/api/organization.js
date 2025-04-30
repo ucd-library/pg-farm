@@ -3,6 +3,8 @@ import {organization} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import crypto from 'crypto';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
+
 
 const router = Router();
 
@@ -24,7 +26,10 @@ async function search(req, res) {
   }
 }
 
-router.post('/', keycloak.protect('admin'), async (req, res) => {
+router.post('/', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     req.context.organization = req.body;
     let org = await organization.create(req.context);
@@ -34,16 +39,19 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.get('/:organization', async (req, res) => {
+router.get('/:organization', 
+  contextMiddleware,
+  async (req, res) => {
   try {
-    let org = await organization.get(req.context);
-    res.status(200).json(org);
+    res.status(200).json(req.context.organization);
   } catch(e) {
     handleError(res, e);
   }
 });
 
-router.get('/:organization/users', async (req, res) => {
+router.get('/:organization/users', 
+  contextMiddleware,
+  async (req, res) => {
   try {
     let resp = await organization.getUsers(req.context);
 
@@ -75,8 +83,8 @@ router.get('/:organization/users', async (req, res) => {
   }
 });
 
-router.patch(
-  '/:organization',
+router.patch('/:organization',
+  contextMiddleware,
   keycloak.protect('organization-admin'),
   async (req, res) => {
 
@@ -90,7 +98,9 @@ router.patch(
   }
 });
 
-router.get('/:organization/is-admin', keycloak.protect('organization-admin'), async (req, res) => {
+router.get('/:organization/is-admin', 
+  keycloak.protect('organization-admin'), 
+  async (req, res) => {
   return res.json({isAdmin: true});
 });
 

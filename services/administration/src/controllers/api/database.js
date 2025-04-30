@@ -1,8 +1,8 @@
 import {Router} from 'express';
 import {database, pgRest, instance, user, organization, admin} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
-import pgInstClient from '../../../../lib/pg-instance-client.js'
 import handleError from '../handle-errors.js';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
 
 const router = Router();
 
@@ -160,29 +160,30 @@ async function getFeatured(res, organization){
 }
 
 /** Get **/
-router.get('/:organization/:database', async (req, res) => {
+router.get('/:organization/:database', 
+  contextMiddleware, 
+  async (req, res) => {
   try {
-
-    let db = await database.get(req.context, GET_DB_COLUMNS);
+    let {organization, database, instance} = req.context;
     let resp = {
-      id : db.database_id,
-      name : db.database_name,
-      title : db.database_title,
-      shortDescription : db.database_short_description,
-      description : db.database_description,
-      icon : db.database_icon,
-      brandColor : db.database_brand_color,
-      url : db.database_url,
-      tags : db.database_tags,
+      id : database.database_id,
+      name : database.name,
+      title : database.title,
+      shortDescription : database.short_description,
+      description : database.description,
+      icon : database.icon,
+      brandColor : database.brand_color,
+      url : database.url,
+      tags : database.tags,
       organization : {
-        id : db.organization_id,
-        name : db.organization_name,
-        title : db.organization_title
+        id : organization.organization_id,
+        name : organization.name,
+        title : organization.title
       },
       instance : {
-        name : db.instance_name,
-        state : db.instance_state,
-        id : db.instance_id
+        name : instance.name,
+        state : instance.state,
+        id : instance.instance_id
       }
     };
 
@@ -193,10 +194,13 @@ router.get('/:organization/:database', async (req, res) => {
 });
 
 /** Create **/
-router.post('/', keycloak.protect('admin'), async (req, res) => {
+router.post('/', 
+  contextMiddleware, 
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
-    await admin.ensureDatabase(req.context);
-    res.status(201).json(await database.get(req.body.database, req.body.organization));
+    let result = await admin.ensureDatabase(req.context);
+    res.status(201).json(result);
   } catch(e) {
     handleError(res, e);
   }
@@ -205,6 +209,7 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
 /** Update Metadata **/
 router.patch(
   '/:organization/:database',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
 
@@ -222,7 +227,10 @@ router.patch(
 });
 
 /** Restart db pgrest instance **/
-router.post('/:organization/:database/restart/api', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:database/restart/api', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     await pgRest.restart(req.context);
     res.status(200).json({success: true});
@@ -232,7 +240,10 @@ router.post('/:organization/:database/restart/api', keycloak.protect('admin'), a
 });
 
 /** rerun db init **/
-router.post('/:organization/:database/init', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:database/init', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     await instance.initInstanceDb(req.context);
     await database.ensurePgDatabase(req.context);
@@ -251,6 +262,7 @@ router.get('/:organization/:database/is-admin', keycloak.protect('instance-admin
 
 /** Get Users **/
 router.get('/:organization/:database/users',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -263,10 +275,11 @@ router.get('/:organization/:database/users',
 
 /** Get Schemas **/
 router.get('/:organization/:database/schemas',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
-    res.json(await database.listSchema(req.ctx));
+    res.json(await database.listSchema(req.context));
   } catch(e) {
     handleError(res, e);
   }
@@ -274,6 +287,7 @@ router.get('/:organization/:database/schemas',
 
 /** Get Tables **/
 router.get('/:organization/:database/tables-overview',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -284,6 +298,7 @@ router.get('/:organization/:database/tables-overview',
 });
 
 router.get('/:organization/:database/schema/:schema/tables',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -297,6 +312,7 @@ router.get('/:organization/:database/schema/:schema/tables',
 });
 
 router.get('/:organization/:database/schema/:schema/tables-overview',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -311,6 +327,7 @@ router.get('/:organization/:database/schema/:schema/tables-overview',
 
 /** Get Table Access **/
 router.get('/:organization/:database/schema/:schema/table/:tableName/access',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -325,6 +342,7 @@ router.get('/:organization/:database/schema/:schema/table/:tableName/access',
 });
 
 router.get('/:organization/:database/schemas-overview',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -339,6 +357,7 @@ router.get('/:organization/:database/schemas-overview',
 
 /** Get User Schema Access **/
 router.get('/:organization/:database/schema/:schema/access/:username',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
@@ -354,6 +373,7 @@ router.get('/:organization/:database/schema/:schema/access/:username',
 
 /** Grant user schema access **/
 router.put('/:organization/:database/grant/:schema/:user/:permission',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
 
@@ -381,6 +401,7 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
 });
 
 router.post('/:organization/:database/grant',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
 
@@ -411,6 +432,7 @@ router.post('/:organization/:database/grant',
 
 /** Revoke user schema access **/
 router.delete('/:organization/:database/revoke/:schema/:user/:permission',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
 
@@ -438,6 +460,7 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
 });
 
 router.post('/:organization/:database/revoke',
+  contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
 

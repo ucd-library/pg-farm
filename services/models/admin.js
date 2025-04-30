@@ -154,6 +154,12 @@ class AdminModel {
 
     // start pg rest once instance is running
     await this.models.pgRest.start(ctx);
+
+    return {
+      database : ctx.database,
+      instance : ctx.instance,
+      organization : ctx.organization
+    }
   }
 
   /**
@@ -348,7 +354,7 @@ class AdminModel {
       if( resources.sleep ) {
         logger.info('Instance has been idle for too long, shutting down', iCtx.logSignal);
         changed.push({instance, newState: 'SLEEP'});
-        await this.stopInstance(iCtx.logSignal);
+        await this.stopInstance(iCtx);
         continue;
       }
 

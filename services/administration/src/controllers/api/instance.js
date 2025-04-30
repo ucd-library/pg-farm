@@ -4,6 +4,7 @@ import keycloak from '../../../../lib/keycloak.js';
 import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
 import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
 
 const router = Router();
 
@@ -16,7 +17,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:organization/:instance', keycloak.protect('instance-user'), async (req, res) => {
+router.get('/:organization/:instance', 
+  contextMiddleware,
+  keycloak.protect('instance-user'), 
+  async (req, res) => {
   try {
     let resp = req.context.instance;
     let lastEvent = await client.getLastDatabaseEvent(resp.instance_id);
@@ -34,7 +38,10 @@ router.get('/:organization/:instance', keycloak.protect('instance-user'), async 
   }
 });
 
-router.post('/', keycloak.protect('admin'), async (req, res) => {
+router.post('/', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let result = await instanceModel.create(req.ctx, req.body);
     res.status(201).json(result);
@@ -43,11 +50,12 @@ router.post('/', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.put('/:organization/:instance/:user', 
+router.put('/:organization/:instance/:user',
+  contextMiddleware,
   keycloak.protect('instance-admin'), 
   async (req, res) => {
   
-    try {
+  try {
     let user = req.params.user;
     let parent = req.query.parent;
 
@@ -65,10 +73,11 @@ router.put('/:organization/:instance/:user',
 });
 
 router.patch('/:organization/:instance/:user', 
-  keycloak.protect('instance-admin'), 
+  contextMiddleware,
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   
-    try {
+  try {
     let user = req.params.user;
 
     // do not let api create special users, for now
@@ -85,6 +94,7 @@ router.patch('/:organization/:instance/:user',
 });
 
 router.delete('/:organization/:instance/:user', 
+  contextMiddleware,
   keycloak.protect('instance-admin'), 
   async (req, res) => {
 
@@ -102,7 +112,10 @@ router.delete('/:organization/:instance/:user',
   }
 });
 
-router.post('/:organization/:instance/stop', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/stop', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let resp = await model.stopInstance(req.context);
     
@@ -112,7 +125,10 @@ router.post('/:organization/:instance/stop', keycloak.protect('admin'), async (r
   }
 });
 
-router.post('/:organization/:instance/start', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/start', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let force = req.query.force === 'true';
 
@@ -127,7 +143,10 @@ router.post('/:organization/:instance/start', keycloak.protect('admin'), async (
   }
 });
 
-router.post('/:organization/:instance/restart', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/restart', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let resp = await instanceModel.restart(req.context);
     res.status(200).json(resp);
@@ -136,7 +155,10 @@ router.post('/:organization/:instance/restart', keycloak.protect('admin'), async
   }
 });
 
-router.post('/:organization/:instance/backup', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/backup', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let resp = await remoteExec(req.context.instance.hostname, '/backup');
 
@@ -146,7 +168,10 @@ router.post('/:organization/:instance/backup', keycloak.protect('admin'), async 
   }
 });
 
-router.post('/:organization/:instance/sync-users', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/sync-users', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
 
     let result = await instanceModel.remoteSyncUsers(req.context, 
@@ -168,7 +193,10 @@ router.post('/:organization/:instance/sync-users', keycloak.protect('admin'), as
   }
 });
 
-router.post('/:organization/:instance/archive', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/archive', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let {instance, organization} = req.context;
     let resp = await backup.remoteArchive(instance.name, organization.name);
@@ -178,7 +206,10 @@ router.post('/:organization/:instance/archive', keycloak.protect('admin'), async
   }
 });
 
-router.post('/:organization/:instance/restore', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/restore', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let resp = await model.restoreInstance(req.context);
     res.status(resp.status).send(await resp.text());
@@ -187,7 +218,10 @@ router.post('/:organization/:instance/restore', keycloak.protect('admin'), async
   }
 });
 
-router.post('/sleep', keycloak.protect('admin'), async (req, res) => {
+router.post('/sleep', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     await model.sleepInstances(req.context);
     res.status(200).send('ok');
@@ -196,7 +230,10 @@ router.post('/sleep', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.post('/:organization/:instance/resize', keycloak.protect('admin'), async (req, res) => {
+router.post('/:organization/:instance/resize', 
+  contextMiddleware,
+  keycloak.protect('admin'), 
+  async (req, res) => {
   try {
     let resp = await instanceModel.resizeVolume(req.context, req.query.size);
     res.status(200).json(resp);

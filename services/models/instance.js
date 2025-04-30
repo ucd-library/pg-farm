@@ -7,7 +7,7 @@ import modelUtils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
 import { getContext } from '../lib/context.js';
 import { getInstanceResources, getMaxPriority, GENERAL_RESOURCES } from '../lib/instance-resources.js';
-import { organization } from './index.js';
+
 
 class Instance {
 
@@ -32,6 +32,14 @@ class Instance {
     try {
       pgUser = await this.models.user.get(ctx, config.pgInstance.adminRole);
     } catch(e) {}
+
+    let instance = ctx.instance;
+    if( !instance ) {
+      throw new Error('Instance not found in context');
+    }
+    if( !instance.hostname || !instance.port  ) {
+      throw new Error('Instance hostname or port not found in context');
+    }
 
     return {
       host : instance.hostname,

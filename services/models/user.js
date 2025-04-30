@@ -43,6 +43,13 @@ class User {
   async create(ctx, user) {
     ctx = getContext(ctx);
 
+    if( typeof user === 'string' ) {
+      user = { username: user };
+    }
+    if( !user.username ) {
+      throw new Error('Username is required');
+    }
+
     if( !user.type ) user.type = 'USER';
     if( !user.noinherit ) user.noinherit = false;
 
@@ -81,8 +88,6 @@ class User {
       }
     } else { // get current password.  make sure its set on the instance db
       logger.info('Instance user already exists', this.getUserForLogging(user), ctx.logSignal);
-      password = user.password;
-
       if( existingUser.type !== user.type ) {
         await this.updateType(ctx, user);
       }
@@ -97,8 +102,8 @@ class User {
     // get instance connection information
     let con = await this.models.instance.getConnection(ctx);
 
-    logger.info('Ensuring pg user', username, ctx.logSignal);
-    await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });
+    logger.info('Ensuring pg user', user.username, ctx.logSignal);
+    await pgInstClient.createOrUpdatePgUser(con, user);
   }
 
   /**
@@ -244,7 +249,7 @@ class User {
   }
 
   /**
-   * @method resetUserPassword
+   * @method resetPassword
    * @description Resets a user's password to a random password
    *
    * @param {String} ctx context object or id

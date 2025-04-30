@@ -457,14 +457,13 @@ class PgFarmAdminClient {
   async getDatabase(ctx, columns=null) {
     ctx = getContext(ctx);
 
-    // if( !columns ) {
-    //   columns = ["organization_name", "organization_title","organization_id",
-    //     "instance_hostname","instance_name","instance_state","instance_id",
-    //     "instance_port","database_name","database_title","database_short_description",
-    //     "database_description","database_url","database_tags",
-    //     "pgrest_hostname","database_id","tsv_content"
-    //   ];
-    // }
+    if( !columns ) {
+      columns = ["instance_id","database_id", "organization_id", 
+        "name","title","short_description",
+        "description","url","tags","brand_color", "created_at", "updated_at",
+        "pgrest_hostname","discoverable"
+      ];
+    }
 
     let res = await client.query(`
       SELECT * FROM ${config.adminDb.tables.DATABASE}
