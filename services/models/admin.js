@@ -11,6 +11,7 @@ import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
 import { getInstanceResources  } from '../lib/instance-resources.js';
+import { organization } from './index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -348,6 +349,7 @@ class AdminModel {
 
       let iCtx = ctx.clone();
       iCtx.instance = instance;
+      await iCtx.update({organization: instance.organization_id});
 
       let resources = await getInstanceResources(iCtx);
 
@@ -369,8 +371,8 @@ class AdminModel {
           instance, 
           newState : newPriority,
           lastDatabaseEvent : {
-            event_type : query.event_type,
-            timestamp : query.timestamp
+            event_type : query?.event_type,
+            timestamp : query?.timestamp
           }
         });
       }
@@ -466,7 +468,6 @@ class AdminModel {
         logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
         await utils.sleep(5000);
       }
-      console.log('INSTANCE READY');
     })();
 
 
@@ -493,7 +494,6 @@ class AdminModel {
 
         // wait for pgRest to be actually be ready
         await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
-        console.log('DATABASE READY');
       }
       return start.bind(this);
     })

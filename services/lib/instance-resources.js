@@ -225,7 +225,7 @@ async function getInstanceResources(ctx, onStart) {
     e.timestamp = new Date(e.timestamp);
   }
 
-  return getResources(instance.availability, e.timestamp.getTime());
+  return getResources(ctx.instance.availability, e.timestamp.getTime());
 }
 
 export {
