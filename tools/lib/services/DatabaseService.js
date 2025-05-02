@@ -184,25 +184,6 @@ class DatabaseService extends BaseService {
     return this.store.data.users.get(id);
   }
 
-  async getTablesOverview(org, db) {
-    let id = payload.getKey({org, db});
-
-    await this.checkRequesting(
-      id, this.store.data.tablesOverview,
-      () => this.request({
-          url: `${this.basePath}/${org}/${db}/tables-overview`,
-          fetchOptions: {
-            headers: serviceUtils.authHeader()
-          },
-          onLoading: request => this.store.onGetTablesOverviewUpdate({org, db}, {request}),
-          onLoad: payload => this.store.onGetTablesOverviewUpdate({org, db}, {payload: payload.body}),
-          onError: error => this.store.onGetTablesOverviewUpdate({org, db}, {error})
-        })
-    );
-
-    return this.store.data.tablesOverview.get(id);
-  }
-
   async isAdmin(org, db){
     let id = payload.getKey({org, db});
 
