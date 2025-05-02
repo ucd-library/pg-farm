@@ -71,6 +71,11 @@ export default class AppAdminDatabaseTableSingle extends Mixin(LitElement)
         errorMessage: 'Unable to get database users'
       },
       {
+        request: this.DatabaseModel.get(this.orgName, this.dbName),
+        ctlProp: 'db',
+        errorMessage: 'Unable to load database'
+      },
+      {
         request: this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
         ctlProp: 'tablesOverview',
         errorMessage: 'Unable to load tables overview'
@@ -85,7 +90,7 @@ export default class AppAdminDatabaseTableSingle extends Mixin(LitElement)
 
     this.tablesOverview = this.dataCtl.tablesOverview?.[0] || {};
     this.schema = this.tablesOverview.schema || '';
-    this.users = this.dataCtl.users.filter(user => (this.tablesOverview.userAccess || []).includes(user.name));
+    this.users = this.dataCtl.users || []; // .filter(user => (this.tablesOverview.userAccess || []).includes(user.name));
     
     r = await this.dataCtl.get([
       {

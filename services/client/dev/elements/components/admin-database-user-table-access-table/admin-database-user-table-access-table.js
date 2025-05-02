@@ -1,5 +1,5 @@
-import { LitElement } from 'lit';
-import {render, styles, renderRmAccessForm} from "./admin-database-user-table-access-table.tpl.js";
+import { LitElement, html } from 'lit';
+import {render, styles} from "./admin-database-user-table-access-table.tpl.js";
 
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
@@ -9,9 +9,6 @@ import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
-
-import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
-import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 /**
  * @description Admin Database User Table Access Table
@@ -55,38 +52,59 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
     const ctlOptions = {
       searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
       filters: [
-        {id: 'db-access', cb: this._onDbAccessFilterChange},
         {id: 'schema-access', cb: this._onSchemaAccessFilterChange}
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
-    debugger;
     
     this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel');
   }
 
   async _onAppStateUpdate(e){
     if ( e.page !== this.compCtl.parentPageId ) return;
+
+    this.orgName = e.location?.path?.[1] || '';
+    this.dbName = e.location?.path?.[2] || '';
+    this.tableName = e.location?.path?.[5] || '';
+
     await this.queryCtl.setFromLocation();
     this._setBulkActions();
+
+    this.AppStateModel.showLoading();
+    let r = await this.dataCtl.get([
+      {
+        request: this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
+        ctlProp: 'tablesOverview',
+        errorMessage: 'Unable to load tables overview'
+      }
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+
+    this.tablesOverview = this.dataCtl.tablesOverview?.[0] || {};
+    this.schema = this.tablesOverview.schema || '';
+
+    this.AppStateModel.hideLoading();
   }
 
   /**
-   * @description Callback to determine whether to show user based on db access filter
-   * @param {Object} user - The user object from this.users array
-   * @param {String} value - The value of the filter
-   * @returns {Boolean} - True if the user should be shown, false otherwise
+   * @description Table access dropdown change
+   * @param {Object} e - The custom event object
    */
-  _onDbAccessFilterChange(user, value) {
-    if ( !value ) return true;
-    if ( value === 'ADMIN') {
-      return user?.user?.pgFarmUser?.type === 'ADMIN';
-    } else {
-      const roleLabel = grantDefinitions.getRoleLabel('DATABASE', user.user);
-      for ( const [role, label] of Object.entries(grantDefinitions.roleLabels) ) {
-        if ( roleLabel === label ) return role === value;
-      }
-    }
+  _onTableAccessChange(e) {
+    const username = e.currentTarget.dataset.username || '';
+    const access = e.detail.value;
+    if( !username || !access ) return;
+
+    this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, `${this.schema}.${this.tableName}`, username, access);
+
+    const accessLabel = this.bulkActions.find(a => a.value === access)?.label || '';
+    const toastText = `User access has been updated to '${accessLabel}'`;
+    this.AppStateModel.showToast({
+      text: toastText,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.AppStateModel.hideLoading();
   }
 
   /**
@@ -108,11 +126,10 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
    */
   _setBulkActions() {
     const bulkActions = [
-      {value: 'delete', label: 'Delete user'}
+      {value: 'READ', label: 'Viewer'},
+      {value: 'WRITE', label: 'Editor'},
+      {value: 'NONE', label: 'No Access'}
     ];
-    if ( this.queryCtl?.schema?.exists?.() ){
-      bulkActions.push({value: 'rm-schema-access', label: `Remove access to "${this.queryCtl.schema.value}" schema`});
-    }
     this.bulkActions = bulkActions;
   }
 
@@ -120,68 +137,19 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
    * @description Callback for when a bulk action is selected by the user
    */
   _onBulkActionSelect() {
-    if ( this.selectedBulkAction === 'delete' ) {
-      this._showDeleteUserModal(this.tableCtl.getSelectedItems().map(user => user.user));
-      return;
-    }
-    if ( this.selectedBulkAction === 'rm-schema-access' ) {
-      const users = this.tableCtl.getSelectedItems().map(user => user.user);
-      this.AppStateModel.showDialogModal({
-        title: `Remove User Schema Access`,
-        actions: [
-          {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
-          {text: 'Confirm Removal', value: 'db-rm-schema-access', color: 'secondary'}
-        ],
-        content: removeSchemaAccess(users, this.queryCtl.schema.value),
-        data: {user: users}
-      });
-      return;
-    }
+    const users = this.tableCtl.getRows()
+      .filter(u => u.selected)
+      .map(row => row.item?.user?.name);
+    const accessLabel = this.bulkActions.find(a => a.value === this.selectedBulkAction)?.label || '';
+    this.AppStateModel.showDialogModal({
+      title: `Update Table Access`,
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Update Access', value: 'db-update-user-table-access', color: 'secondary'}
+      ],
+      content: html`<div>Update access for ${users.length} user${users.length > 1 ? 's' : ''} to '${accessLabel}'</div>`,
+    });
   }
-
-  /**
-   * @description Callback for when the 'remove' button is clicked for a user
-   * @param {Object} user - The user object to remove
-   */
-  _onRemoveUserButtonClick(user) {
-    if ( this.queryCtl?.schema.exists() ){
-      this._showRemoveAccessForm(user);
-    } else {
-      this._showDeleteUserModal(user);
-    }
-  }
-
-  /**
-   * @description Shows the modal for removing access to a schema or the database. User must choose one and confirm.
-   * @param {Object} user - The user object to remove access for
-   */
-  // _showRemoveAccessForm(user){
-  //   this.AppStateModel.showDialogModal({
-  //     title: 'Remove User Access',
-  //     actions: [
-  //       {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
-  //       {text: 'Confirm Removal', value: 'db-remove-single-user-access', color: 'secondary'}
-  //     ],
-  //     content: renderRmAccessForm.call(this, user),
-  //     data: {user}
-  //   });
-  // }
-
-  /**
-   * @description Shows the confirmation modal for deleting a user or users from the database
-   * @param {Object|Array} user - The user object or array of user objects to delete
-   */
-  // _showDeleteUserModal(user) {
-  //   this.AppStateModel.showDialogModal({
-  //     title: `Delete User`,
-  //     actions: [
-  //       {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
-  //       {text: 'Delete User', value: 'db-delete-users', color: 'secondary'}
-  //     ],
-  //     content: deleteUserConfirmation(user),
-  //     data: {user}
-  //   });
-  // }
 
   /**
    * @description Callback for when any application dialog action is triggered
@@ -190,72 +158,46 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
    * @param {Object} e.data - The data object specified when launching the dialog
    * @returns
    */
-  // _onAppDialogAction(e){
-  //   if (
-  //     e.action?.value === 'db-delete-users' ||
-  //     (e.action?.value === 'db-remove-single-user-access' && this.rmFromDb)
-  //   ) {
-  //     const users = (Array.isArray(e.data.user) ? e.data.user : [e.data.user]).map(user => user.name);
-  //     // this.deleteUsers(users);
-  //     return;
-  //   }
-  //   if ( e.action?.value === 'db-remove-single-user-access' ) {
-  //     const user = e.data.user;
-  //     const schema = this.queryCtl.schema.value;
-  //     this.removeSchemaAccess([user.name], schema);
-  //     return;
-  //   }
-  //   if ( e.action?.value === 'db-rm-schema-access' ) {
-  //     const users = (Array.isArray(e.data.user) ? e.data.user : [e.data.user]).map(user => user.name);
-  //     const schema = this.queryCtl.schema.value;
-  //     this.removeSchemaAccess(users, schema);
-  //     return;
-  //   }
-  // }
+  _onAppDialogAction(e){
+    if ( e.action?.value === 'db-update-user-table-access' ) {
+      this.updateUserAccess();
+    }
+  }
 
   /**
-   * @description Removes schema access for a user or users
-   * @param {Array} usernames - The array of usernames to remove access for
-   * @param {String} schema - The schema to remove access from
-   * @returns
+   * @description Update users access for the table being viewed
    */
-  // async removeSchemaAccess(usernames, schema) {
-  //   this.AppStateModel.showLoading();
-  //   const r = await this.dataCtl.batchGet(usernames.map(username => ({
-  //     func: () => this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, schema, username, 'NONE'),
-  //     errorMessage: `Unable to remove access to schema '${schema}' for user '${username}'`
-  //   })), {ignoreLoading: true});
-  //   if ( !r ) return;
-  //   const userText = usernames.length === 1 ? `User '${usernames[0]} has'` : `${usernames.length} Users have`;
-  //   this.AppStateModel.showToast({
-  //     text: `${userText} been removed from schema '${schema}'`,
-  //     type: 'success',
-  //     showOnPageLoad: true
-  //   });
-  //   this.tableCtl.reset();
-  //   this.AppStateModel.refresh();
-  // }
+  async updateUserAccess() {
+    const users = this.tableCtl.getRows().filter(u => u.selected);
+    const access = this.selectedBulkAction;
+    const accessLabel = this.bulkActions.find(a => a.value === this.selectedBulkAction)?.label || '';
+    if (!users.length) return;
 
-
-  /**
-   * @description Deletes users from the database
-   * @param {Array} usernames - The array of usernames to delete
-   */
-  // async deleteUsers(usernames) {
-  //   this.AppStateModel.showLoading();
-  //   const r = await this.dataCtl.batchGet(usernames.map(username => ({
-  //     func: () => this.InstanceModel.deleteUser(this.orgName, this.dbName, username),
-  //     errorMessage: `Unable to delete user '${username}'`
-  //   })), {ignoreLoading: true});
-  //   if ( !r ) return;
-  //   this.AppStateModel.showToast({
-  //     text: usernames.length === 1 ? `User '${usernames[0]}' has been deleted from the database` : `${usernames.length} Users have been deleted from the database`,
-  //     type: 'success',
-  //     showOnPageLoad: true
-  //   });
-  //   this.tableCtl.reset();
-  //   this.AppStateModel.refresh();
-  // }
+    this.AppStateModel.showLoading();
+    const r = await this.dataCtl.batchGet(users.map(user => ({
+      func: () => {
+        console.log('about to update access', {
+          orgName: this.orgName, 
+          dbName: this.dbName, 
+          schemaTableName: `${this.schema}.${this.tableName}`, 
+          username: user.item?.user?.name, 
+          access
+        });
+        this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, `${this.schema}.${this.tableName}`, user.item?.user?.name, access)
+      },
+      errorMessage: `Failed to update access for ${user.item?.user?.name}`
+    })), {ignoreLoading: true});
+    if ( !r ) return;
+    let toastText = `User access has been updated to '${accessLabel}'`;
+    this.AppStateModel.showToast({
+      text: toastText,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.AppStateModel.hideLoading();
+    this.tableCtl.reset();
+    this.AppStateModel.refresh();
+  }
 
 }
 

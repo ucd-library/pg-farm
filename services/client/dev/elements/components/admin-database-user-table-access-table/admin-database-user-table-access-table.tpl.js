@@ -2,6 +2,8 @@ import { html, css } from 'lit';
 
 import '@ucd-lib/pgfarm-client/elements/components/app-search-input/app-search-input.js';
 import '@ucd-lib/pgfarm-client/elements/components/app-dropdown-button/app-dropdown-button.js';
+import '@ucd-lib/pgfarm-client/elements/components/admin-table-access-dropdown/admin-table-access-dropdown.js';
+
 import {grantDefinitions} from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 
 export function styles() {
@@ -20,7 +22,7 @@ export function styles() {
       display: block;
     }
     admin-database-user-table-access-table .mobile .app-table .row {
-      grid-template-columns: 1fr auto;
+      grid-template-columns: 2fr 1fr;
     }
     admin-database-user-table-access-table .user-name-container {
       display: flex;
@@ -41,6 +43,11 @@ export function styles() {
       max-width: 350px;
       margin-top: .75rem;
     }
+
+    admin-database-user-table-access-table .cell.access {
+      margin: 0 1rem;
+    }
+
     @container (min-width: 768px) {
       admin-database-user-table-access-table .desktop {
         display: block;
@@ -90,7 +97,7 @@ function _renderDesktopView(){
               <div>Users (${this.tableCtl.getRowCt()})</div>
             </div>
           </div>
-          <div class='cell'>
+          <div class='cell access'>
             <div>Access</div>
             <div>
               <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
@@ -111,10 +118,11 @@ function _renderDesktopView(){
                 ${_renderUserName.call(this, row)}
               </div>
             </div>
-            <div class='cell'>
-              <div>${row.item?.schemaRole?.grant?.roleLabel}</div>
-              <div class='caption' ?hidden=${!row.item?.schemaRole?.privileges?.length}>${row.item?.schemaRole?.privileges?.join?.(', ')}</div>
-            </div>
+            <admin-table-access-dropdown 
+              data-username=${row.item?.user?.name}
+              .value=${row.item?.schemaRole?.grant?.roleLabel}
+              @option-change=${this._onTableAccessChange}>
+            </admin-table-access-dropdown>
           </div>
           `)}
       </div>
@@ -134,7 +142,17 @@ function _renderMobileView(){
               <div>Users (${this.tableCtl.getRowCt()})</div>
             </div>
           </div>
-          <div class='cell'></div>
+          <div class='cell access'>
+            <div>Access</div>
+            <div>
+              <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Any Access</option>
+                ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('schema-access') === value}>${label}</option>
+                `)}
+              </select>
+            </div>
+          </div>
         </div>
 
         ${this.tableCtl.getRows().map( row => html`
@@ -142,17 +160,16 @@ function _renderMobileView(){
             <div class='cell'>
               <div class='checkbox-container'>
                 <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
-                <div class='u-width-100'>
+                <div>
                   ${_renderUserName.call(this, row)}
-                  <div class='details'>
-                    <div>
-                      <div>Access:</div>
-                      <div>${row.item?.schemaRole?.grant?.roleLabel}</div>
-                    </div>
-                  </div>
                 </div>
-              </div>
+              </div>  
             </div>
+            <admin-table-access-dropdown 
+              data-username=${row.item?.user?.name}
+              .value=${row.item?.schemaRole?.grant?.roleLabel}
+              @option-change=${this._onTableAccessChange}>
+            </admin-table-access-dropdown>
           </div>
         `)}
       </div>
