@@ -33,7 +33,18 @@ return html`
         @token-select=${this._onTokenSelect}
       ></app-token-search-input>
     </div>
-    <div class='field-container'>
+  </form>
+`;}
+
+/**
+ * Don't know if we want user to be able to select "WRITE" or not.
+ * Leaving this here, in case we do.
+ * Note - selecting "READ" does not demote a user with "WRITE" access, so might be confusing UI.
+ * - sp 2025-04-30
+ */
+function _renderAccessTypeInput() {
+  return html`
+    <div class='field-container' ?hidden=${this.operation !== 'add-users'}>
       <label>Table Access</label>
       <ul class="list--reset radio">
         ${grantDefinitions.getObjectGrants('TABLE', true).map(def => html`
@@ -52,5 +63,5 @@ return html`
           `)}
       </ul>
     </div>
-  </form>
-`;}
+  `
+}

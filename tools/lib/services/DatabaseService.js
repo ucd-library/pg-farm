@@ -370,6 +370,26 @@ class DatabaseService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  async bulkGrantAccess(org, db, grants) {
+    let ido = {org, db, grants, action: 'bulkGrantAccess'};
+    let id = payload.getKey(ido);
+
+    await this.request({
+      url: `${this.basePath}/${org}/${db}/grant`,
+      fetchOptions: {
+        method : 'POST',
+        body: grants,
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onGrantAccessUpdate(ido, {request}),
+      onLoad: payload => this.store.onGrantAccessUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onGrantAccessUpdate(ido, {error})
+    });
+
+    return this.store.data.actions.get(id);
+  }
+
   async revokeAccess(org, db, schemaTable, user, access) {
     let ido = {org, db, schemaTable, user, access, action: 'revokeAccess'};
     let id = payload.getKey(ido);
@@ -386,6 +406,24 @@ class DatabaseService extends BaseService {
       onError: error => this.store.onRevokeAccessUpdate(ido, {error})
     });
 
+    return this.store.data.actions.get(id);
+  }
+
+  async bulkRevokeAccess(org, db, grants) {
+    let ido = {org, db, grants, action: 'bulkRevokeAccess'};
+    let id = payload.getKey(ido);
+    await this.request({
+      url: `${this.basePath}/${org}/${db}/revoke`,
+      fetchOptions: {
+        method : 'POST',
+        body: grants,
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onRevokeAccessUpdate(ido, {request}),
+      onLoad: payload => this.store.onRevokeAccessUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onRevokeAccessUpdate(ido, {error})
+    });
     return this.store.data.actions.get(id);
   }
 

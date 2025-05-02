@@ -6,6 +6,13 @@ import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.
 
 import '@ucd-lib/pgfarm-client/elements/components/admin-database-user-table-form/admin-database-user-table-form.js';
 
+/**
+ * @description Table component for displaying database tables
+ * @property {Array} tables - list of database tables
+ * @property {Array} users - list of database users
+ * @property {Array} bulkActions - list of bulk actions available for the table
+ * @property {String} selectedBulkAction - selected bulk action value from bulkActions array
+ */
 export default class AdminDatabaseTablesTable extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
 
@@ -35,7 +42,7 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     this.selectedBulkAction = '';
 
     const ctlOptions = {
-      searchProps: ['table.table_name'],
+      searchProps: ['table.tableName'],
       filters: [{id: 'table-access', cb: this._onTableAccessFilterChange}]
     }
     this.tableCtl = new TableController(this, 'tables', ctlOptions);
@@ -55,6 +62,10 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     this.tableUrl = `/db/${this.orgName}/${this.dbName}/edit/tables`;
   }
 
+  /**
+   * @description Callback for when a user applies a bulk action
+   * @returns
+   */
   _onBulkActionSelect() {
     const action = this.bulkActions.find( a => a.value === this.selectedBulkAction );
     if ( action.showUserAccessForm ) {
@@ -63,18 +74,34 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     }
   }
 
-  _showUserAccessForm(){
-    let selectedTables = this.tableCtl.getSelectedItems();
+  /**
+   * @description Callback for when a user clicks the remove button on a table
+   * @param {Object} table - An item from this.tables
+   */
+  _onSingleRemoveClick(table){
+    const users = this.users.filter( u => table.table.userAccess.includes(u.name) );
+    this._showUserAccessForm('remove-users', [table], users);
+  }
 
-    let modalTitle = this.selectedBulkAction === 'add-users' ? 'Add User to' : 'Remove User from';
-    if ( selectedTables.length > 1 ) {
-      modalTitle += ` ${selectedTables.length} Tables`;
+  /**
+   * @description Shows the user access form modal
+   * @param {String} operation - The operation to perform (add-users or remove-users)
+   * @param {Array} tables - Tables to apply the operation to. Will be items from this.tables
+   * @param {Array} users - Users to apply the operation to. Will be items from this.users
+   */
+  _showUserAccessForm(operation, tables, users){
+    operation = operation || this.selectedBulkAction;
+    tables = tables || this.tableCtl.getSelectedItems();
+    users = users || this.users;
+
+    let modalTitle = operation === 'add-users' ? 'Add User to' : 'Remove User from';
+    if ( tables.length > 1 ) {
+      modalTitle += ` ${tables.length} Tables`;
     } else {
-      modalTitle += ` Table: ${selectedTables[0]?.table?.tableName}`;
+      modalTitle += ` Table: ${tables[0]?.table?.tableName}`;
     }
 
-    const actionText = this.selectedBulkAction === 'add-users' ? 'Add Table Access' : 'Remove Table Access';
-
+    const actionText = operation === 'add-users' ? 'Add Table Access' : 'Remove Table Access';
     this.AppStateModel.showDialogModal({
       title: modalTitle,
       actions: [
@@ -83,20 +110,32 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
       ],
       content: html`
         <admin-database-user-table-form
-          operation=${this.selectedBulkAction}
-          .users=${this.users}
-          .tables=${selectedTables.map( t => t.table )}
+          operation=${operation}
+          .users=${users}
+          .tables=${tables.map( t => t.table )}
           >
         </admin-database-user-table-form>`,
-      actionCallback: this._onEditAccessModalAction
+      actionCallback: this._onEditAccessModalAction.bind(this)
     });
   }
 
+  /**
+   * @description Callback for table controller hook when the access filter is changed
+   * @param {Object} table - The table object - from this.tables
+   * @param {String} value - The current value of the filter
+   * @returns {Boolean} - true if the row should be shown, false otherwise
+   */
   _onTableAccessFilterChange(table, value) {
     if ( !value ) return true;
     return table.accessSummary == value;
   }
 
+  /**
+   * @description Callback for when the user clicks a modal action on the user access form
+   * @param {String} action - The action value from the modal
+   * @param {Element} modalEle - The modal element
+   * @returns
+   */
   async _onEditAccessModalAction(action, modalEle) {
     const form = modalEle.renderRoot.querySelector('admin-database-user-table-form');
     if ( action === 'dismiss' ){
@@ -109,7 +148,10 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
     const r = await form.submit();
     modalEle._loading = false;
     form.reset();
-    //if ( r ) this.AppStateModel.refresh();
+    if ( r ) {
+      this.AppStateModel.refresh();
+      this.tableCtl.reset();
+    }
   }
 
 }
