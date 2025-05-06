@@ -8,11 +8,13 @@ class UserStore extends BaseStore {
 
     this.data = {
       me: new LruStore({name: 'user.me'}),
-      myDatabases: new LruStore({name: 'user.myDatabases'})
+      myDatabases: new LruStore({name: 'user.myDatabases'}),
+      search: new LruStore({name: 'user.search'}),
     };
     this.events = {
       USER_ME_UPDATE : 'user-me-update',
-      USER_MY_DATABASES_UPDATE : 'user-my-databases-update'
+      USER_MY_DATABASES_UPDATE : 'user-my-databases-update',
+      USER_SEARCH_UPDATE : 'user-search-update',
     };
   }
 
@@ -29,6 +31,14 @@ class UserStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.myDatabases,
       this.events.USER_MY_DATABASES_UPDATE
+    );
+  }
+
+  onSearchUpdate(payload) {
+    this._set(
+      {id: 'search', ...payload},
+      this.data.search,
+      this.events.USER_SEARCH_UPDATE
     );
   }
 

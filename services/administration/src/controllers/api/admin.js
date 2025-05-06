@@ -45,6 +45,17 @@ router.get('/sleep-instances', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
+router.get('/ucd-iam-profile/search/:searchTerm', keycloak.protect('admin'), async (req, res) => {
+  try {
+    let success = false;
+    let resp = await user.fetchUcdIamData(req.params.searchTerm);
+    if ( resp ) success = true;
+    res.json({success, resp});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.put('/ucd-iam-profile/:username', keycloak.protect('admin'), async (req, res) => {
   try {
     let success = false;
