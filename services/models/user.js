@@ -124,6 +124,21 @@ class User {
     return ucdUserProfile;
   }
 
+  /**
+   * @description Fetches user profile info from UCD IAM matching a search term
+   * @param {String} searchTerm
+   */
+  async fetchUcdIamData(searchTerm) {
+    let ucdUserProfiles;
+    try {
+      ucdUserProfiles = await ucdIamApi.searchUsers(searchTerm);
+    } catch (e) {
+      logger.info('Error checking UCD IAM for user: '+searchTerm, e);
+      return;
+    }
+    return ucdUserProfiles;
+  }
+
   async pgFarmUserExists(username) {
     const res = await this.getPgFarmUser(username);
     return res ? true : false;
