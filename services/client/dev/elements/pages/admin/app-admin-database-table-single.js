@@ -90,7 +90,6 @@ export default class AppAdminDatabaseTableSingle extends Mixin(LitElement)
 
     this.tablesOverview = this.dataCtl.tablesOverview?.[0] || {};
     this.schema = this.tablesOverview.schema || '';
-    debugger;
     this.users = (this.dataCtl.users || []).filter(user => (this.tablesOverview.userAccess || []).includes(user.name));
     
     r = await this.dataCtl.get([

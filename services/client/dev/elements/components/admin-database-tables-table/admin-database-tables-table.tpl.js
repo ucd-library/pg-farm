@@ -6,7 +6,7 @@ export function styles() {
 
   const desktopStyles = css`
     admin-database-tables-table .desktop .app-table .row {
-      grid-template-columns: 2fr 1fr 75px 140px 75px;
+      grid-template-columns: 2fr 100px 75px 140px 75px;
     }`;
 
   const elementStyles = css`
