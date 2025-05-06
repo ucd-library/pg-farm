@@ -16,13 +16,13 @@ export function styles() {
       display: none;
     }
     admin-database-user-table-access-table .desktop .app-table .row {
-      grid-template-columns: 3fr 1fr;
+      grid-template-columns: 1fr 250px;
     }
     admin-database-user-table-access-table .mobile {
       display: block;
     }
     admin-database-user-table-access-table .mobile .app-table .row {
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 3fr 2fr;
     }
     admin-database-user-table-access-table .user-name-container {
       display: flex;
@@ -48,7 +48,11 @@ export function styles() {
       margin: 0 1rem;
     }
 
-    @container (min-width: 768px) {
+    admin-database-user-table-access-table .mobile .cell.access {
+      margin: 0;
+    }
+
+    @media (min-width: 768px) {
       admin-database-user-table-access-table .desktop {
         display: block;
       }

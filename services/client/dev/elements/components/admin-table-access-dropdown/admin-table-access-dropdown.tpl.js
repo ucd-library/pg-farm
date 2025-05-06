@@ -24,7 +24,6 @@ export function styles() {
       width: 100%;
       height: 100%;
       display: grid;
-      padding: 0 1rem;
     }
 
     .selected {
@@ -122,7 +121,16 @@ export function styles() {
     .option.selected .icon {
       opacity: 1;
     }
-    
+
+    .container {
+      padding: 0 .5rem;
+    }
+
+    @media (min-width: 768px) {
+      .container {
+        padding: 0 1rem;
+      }
+    }
   `;
 
   return [
