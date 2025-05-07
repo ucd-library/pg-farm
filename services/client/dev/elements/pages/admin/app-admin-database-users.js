@@ -101,7 +101,13 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
     // merge it all together
     this.users = this.dataCtl.users.map(user => {
       const access = schemaAccess.filter(r => r.response?.value?.user === user.name).map(r => r.response.value);
-      const tableCt = access.reduce((acc, r) => acc + Object.keys(r.payload.tables).length, 0);
+
+      // count tables only when they have access permissions (table will be empty array if no access)
+      const tableCt = access.reduce((acc, r) => {
+        const tables = r.payload.tables;
+        const count = Object.values(tables).filter(arr => Array.isArray(arr) && arr.length > 0).length;
+        return acc + count;
+      }, 0);
 
       let schemaRole;
       let schemaRoles = [];
@@ -144,6 +150,10 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
         schemaRoles
       }
     });
+
+    console.log('schemaAccess', schemaAccess);
+    console.log(this.users);
+
     this.AppStateModel.hideLoading();
   }
 
