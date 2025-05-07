@@ -41,14 +41,14 @@ class AppStateModelImpl extends AppStateModel {
     if( update.location ) {
       update.lastLocation = clone(this.store.data.location);
 
-      let page = update.location.path ? update.location.path[0] : 'home';
-      if( !page ) page = 'home'
+      let page = update.location.path ? update.location.path[0] : '';
+      if( !page ) page = config.isNativeApp ? 'native' : 'home';
+
+
 
       if ( page === 'org' && update.location.path.length > 1 ) {
         page = 'org-single';
-      }
-
-      if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
+      } else if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
 
         if ( update.location.path?.[4] === 'users' && update.location.path?.[5]){
           page = 'admin-db-user-single';
@@ -57,6 +57,12 @@ class AppStateModelImpl extends AppStateModel {
           page = `admin-db-${update.location.path[4]}`;
         } else {
           page = 'admin-db-overview';
+        }
+      } else if ( page === 'native' ) {
+        if ( update.location.path.length > 1 ) {
+          page = 'native-'+update.location.path[1];
+        } else {
+          page = 'native-home';
         }
       }
 

@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   getPgFarmConfig: () => ipcRenderer.invoke('getPgfarmConfig'),
   login: (opts) => ipcRenderer.invoke('login', opts),
+  logout: () => ipcRenderer.invoke('logout'),
   openExternalUrl: (url) => ipcRenderer.invoke('openExternalUrl', url),
 });
 

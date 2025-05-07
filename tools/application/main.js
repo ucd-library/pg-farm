@@ -29,19 +29,19 @@ function createWindow () {
   console.log('loading host', host);
   mainWindow.loadURL(host);
 
-  // In the main process
-  mainWindow.webContents.setWindowOpenHandler(e => {
-    console.log('window open handler', e);
-    // if (url.startsWith('http')) {
-    //   shell.openExternal(url);
-    //   return { action: 'deny' };
-    // }
-    return { action: 'allow' };
-  });
+  // TODO
+  // mainWindow.webContents.setWindowOpenHandler(e => {
+  //   console.log('window open handler', e);
+  //   // if (url.startsWith('http')) {
+  //   //   shell.openExternal(url);
+  //   //   return { action: 'deny' };
+  //   // }
+  //   return { action: 'allow' };
+  // });
 
   setTimeout(() => {
     mainWindow.webContents.openDevTools()
-  }, 1000)
+  }, 1000);
   
 }
 

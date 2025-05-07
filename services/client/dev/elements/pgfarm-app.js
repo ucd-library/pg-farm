@@ -59,7 +59,7 @@ export default class PgfarmApp extends Mixin(LitElement)
 
     this._firstAppStateUpdate = false;
 
-    this.page = 'home';
+    this.page = config.isNativeApp ? 'native-home' : 'home';
     this.pathInfo = '';
     this.siteSearchValue = '';
     this.userDatabases = [];
@@ -70,6 +70,11 @@ export default class PgfarmApp extends Mixin(LitElement)
   }
 
   async _onAppStateUpdate(e) {
+    if( e.location.hash === 'logout' && 
+        config.isNativeApp ){
+      this._nativeLogout();
+    }
+
     if ( !this._firstAppStateUpdate ) {
       this._firstAppStateUpdate = true;
 
@@ -130,6 +135,10 @@ export default class PgfarmApp extends Mixin(LitElement)
   }
 
   async _loadUserDatabases() {
+    if( config.user.loggedIn !== true ) {
+      return;
+    }
+
     let result = await this.UserModel.myDatabases();
     let dbs = result.payload;
     
@@ -168,6 +177,8 @@ export default class PgfarmApp extends Mixin(LitElement)
       return import(/* webpackChunkName: "public" */ "./pages/bundles/public.js");
     } else if( bundle == 'admin' ) {
       return import(/* webpackChunkName: "admin" */ "./pages/bundles/admin.js");
+    } else if( bundle == 'native' ) {
+      return import(/* webpackChunkName: "native" */ "./pages/bundles/native.js");
     }
     this.logger.warn(`AppMain: bundle ${bundle} not found for page ${page}. Check pages/bundles/index.js`);
     return false;
@@ -185,6 +196,12 @@ export default class PgfarmApp extends Mixin(LitElement)
     if ( ele ) {
       ele.close();
     }
+  }
+
+  async _nativeLogout() {
+    await window.electronAPI.logout();
+    this.AppStateModel.setLocation('/native/home');
+    window.location.reload();
   }
 
 
