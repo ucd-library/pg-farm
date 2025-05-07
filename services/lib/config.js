@@ -19,7 +19,9 @@ if( env.PG_INSTANCE_IMAGE ) PG_INSTANCE_IMAGE = env.PG_INSTANCE_IMAGE;
 if( env.BASE_IMAGE ) BASE_IMAGE = env.BASE_IMAGE;
 
 if( !PG_INSTANCE_IMAGE || !BASE_IMAGE ) {
-  throw new Error('Missing required image tags via env (PG_INSTANCE_IMAGE and BASE_IMAGE) or build info');
+  if( !process?.versions?.electron ) {
+    throw new Error('Missing required image tags via env (PG_INSTANCE_IMAGE and BASE_IMAGE) or build info');
+  }
 }
 
 const PORT = parseInt(env.PORT || env.SERVICE_PORT || 3000);

@@ -1,5 +1,6 @@
 import { html, css } from 'lit';
 import user from '../utils/user.js';
+import {config} from '../../../../tools/lib/config.js';
 
 export function styles() {
   const elementStyles = css`
@@ -31,7 +32,7 @@ export function styles() {
 export function render() {
 return html`
   <div class='${user.loggedIn ? 'user-logged-in' : 'user-logged-out'}'>
-    ${ _renderHeader.call(this) }
+    ${ config.isNativeApp ? _renderElectronHeader.call(this) : _renderHeader.call(this) }
     ${ _renderMainContent.call(this) }
     ${ _renderFooter.call(this) }
   </div>
@@ -100,6 +101,24 @@ function _renderHeader(){
         <a href='/me'>Manage Databases</a>
         <a href=${user.logoutPath}>Sign Out</a>
       </ucd-theme-quick-links>
+    </ucd-theme-header>
+  `;
+}
+
+function _renderElectronHeader(){
+  return html`
+    <ucd-theme-header>
+      <ucdlib-branding-bar
+        site-name="PG Farm"
+        slogan="via UC Davis Library">
+      </ucdlib-branding-bar>
+      <ucd-theme-primary-nav>
+        <ul link-text="My Databases">
+        ${this.userDatabases.map(db => html`
+          <li><a href="${db.link}">${db.title}</a></li>
+        `)}
+        </ul>
+      </ucd-theme-primary-nav>
     </ucd-theme-header>
   `;
 }

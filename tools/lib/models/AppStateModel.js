@@ -10,6 +10,31 @@ class AppStateModelImpl extends AppStateModel {
     this.store = AppStateStore;
 
     this.init(config.appRoutes);
+
+    if( typeof window !== 'undefined' && config.isNativeApp) {
+      this.registerExternalOpener();
+    }
+  }
+
+  registerExternalOpener() {
+    this.logger.info('registering external url opener');
+    document.addEventListener('click', (event) => {
+      var eventPath = event.composedPath();
+      var anchor = null;
+      for (var i = 0; i < eventPath.length; i++) {
+        var element = eventPath[i];
+        if (element.tagName === 'A' && element.href) {
+          anchor = element;
+          break;
+        }
+      }
+
+      if( anchor?.href && !anchor.href.startsWith(window.location.origin) ) {
+        this.logger.info('opening external url via electron api', anchor.href);
+        event.preventDefault();
+        window.electronAPI.openExternalUrl(anchor.href);
+      }
+    });
   }
 
   set(update) {

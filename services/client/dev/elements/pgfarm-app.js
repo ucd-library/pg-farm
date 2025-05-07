@@ -19,8 +19,7 @@ import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-po
 import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-pagination/ucd-theme-pagination.js';
 
-import {appStateModel} from '../../../../tools/lib/index.js';
-console.log(appStateModel);
+import {config} from '../../../../tools/lib/index.js';
 
 // global app components
 import './components/app-build-info/app-build-info.js';
@@ -44,6 +43,7 @@ export default class PgfarmApp extends Mixin(LitElement)
       page : {type: String},
       pathInfo: { type: String },
       siteSearchValue: { type: String },
+      userDatabases : { type: Array },
       _firstAppStateUpdate : { state: true }
     }
   }
@@ -62,18 +62,25 @@ export default class PgfarmApp extends Mixin(LitElement)
     this.page = 'home';
     this.pathInfo = '';
     this.siteSearchValue = '';
+    this.userDatabases = [];
 
-    this._injectModel('AppStateModel');
+    this._injectModel('AppStateModel', 'UserModel');
     this.AppStateModel.showLoading();
     this.AppStateModel.refresh();
   }
 
   async _onAppStateUpdate(e) {
     if ( !this._firstAppStateUpdate ) {
+      this._firstAppStateUpdate = true;
+
       setTimeout(() => {
-        this._firstAppStateUpdate = true;
+        
         document.querySelector('#site-loader').style.display = 'none';
         this.style.display = 'block';
+
+        if( config.isNativeApp ){
+          this._loadUserDatabases();
+        }
       }, 500);
     }
     this.AppStateModel.showLoading();
@@ -120,6 +127,26 @@ export default class PgfarmApp extends Mixin(LitElement)
       }
     }
     return '';
+  }
+
+  async _loadUserDatabases() {
+    let result = await this.UserModel.myDatabases();
+    let dbs = result.payload;
+    
+    dbs.sort((a, b) => {
+      if (a.organization === b.organization) {
+        return a.title.localeCompare(b.title);
+      }
+      return a.organization.localeCompare(b.organization);
+    });
+
+    dbs.forEach(db => {
+      db.link = `/db/${db.organizationName || '_'}/${db.databaseName}`;
+      db.title = (db.organizationTitle || db.organizationName ? (db.organizationTitle || db.organizationName) + ' - ' : '') + 
+        (db.databaseTitle || db.databaseName);
+    });
+
+    this.userDatabases = dbs;
   }
 
   _onSearch(e){

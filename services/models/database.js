@@ -244,7 +244,7 @@ class Database {
    * @returns 
    */
   async getFeatured(ctx) {
-    return client.getFeaturedDatabases(ctx.organization.organization_id);
+    return client.getFeaturedDatabases(ctx?.organization?.organization_id);
   }
 
   /**

@@ -123,10 +123,10 @@ async function patchFeatured(req, res, organizationList){
  * Get featured database lists
  */
 router.get('/featured', async (req, res) => getFeatured(res));
-router.get('/featured/:organization', async (req, res) => getFeatured(res, req.params.organization));
-async function getFeatured(res, organization){
+router.get('/featured/:organization', async (req, res) => getFeatured(res));
+async function getFeatured(res){
   try {
-    let results = await database.getFeatured(organization);
+    let results = await database.getFeatured(res.context);
     const resp = results.map(db => {
       let result = {
         id : db.database_id,
