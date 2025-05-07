@@ -151,9 +151,6 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
       }
     });
 
-    console.log('schemaAccess', schemaAccess);
-    console.log(this.users);
-
     this.AppStateModel.hideLoading();
   }
 
