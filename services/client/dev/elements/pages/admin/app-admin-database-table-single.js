@@ -88,7 +88,7 @@ export default class AppAdminDatabaseTableSingle extends Mixin(LitElement)
     ], {ignoreLoading: true});
     if ( !r ) return;
 
-    this.tablesOverview = this.dataCtl.tablesOverview?.[0] || {};
+    this.tablesOverview = this.dataCtl.tablesOverview.find(t => t.tableName === this.tableName) || {};
     this.schema = this.tablesOverview.schema || '';
     this.users = (this.dataCtl.users || []).filter(user => (this.tablesOverview.userAccess || []).includes(user.name));
     
