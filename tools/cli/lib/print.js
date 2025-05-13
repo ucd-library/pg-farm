@@ -121,7 +121,7 @@ class Print {
   }
 
   schemaUserAccess(result) {
-    result.schema = result.schema.join(', ');
+    result.schema = (result.schema || []).join(', ');
     if( result.tables ) {
       for( let table in result.tables ) {
         result.tables[table] = result.tables[table].join(', ');

@@ -4,6 +4,7 @@ import {backup as model, admin, user, database, instance} from '../models/index.
 import { logReqMiddleware } from '@ucd-lib/logger';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
+import { createContext } from '../lib/context.js';
 
 
 const app = express();
@@ -46,7 +47,15 @@ app.post('/archive', async (req, res) => {
 app.post('/sync-user', async (req, res) => {
   try {
     let user = req.body;
-    await instance.syncUser(config.pgInstance.name, config.pgInstance.organization, user)
+
+    let ctx = await createContext({
+      organization : config.pgInstance.organization,
+      instance : config.pgInstance.name,
+      corkTraceId : req.corkTraceId,
+      requestor : 'pgfarm:pg-helper'
+    });
+
+    await instance.syncUser(ctx, user)
     res.status(200).send('syncd user: '+user.username);
   } catch (e) {
     logger.error('sync user failed', user.username, e);
@@ -57,9 +66,15 @@ app.post('/sync-user', async (req, res) => {
 app.put('/grant/:database/:schema/:user/:permission', async (req, res) => {
   try {
 
+    let ctx = await createContext({
+      organization : config.pgInstance.organization,
+      database : req.params.database,
+      corkTraceId : req.corkTraceId,
+      requestor : 'pgfarm:pg-helper'
+    });
+
     await user.grant(
-      req.params.database, 
-      config.pgInstance.organization,
+      ctx,
       req.params.schema, 
       req.params.user,
       req.params.permission

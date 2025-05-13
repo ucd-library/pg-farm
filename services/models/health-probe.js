@@ -4,6 +4,7 @@ import utils from '../lib/utils.js';
 import logger from '../lib/logger.js';
 import pgClient from '../lib/pg-admin-client.js'
 import metrics from '../lib/metrics/index.js';
+import { createContext } from '../lib/context.js';
 import instance from './instance.js';
 import pgRest from './pg-rest.js';
 import {ValueType} from '@opentelemetry/api';
@@ -213,20 +214,27 @@ class HealthProbe {
       let instances = await instance.list({state: instance.STATES.RUN});
       for( let inst of instances ) {
 
+        let iCtx = await createContext({
+          organization : inst.organization_id,
+          instance : inst.name,
+          requestor : 'pgfarm:health-probe'
+        });
+
         // check the tcp status of the instance
         // start the instance if it is not running
         if( this.tcpStatus.inst[inst.hostname]?.isAlive !== true ) {
-          logger.info(`Instance ${inst.name} is not running but in a RUN state.  Starting...`);
-          await instance.start(inst.name, inst.organization_id);
-          continue;
+          logger.info(`Instance is not running but in a RUN state.  Starting...`, iCtx.logSignal);
+          await instance.start(iCtx);
+          continue; // this will start the pgrest as well
         }
 
-        let databases = await pgClient.getInstanceDatabases(inst.name, inst.organization_id);
+        let databases = await pgClient.getInstanceDatabases(iCtx);
         for( let db of databases ) {
           if( this.tcpStatus.rest[db.pgrest_hostname]?.isAlive !== true ) {
-            logger.info(`Instance ${inst.name} database ${db.database_name} pgrest is not running but instance in a RUN state.  Starting...`);
-            await pgRest.start(db.database_name, inst.organization_id);
-            break;
+            let dbCtx = iCtx.clone();
+            await dbCtx.update({database: db.name});
+            logger.info(`Instance database pgrest is not running but instance in a RUN state.  Starting...`, dbCtx.logSignal);
+            await pgRest.start(dbCtx);
           }
         }
 

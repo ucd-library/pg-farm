@@ -37,6 +37,8 @@ class DatabaseStore extends BaseStore {
       DATABASE_GRANT_ACCESS_UPDATE : 'database-grant-access-update',
       DATABASE_REVOKE_ACCESS_UPDATE : 'database-revoke-access-update',
       DATABASE_RESTART_API_UPDATE : 'database-restart-api-update',
+      DATABASE_EXPOSE_TABLE_TO_API_UPDATE : 'database-expose-table-to-api-update',
+      DATABASE_UPDATE_API_CACHE_UPDATE : 'database-update-api-cache-update',
       DATABASE_INIT_UPDATE : 'database-init-update',
       DATABASE_LINK_UPDATE : 'database-link-update',
       DATABASE_UPDATE_FEATURED_LIST_UPDATE : 'database-update-featured-list-update',
@@ -146,6 +148,22 @@ class DatabaseStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.actions,
       this.events.DATABASE_RESTART_API_UPDATE
+    );
+  }
+
+  onExposeTableToApiUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.DATABASE_EXPOSE_TABLE_TO_API_UPDATE
+    );
+  }
+
+  onUpdateApiCacheUpdated(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.DATABASE_UPDATE_API_CACHE_UPDATE
     );
   }
 

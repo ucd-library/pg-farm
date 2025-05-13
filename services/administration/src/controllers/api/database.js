@@ -227,12 +227,37 @@ router.patch(
 });
 
 /** Restart db pgrest instance **/
-router.post('/:organization/:database/restart/api', 
+router.post('/:organization/:database/api/restart', 
   contextMiddleware,
   keycloak.protect('admin'), 
   async (req, res) => {
   try {
     await pgRest.restart(req.context);
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.post('/:organization/:database/api/updated', 
+  contextMiddleware,
+  keycloak.protect('instance-admin'), 
+  async (req, res) => {
+  try {
+    await pgRest.updateApiSchemaCache(req.context);
+    res.status(200).json({success: true});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.post('/:organization/:database/api/expose/:table', 
+  contextMiddleware,
+  keycloak.protect('instance-admin'), 
+  async (req, res) => {
+  try {
+    await pgRest.exposeTable(req.context, req.params.table);
+    await pgRest.updateApiSchemaCache(req.context);
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);

@@ -465,7 +465,7 @@ class Instance {
         logger.warn(`Skipping user ${user.username} of type ${user.type}`, ctx.logSignal);
         continue;
       }
-      if( user.type === 'PGREST' && (updatePassword == false || hardReset == false) ) {
+      if( user.type === 'PGREST' && (updatePassword == false && hardReset == false) ) {
         logger.warn(`Skipping user ${user.username} of type ${user.type}, no hard reset`, ctx.logSignal);
         continue;
       }
@@ -476,8 +476,7 @@ class Instance {
       }
 
       password = await this.models.user.resetPassword(
-        instance.instance_id, 
-        instance.organization_id, 
+        ctx, 
         user.username, 
         password, 
         false
@@ -511,10 +510,10 @@ class Instance {
       if( updatePassword && hardReset && user.type === 'PGREST' ) {
         let dbs = await client.getInstanceDatabases(ctx);
         for( let db of dbs ) {
-          await this.models.pgRest.restart({
-            database : {name: db.database_name}, 
-            organization : {name: db.organization_name}
-          });
+          let dbCtx = ctx.clone();
+          await dbCtx.update({database: db.name});
+
+          await this.models.pgRest.restart(dbCtx);
         }
       }
 
@@ -543,7 +542,7 @@ class Instance {
 
     // grant the users role to the authenticator user
     if( user.username !== config.pgInstance.adminRole && user.username !== config.pgRest.authenticator.username ) {
-      await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user.username, con);
+      await this.models.pgRest.grantUserAccess(ctx, user.username, con);
     }
   }
 

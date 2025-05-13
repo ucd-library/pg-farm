@@ -83,6 +83,26 @@ server-port = ${config.pgRest.port}`
     );
     await pgInstClient.query(con, formattedQuery);
 
+    // grant table select on the api schema to the public role
+    logger.info('Setting default privileges for public role to allow table select',
+      logger.objToString({schema: config.pgRest.schema, user: config.pgInstance.publicRole.username}),
+      ctx.logSignal
+    );
+    formattedQuery = pgFormat('ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT SELECT ON TABLES TO "%s"', 
+      config.pgRest.schema, config.pgInstance.publicRole.username
+    );
+    await pgInstClient.query(con, formattedQuery);
+
+    // grant function execute on the api schema to the public role
+    logger.info('Setting default privileges for public role to allow function execution',
+      logger.objToString({schema: config.pgRest.schema, user: config.pgInstance.publicRole.username}),
+      ctx.logSignal
+    );
+    formattedQuery = pgFormat('ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT EXECUTE ON FUNCTIONS TO "%s"', 
+      config.pgRest.schema, config.pgInstance.publicRole.username
+    );
+    await pgInstClient.query(con, formattedQuery);
+
     // grant the public role to the authenticator user
     await this.grantUserAccess(ctx, config.pgInstance.publicRole.username, con);
   }
@@ -238,6 +258,73 @@ server-port = ${config.pgRest.port}`
     }
 
     return {pgrestResult, pgrestServiceResult};
+  }
+
+  /**
+   * @method updateApiSchemaCache
+   * @description Update the PostgREST API schema to ensure that the public user has 
+   * select access to all tables. 
+   * 
+   * @param {String|Object} ctx context object or id
+   */
+  async updateApiSchemaCache(ctx) {
+    ctx = getContext(ctx);
+
+    logger.info('Updating PostgREST API schema grants and cache', ctx.logSignal);
+
+    // grant select on the api schema tables to the public role
+    logger.info('Granting select on all tables in schema api to public role',
+      logger.objToString({schema: config.pgRest.schema, user: config.pgInstance.publicRole.username}),
+      ctx.logSignal
+    );
+    let formattedQuery = pgFormat('GRANT SELECT ON ALL TABLES IN SCHEMA %s TO "%s"', 
+      config.pgRest.schema, config.pgInstance.publicRole.username
+    );
+    await pgInstClient.query(con, formattedQuery);
+
+
+    // grant execute on the api schema to the public role
+    logger.info('Granting execute on functions in schema api to public role',
+      logger.objToString({schema: config.pgRest.schema, user: config.pgInstance.publicRole.username}),
+      ctx.logSignal
+    );
+    formattedQuery = pgFormat('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %s TO "%s"', 
+      config.pgRest.schema, config.pgInstance.publicRole.username
+    );
+    await pgInstClient.query(con, formattedQuery);
+
+    // notify PostgREST to update the cache
+    logger.info('Notifying PostgREST to update the cache', ctx.logSignal);
+    await pgInstClient.query(con, `NOTIFY pgrst, 'reload schema'`);
+  }
+
+  /**
+   * @method exposeTable
+   * @description Expose a table to the PostgREST API.  This creates a view wrapper in the api schema
+   * that selects all columns from the source table. 
+   * 
+   * @param {String|Object} ctx context object or id 
+   * @param {String} tableName table name to expose.  Must be in the form "schema.table"
+   * @returns {Promise}
+   */
+  async exposeTable(ctx, tableName) {
+    ctx = getContext(ctx);
+
+    let [schema, srcTable] = tableName.split('.');
+    if( !schema || !srcTable ) {
+      throw new Error('Invalid table name: "'+tableName+'". must be in the form "schema.table"');
+    }
+    let dstTable = config.pgRest.schema+'.'+srcTable;
+    let srcTableName = schema+'.'+srcTable;
+
+    logger.info('Exporting table to api', srcTable, dstTable, ctx.logSignal);
+
+    let formattedQuery = pgFormat('CREATE OR REPLACE VIEW %s AS SELECT * FROM %s', 
+      dstTable, srcTableName
+    );
+    await pgInstClient.query(con, formattedQuery);
+
+    return result;
   }
 
 }
