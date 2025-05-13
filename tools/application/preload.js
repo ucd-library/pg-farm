@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   pgFarmConfig = await ipcRenderer.invoke('getPgfarmConfig');
   user = await ipcRenderer.invoke('getPgfarmCred');
 
-  if( user ) {
+  if( user && user.expiresDays > 0 ) {
     user.loggedIn = true;
   } else {
     user = {loggedIn: false}

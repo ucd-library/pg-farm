@@ -14,7 +14,8 @@ export function render() {
 return html`
 
 <div ?hidden="${!this.isLoggedIn}">
-  You are logged in!
+  <p>Welcome, ${this.username}!</p>
+  <p>Your token expires on ${this.expiresText}</p>
 </div>
 <div ?hidden="${this.isLoggedIn}">
   <h1>Welcome to the Native App</h1>

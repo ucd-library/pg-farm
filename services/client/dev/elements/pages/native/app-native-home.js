@@ -11,6 +11,8 @@ export default class AppNativeHome extends Mixin(LitElement)
     return {
       pageId: { type: String, attribute: 'page-id' },
       isLoggedIn: { type: Boolean },
+      username : { type: String },
+
     }
   }
 
@@ -22,6 +24,14 @@ export default class AppNativeHome extends Mixin(LitElement)
     super();
     this.render = render.bind(this);
     this.isLoggedIn = config.user.loggedIn;
+
+    if( this.isLoggedIn ) {
+      this.username = config.user.username || config.user.preferred_username;
+      this.expiresText = `${config.user.expires.toLocaleDateString()} ${config.user.expires.toLocaleTimeString()} (${config.user.expiresDays} days from now)`
+    } else {
+      this.username = '';
+      this.expiresText = '';
+    }
 
     this._injectModel('AppStateModel');
 

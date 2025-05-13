@@ -114,6 +114,7 @@ function _renderElectronHeader(){
         slogan="via UC Davis Library">
       </ucdlib-branding-bar>
       <ucd-theme-primary-nav>
+        <a href="/native/home">My Info</a>
         <ul link-text="My Databases">
         ${this.userDatabases.map(db => html`
           <li><a href="${db.link}/edit">${db.title}</a></li>
