@@ -74,8 +74,8 @@ class DatabaseService extends BaseService {
     return this.store.data.update.get(id);
   }
 
-  async updateFeaturedList(org, db, opts={}) {
-    const ido = {org, db, ...opts};
+  async updateFeaturedList(organization, database, opts={}) {
+    const ido = {organization, database, ...opts};
     let id = payload.getKey(ido);
     let url = `${this.basePath}/featured`;
     if ( opts.organizationList ) url += `/${org}`;
@@ -326,7 +326,7 @@ class DatabaseService extends BaseService {
     await this.checkRequesting(
       id, this.store.data.actions,
       () => this.request({
-          url: `${this.basePath}/${org}/${db}/restart/api`,
+          url: `${this.basePath}/${org}/${db}/api/restart`,
           fetchOptions: {
             method : 'POST',
             headers: serviceUtils.authHeader()
@@ -334,6 +334,48 @@ class DatabaseService extends BaseService {
           onLoading: request => this.store.onRestartApiUpdate(ido, {request}),
           onLoad: payload => this.store.onRestartApiUpdate(ido, {payload: payload.body}),
           onError: error => this.store.onRestartApiUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
+  async exposeTableToApi(org, db, table) {
+    let ido = {org, db, table, action: 'exposeTableToApi'};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/api/expose/${table}`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onExposeTableToApiUpdate(ido, {request}),
+          onLoad: payload => this.store.onExposeTableToApiUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onExposeTableToApiUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
+  async updateApiCache(org, db, table) {
+    let ido = {org, db, table, action: 'updateApiCache'};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/api/updated`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onUpdateApiCacheUpdated(ido, {request}),
+          onLoad: payload => this.store.onUpdateApiCacheUpdated(ido, {payload: payload.body}),
+          onError: error => this.store.onUpdateApiCacheUpdated(ido, {error})
         })
     );
 

@@ -21,8 +21,10 @@ class PgFarmUtils {
     return crypto.randomBytes(length).toString('base64')
   }
 
-  async getHealth(instNameOrId, orgNameOrId='_') {
-    let resp = await fetch(`http://${config.healthProbe.host}:${config.healthProbe.port}/health/${orgNameOrId}/${instNameOrId}`);
+  async getHealth(ctx) {
+    let orgNameOrId = ctx?.organization?.name || '_';
+
+    let resp = await fetch(`http://${config.healthProbe.host}:${config.healthProbe.port}/health/${orgNameOrId}/${ctx.instance.name}`);
     return resp.json();
   }
 

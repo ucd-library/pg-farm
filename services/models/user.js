@@ -3,99 +3,128 @@ import pgInstClient from '../lib/pg-instance-client.js';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import utils from '../lib/utils.js';
-import remoteExec from '../lib/pg-helper-remote-exec.js';
+import {getContext} from '../lib/context.js';
 import ucdIamApi from '../lib/ucd-iam-api.js';
 
 class User {
 
   constructor() {
+    this.ALLOWED_PERMISSION_TYPES = ['READ', 'WRITE'];
     this.schema = config.adminDb.schema;
+  }
+
+  getUserForLogging(user) {
+    let l = [];
+    for( let key in user ) {
+      if( key === 'password' ) {
+        l.push(key+': <hidden>');
+      } else {
+        l.push(key+':"'+user[key]+'"');
+      }
+    }
+    return l.join(', ');
   }
 
   /**
    * @method addUser
    * @description Adds a user to a postgres instance
    *
-   * @param {String} nameOrId  PG Farm instance name or ID
-   * @param {String} orgNameOrId Organization name or ID. Can be null.
-   * @param {String} username username
-   * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER.
-   * @param {String} password optional.  defined password.  If not
+   * @param {String|Object} nameOrId Context object or id
+   * @param {Object} user user object
+   * @param {String} user.username username
+   * @param {String} user.type USER, ADMIN, or PUBLIC.  Defaults to USER.
+   * @param {String} user.password optional.  defined password.  If not
    * provided, a random password will be generated.
-   * @param {Boolean} noinherit optional.  Defaults to false.
-   * @param {String} parent optional.  Parent user.  Only used for 'SERVICE_ACCOUNT' type
+   * @param {Boolean} user.noinherit optional.  Defaults to false.
+   * @param {String} user.parent optional.  Parent user.  Only used for 'SERVICE_ACCOUNT' type
    *
    * @returns {Promise}
    */
-  async create(nameOrId, orgNameOrId=null, username, type='USER', password, noinherit=false, parent=null) {
-    let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
-    if( !instance ) {
-      let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
-      if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
-      instance = await this.models.instance.get(db.instance_id);
+  async create(ctx, user) {
+    ctx = getContext(ctx);
+
+    if( typeof user === 'string' ) {
+      user = { username: user };
+    }
+    if( !user.username ) {
+      throw new Error('Username is required');
+    }
+
+    if( !user.type ) user.type = 'USER';
+    if( !user.noinherit ) user.noinherit = false;
+
+    let instanceExists = await this.models.instance.exists(ctx);
+    if( !instanceExists ) {
+      throw new Error('Instance or database not found: '+ctx.fullDatabaseName);
     }
 
     // check for reserved users
-    if( username === config.pgInstance.publicRole.username ) {
-      type = 'PUBLIC';
-      password = config.pgInstance.publicRole.password;
-    } else if( username === config.pgRest.authenticator.username ) {
-      type = 'PGREST';
-      noinherit = true;
-    } else if( username === config.pgInstance.adminRole ) {
-      type = 'ADMIN';
-      password = 'postgres';
+    if( user.username === config.pgInstance.publicRole.username ) {
+      user.type = 'PUBLIC';
+      user.password = config.pgInstance.publicRole.password;
+    } else if( user.username === config.pgRest.authenticator.username ) {
+      user.type = 'PGREST';
+      user.noinherit = true;
+    } else if( user.username === config.pgInstance.adminRole ) {
+      user.type = 'ADMIN';
+      user.password = 'postgres';
     }
 
     // create new random password
-    if( !password ) {
-      password = utils.generatePassword();
+    if( !user.password ) {
+      user.password = utils.generatePassword();
     }
 
     // add user to database
-    let user = await this.exists(instance.instance_id, orgNameOrId, username);
-    if( !user ) {
+    let existingUser = await this.exists(ctx, user.username);
+    if( !existingUser ) {
 
-      logger.info('Creating instance user: ', {
-        username, type, parent,
-        instance: instance.name,
-        organization: orgNameOrId
-      });
-      await client.createInstanceUser(instance.instance_id, orgNameOrId, username, password, type, parent);
+      logger.info('Creating instance user', this.getUserForLogging(user), ctx.logSignal);
+      await client.createInstanceUser(ctx, user);
 
       // check if user exists in UCD IAM
       if ( !parent ){
-        await this.fetchAndUpdateUcdIamData(username);
+        await this.fetchAndUpdateUcdIamData(user.username);
       }
     } else { // get current password.  make sure its set on the instance db
-      logger.info('Instance user already exists: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
-      password = user.password;
-
-      if( type !== user.type ) {
-        logger.info('Updating user type: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId, type);
-        await this.updateType(nameOrId, orgNameOrId, username, type);
+      logger.info('Instance user already exists', this.getUserForLogging(user), ctx.logSignal);
+      if( existingUser.type !== user.type ) {
+        await this.updateType(ctx, user);
       }
     }
 
     // postgres user already exists.  Update password
-    if( username === config.pgInstance.adminRole ) {
-      await this.resetPassword(instance.instance_id, orgNameOrId, config.pgInstance.adminRole);
+    if( user.username === config.pgInstance.adminRole ) {
+      await this.resetPassword(ctx, config.pgInstance.adminRole);
       return;
     }
 
     // get instance connection information
-    let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
+    let con = await this.models.instance.getConnection(ctx);
 
-    logger.info('Ensuring pg user: '+username+' on instance: '+instance.name+' for organization: '+orgNameOrId);
-    await pgInstClient.createOrUpdatePgUser(con, { username, password, noinherit });
+    logger.info('Ensuring pg user', user.username, ctx.logSignal);
+    await pgInstClient.createOrUpdatePgUser(con, user);
   }
 
-  updateType(nameOrId, orgNameOrId=null, username, type) {
+  /**
+   * @method updateType
+   * @description Updates the type of a instance user
+   * 
+   * @param {Object|String} ctx context object or id
+   * @param {Object} user
+   * @param {String} user.username username
+   * @param {String} user.type USER, ADMIN, or PUBLIC.  Defaults to USER. 
+   * @returns 
+   */
+  updateType(ctx, user) {
+    ctx = getContext(ctx);
+    logger.info('Updating user type', this.getUserForLogging(user), ctx.logSignal);
+
     return client.query(
       `UPDATE ${config.adminDb.tables.INSTANCE_USER}
       SET type = $4
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
-      [username, nameOrId, orgNameOrId, type]
+      [user.username, ctx.instance.name, ctx.organization.name, user.type]
     );
   }
 
@@ -141,23 +170,25 @@ class User {
     return res.rows[0];
   }
 
-  async delete(nameOrId, orgNameOrId=null, username) {
-    let instance = await this.models.instance.exists(nameOrId, orgNameOrId);
-    if( !instance ) {
-      let db = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
-      if( !db ) throw new Error('Instance or database not found: '+(orgNameOrId ? orgNameOrId+'/': '')+nameOrId);
-      instance = await this.models.instance.get(db.instance_id);
-    }
+  /**
+   * @method delete
+   * @description Deletes a user from the database and instance
+   * 
+   * @param {String|Object} ctx context object or id 
+   * @param {String} username 
+   */
+  async delete(ctx, username) {
+    ctx = getContext(ctx);
 
     // get instance connection information
-    let con = await this.models.instance.getConnection(instance.name, orgNameOrId);
+    let con = await this.models.instance.getConnection(ctx);
 
     // get all databases for instance
     let databases = await pgInstClient.listDatabases(con);
 
     for( let db of databases.rows ) {
       con.database = db.datname;
-      logger.info('Removing pg user: '+username+' from instance='+orgNameOrId+'/'+instance.name+' database='+db.datname);
+      logger.info('Removing pg user', username, ctx.logSignal);
       try {
         // reassign owned objects
         await pgInstClient.reassignOwnedBy(con, { username });
@@ -171,20 +202,16 @@ class User {
         // revoke access from database and finally delete user
         await pgInstClient.deletePgUser(con, { username });
       } catch(e) {
-        logger.error('Error deleting user: '+username, instance, db.datname, e);
+        logger.error('Error removing pg user ', {error: e}, ctx.logSignal);
       }
     }
 
     // remove user to database
     try {
-      logger.info('Deleting pg farm instance user: ', {
-        username,
-        instance: instance.name,
-        organization: orgNameOrId
-      });
-      await client.deleteInstanceUser(instance.instance_id, orgNameOrId, username);
+      logger.info('Deleting pg farm instance user', username, ctx.logSignal);
+      await client.deleteInstanceUser(ctx, username);
     } catch(e) {
-      logger.error('Error deleting user: '+username, instance, e);
+      logger.error('Error deleting user', username, {error: e}, ctx.logSignal);
     }
   }
 
@@ -193,18 +220,28 @@ class User {
    * @description Returns a user.  Provide either instance or database plus
    * the organization.
    *
-   * @param {String} nameOrId can be name or id of the database or instance
-   * @param {String} orgNameOrId organization name or id
+   * @param {String} ctx context object or id
    * @param {String} username username
    * @returns {Promise<Object>}
    */
-  async get(nameOrId, orgNameOrId=null, username) {
-    return client.getInstanceUser(nameOrId, orgNameOrId, username);
+  async get(ctx, username) {
+    ctx = getContext(ctx);
+    return client.getInstanceUser(ctx, username);
   }
 
-  async exists(nameOrId, orgNameOrId=null, username) {
+  /**
+   * @method exists
+   * @description Checks if a user exists in the database.  
+   * If the user exists, it will return the user object.
+   * 
+   * @param {String|Object} ctx context object or id
+   * @param {String} username 
+   * @returns 
+   */
+  async exists(ctx, username) {
+    // no need to get context, get() will do that
     try {
-      let user = await this.get(nameOrId, orgNameOrId, username);
+      let user = await this.get(ctx, username);
       return user;
     } catch(e) {
       return false;
@@ -212,22 +249,24 @@ class User {
   }
 
   /**
-   * @method resetUserPassword
+   * @method resetPassword
    * @description Resets a user's password to a random password
    *
-   * @param {String} instNameOrId PG Farm instance name or ID
-   * @param {String} orgNameOrId PG Farm organization name or ID
+   * @param {String} ctx context object or id
    * @param {String} username
    * @param {String} password
+   * @param {Boolean} updateInstance if true, update the instance with the new password
    *
    * @returns {Promise<String>} new password
    */
-  async resetPassword(instNameOrId, orgNameOrId=null, username, password, updateInstance=true) {
+  async resetPassword(ctx, username, password, updateInstance=true) {
+    ctx = getContext(ctx);
+
     // generate random password if not provided
     if( !password ) password = utils.generatePassword();
 
-    let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
-    logger.info('resetting password for user: '+username+' on instance: '+con.host+' for organization: '+orgNameOrId);
+    let con = await this.models.instance.getConnection(ctx);
+    logger.info('resetting password for user ', username, ctx.logSignal);
 
     if( updateInstance ) {
       await pgInstClient.createOrUpdatePgUser(con, { username, password });
@@ -238,22 +277,39 @@ class User {
       `UPDATE ${config.adminDb.tables.INSTANCE_USER}
       SET password = $4
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
-      [username, instNameOrId, orgNameOrId, password]
+      [username, ctx.instance.name, ctx.organization.name, password]
     );
 
     return password;
   }
 
+  /**
+   * @method checkPermissionType
+   * @description Checks if the permission type is valid
+   * 
+   * @param {String} type 
+   */
   checkPermissionType(type) {
-    if( ['READ', 'WRITE'].indexOf(type) === -1 ) {
-      throw new Error('Invalid permission type: '+type+'. Permission must be one of: READ, WRITE');
+    if( this.ALLOWED_PERMISSION_TYPES.indexOf(type) === -1 ) {
+      throw new Error('Invalid permission type: '+type+'. Permission must be one of: '+this.ALLOWED_PERMISSION_TYPES.join(', '));
     }
   }
 
-  async grantDatabaseAccess(dbNameOrId, orgNameOrId, roleName, permission='READ') {
+  /**
+   * @method grantDatabaseAccess
+   * @description Grants a user access to a database
+   * 
+   * @param {Object|String} ctx context object or id
+   * @param {*} roleName 
+   * @param {*} permission 
+   * @returns 
+   */
+  async grantDatabaseAccess(ctx, roleName, permission='READ') {
+    ctx = getContext(ctx);
+
     this.checkPermissionType(permission);
 
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
+    let database = await this.models.database.get(ctx);
 
     if( permission === 'WRITE' ) {
       //permission = pgInstClient.ALL_PRIVILEGE;
@@ -262,21 +318,29 @@ class User {
       permission = pgInstClient.GRANTS.DATABASE.READ;
     }
 
-    logger.info('running user database grant', {
-      database,
-      roleName,
-      permission: pgInstClient.GRANTS.DATABASE
-    });
-
-    let con = await this.models.database.getConnection(
-      database.database_name,
-      database.organization_name
+    logger.info(
+      'running user database grant', 
+      logger.objToString({database, roleName, permission}),
+      ctx.logSignal
     );
 
-    return pgInstClient.grantDatabaseAccess(con, database.database_name, roleName, permission);
+    let con = await this.models.database.getConnection(ctx);
+
+    return pgInstClient.grantDatabaseAccess(con, ctx.database.name, roleName, permission);
   }
 
-  async revokeDatabaseAccess(dbNameOrId, orgNameOrId, roleName, permission='READ') {
+  /**
+   * @method revokeDatabaseAccess
+   * @description Revokes a user's access to a database
+   * 
+   * @param {Object|String} ctx 
+   * @param {*} roleName 
+   * @param {*} permission 
+   * @returns 
+   */
+  async revokeDatabaseAccess(ctx, roleName, permission='READ') {
+    ctx = getContext(ctx);
+
     this.checkPermissionType(permission);
 
     if( permission === 'WRITE' ) {
@@ -285,28 +349,21 @@ class User {
       permission = pgInstClient.ALL_PRIVILEGE;
     }
 
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
-
-    logger.info('running user database revoke', {
-      database,
-      roleName,
-      permission: pgInstClient.GRANTS.DATABASE[permission]
-    });
-
-    let con = await this.models.database.getConnection(
-      database.database_name,
-      database.organization_name
+    logger.info('running user database revoke', 
+      logger.objToString({roleName, permission}),
+      ctx.logSignal
     );
 
-    return pgInstClient.revokeDatabaseAccess(con, database.database_name, roleName, permission);
+    let con = await this.models.database.getConnection(ctx);
+
+    return pgInstClient.revokeDatabaseAccess(con, ctx.database.name, roleName, permission);
   }
 
   /**
    * @method grant
    * @description Simplified helper to grant a user access to a schema or table.
    *
-   * @param {String} dbNameOrId name or id of the database
-   * @param {String} orgNameOrId name or id of the organization
+   * @param {String|Object} ctx context object or id
    * @param {String} schemaName can include table name
    * @param {String} roleName username to give access
    * @param {String} permission must be one of 'READ' or 'WRITE'.
@@ -314,11 +371,11 @@ class User {
    *
    * @returns
    */
-  async grant(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
+  async grant(ctx, schemaName, roleName, permission='READ') {
+    ctx = getContext(ctx);
+
     permission = permission.toUpperCase();
     this.checkPermissionType(permission);
-
-    let database = await this.models.database.get(dbNameOrId, orgNameOrId);
 
     let tableName = null;
     if( schemaName.includes('.') ) {
@@ -327,18 +384,15 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user grant', {
-      database,
-      schemaName,
-      tableName,
-      roleName,
-      permission,
-    });
-
-    let con = await this.models.database.getConnection(
-      database.database_name,
-      database.organization_name
+    logger.info('running user grant', 
+      logger.objToString({schemaName, tableName, roleName, permission}), 
+      ctx.logSignal
     );
+
+    // TODO: collect all responses and return them
+
+
+    let con = await this.models.database.getConnection(ctx);
 
     // grant table access
     if( tableName ) {
@@ -376,19 +430,22 @@ class User {
     }
   }
 
-  async revoke(dbNameOrId, orgNameOrId, schemaName, roleName, permission='READ') {
-    let con;
+  /**
+   * @method revoke
+   * @description Revoke a user's access to a schema or table.
+   * 
+   * @param {String|Object} ctx context object or id 
+   * @param {*} schemaName 
+   * @param {*} roleName 
+   * @param {*} permission 
+   */
+  async revoke(ctx, schemaName, roleName, permission='READ') {
+    ctx = getContext(ctx);
+    
+    permission = permission.toUpperCase();
+    this.checkPermissionType(permission);
 
-    if ( typeof dbNameOrId === 'object' ) {
-      con = dbNameOrId;
-    } else {
-      let database = await this.models.database.get(dbNameOrId, orgNameOrId);
-
-      con = await this.models.database.getConnection(
-        database.database_name,
-        database.organization_name
-      );
-    }
+    let con = await this.models.database.getConnection(ctx);
 
     let tableName = null;
     if( schemaName.includes('.') ) {
@@ -397,12 +454,12 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user revoke', {
-      database: con.database,
-      schemaName,
-      tableName,
-      roleName
-    });
+    logger.info('running user revoke', 
+      logger.objToString({schemaName, tableName, roleName, permission}),
+      ctx.logSignal
+    );
+
+    // TODO: collect all responses and return them
 
     // revoke table access
     if( tableName ) {

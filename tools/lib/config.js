@@ -40,8 +40,14 @@ if( typeof window === 'undefined' ) {
   config.host = '/';
   config.loginPath = config.loginPath || '/login';
   config.logoutPath = config.logoutPath || '/auth/logout';
-}
 
+  // handle electron config and overrides
+  if( window.ELECTRON_CONFIG ) {
+    config.token = window.ELECTRON_CONFIG.token;
+    config.user = window.ELECTRON_CONFIG.user;
+  }
+  config.isNativeApp = window.electronAPI ? true : false;
+}
 
 export {
   save,

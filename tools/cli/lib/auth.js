@@ -38,6 +38,12 @@ class Auth {
     return localServer.create(opts);
   }
 
+  logout() {
+    config.token = "";
+    config.tokenHash = "";
+    saveConfig();
+  }
+
   async loginServiceAccount(name, opts={}) {
     if( opts.file ) {
       if( !path.isAbsolute(opts.file) ) {

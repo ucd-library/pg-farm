@@ -10,6 +10,9 @@ const defs = {
   ],
   admin: [
     'admin-db-overview', 'admin-db-users', 'admin-db-user-single', 'admin-db-schemas', 'admin-db-tables', 'me'
+  ],
+  native: [
+    'native-home'
   ]
 };
 

@@ -28,12 +28,13 @@ class UserService extends BaseService {
   async myDatabases(org){
     let ido = {org};
     let id = payload.getKey(ido);
+    let qs = org ? {org} : null;
 
     await this.checkRequesting(
       id, this.store.data.myDatabases,
       () => this.request({
         url: `${this.basePath}/me/db`,
-        qs: {org},
+        qs,
         fetchOptions: {
           headers: serviceUtils.authHeader()
         },

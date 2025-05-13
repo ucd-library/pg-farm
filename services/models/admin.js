@@ -4,12 +4,14 @@ import utils from '../lib/utils.js';
 import kubectl from '../lib/kubectl.js';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
+import { getContext, createContext } from '../lib/context.js';
 import modelUtils from './utils.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
 import { getInstanceResources  } from '../lib/instance-resources.js';
+import { organization } from './index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,31 +44,50 @@ class AdminModel {
    * @description Creates a new user in the database.  This will also grant
    * the role to the pgrest authenticator user.
    *
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
-   * @param {String} user username
-   * @param {String} type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
-   * @param {Object} opts
-   * @param {String} opts.parent parent username.  Required for SERVICE_ACCOUNT
+   * @param {String|Object} ctx context object or id 
+   * @param {Object} user 
+   * @param {Object} user.username username
+   * @param {Object} user.type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
+   * @param {Object} user.parent parent username.  Required for SERVICE_ACCOUNT
    */
-  async createUser(instNameOrId, orgNameOrId, user, type='USER', opts={}) {
-    await this.models.user.create(instNameOrId, orgNameOrId, user, type, null, null, opts.parent);
-    if( ['USER', 'ADMIN'].includes(type) ) {
-      await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user);
+  async createUser(ctx, user) {
+    ctx = getContext(ctx);
+    if( !user.type ) user.type = 'USER'
+
+    await this.models.user.create(ctx, user);
+    if( ['USER', 'ADMIN'].includes(user.type) ) {
+      await this.models.pgRest.grantUserAccess(ctx, user);
     }
   }
 
-  async updateUser(instNameOrId, orgNameOrId, user, type='USER') {
-    let userObj = await this.models.user.get(instNameOrId, orgNameOrId, user);
+  /**
+   * @method updateUser
+   * @description Updates a user type in the database. 
+   * 
+   * @param {String|Object} ctx 
+   * @param {String} user username
+   * @param {String} type pgfarm user type
+   */
+  async updateUser(ctx, user, type='USER') {
+    let userObj = await this.models.user.get(ctx, user);
     if( userObj.user_type !== 'USER' && userObj.user_type !== 'ADMIN' ) {
       throw new Error('Cannot update user type: '+userObj.user_type);
     }
 
-    await this.models.user.updateType(instNameOrId, orgNameOrId, user, type);
+    await this.models.user.updateType(ctx, user, type);
   }
 
-  async deleteUser(instNameOrId, orgNameOrId, user) {
-    await this.models.user.delete(instNameOrId, orgNameOrId, user);
+  /**
+   * @method deleteUser
+   * @description Deletes a user from the database. 
+   * 
+   * TODO: this should also revoke all user access
+   * 
+   * @param {String|Object} ctx string or context object
+   * @param {String} user username
+   */
+  async deleteUser(ctx, user) {
+    await this.models.user.delete(ctx, user);
   }
 
   /**
@@ -77,94 +98,90 @@ class AdminModel {
    * will always run even if the database already exists.  Ensuring all users, roles, and
    * schema are up to date.
    *
-   * @param {Object} opts
-   * @param {String} opts.name name of database
-   * @param {String} opts.database alias for name
-   * @param {String} opts.organization name or id of organization
-   * @param {String} opts.instance name or id of instance
+   * @param {Object|String} ctx context trace id or context object
    */
-  async ensureDatabase(opts={}) {
-    let name = modelUtils.cleanInstDbName(opts.name || opts.database);
+  async ensureDatabase(ctx) {
+    ctx = getContext(ctx);
+
+    logger.info('Ensuring database', ctx.logSignal);
+
+    let name = modelUtils.cleanInstDbName(ctx.database.name);
     let organization;
 
-    if( opts.organization ) {
-      organization = await this.models.organization.exists(opts.organization);
+    if( ctx.organization ) {
+      organization = await this.models.organization.exists(ctx);
       if( !organization ) {
-        organization = await this.models.organization.create(opts.organization);
-        // make sure we are using the actual name of the org after cleanup
-        opts.organization = organization.name;
+        organization = await this.models.organization.create(ctx, ctx.organization);
+      } else {
+        logger.info('Organization already exists', ctx.logSignal);
       }
     }
+    ctx.organization = organization;
 
     // create instance if not provided
-    if( !opts.instance ) {
-      opts.instance = name;
+    if( !ctx?.instance?.name ) {
+      if( !ctx.instance ) ctx.instance = {};
+      ctx.instance.name = name;
     }
 
-    let instance = await this.models.instance.exists(opts.instance, opts.organization);
+    let instance = await this.models.instance.exists(ctx);
     if( !instance ) {
-      let iOpts = {};
-      if( opts.organization ) iOpts.organization = opts.organization;
-      instance = await this.models.instance.create(opts.instance, iOpts);
+      instance = await this.models.instance.create(ctx, ctx.instance);
+    } else {
+      logger.info('Instance already exists', ctx.logSignal);
     }
+    ctx.instance = instance;
 
-    let startResp = await this.startInstance(instance.name, opts.organization);
+    let startResp = await this.startInstance(ctx);
     if( startResp.starting ) {
       await startResp.instance;
       await startResp.pgrest;
     }
 
     // ensure the public user and pg user password update
-    await this.models.instance.initInstanceDb(instance.name, opts.organization);
+    await this.models.instance.initInstanceDb(ctx);
 
-    opts.instance = instance.name;
-
-    let database = await this.models.database.exists(name, opts.organization);
+    let database = await this.models.database.exists(ctx);
     if( !database ) {
-      await this.models.database.create(name, opts);
-      database = await this.models.database.get(name, opts.organization);
+      database = await this.models.database.create(ctx, ctx.database);
     } else {
-      await this.models.database.ensurePgDatabase(instance.name, opts.organization, database.database_name);
+      logger.info('Database already exists', ctx.logSignal);
+      await this.models.database.ensurePgDatabase(ctx);
     }
+    ctx.database = database;
 
     // initialize the database for PostgREST roles and schem
-    await this.models.pgRest.initDb(database.database_name, instance.name, opts.organization);
+    await this.models.pgRest.initDb(ctx);
 
     // start pg rest once instance is running
-    await this.models.pgRest.start(database.database_name, opts.organization);
-  }
+    await this.models.pgRest.start(ctx);
 
-  /**
-   * @method createInstance
-   * @description Creates a new postgres instance
-   *
-   * @param {String} name
-   * @param {Object} opts
-   *
-   * @returns {Promise}
-   **/
-  async createInstance(name, opts={}) {
-    await this.models.instance.create(name, opts);
+    return {
+      database : ctx.database,
+      instance : ctx.instance,
+      organization : ctx.organization
+    }
   }
-
 
   /**
    * @method stopInstance
    * @description Stops a running instance.  This will also stop all pgRest
    * services associated with the instance.
    *
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String} ctx
    * @param {Object} opts
    * @param {Boolean} opts.isArchived set to true if the instance has been archived.  will set state to ARCHIVE
    *
    * @returns {Promise}
    */
-  async stopInstance(instNameOrId, orgNameOrId, opts={}) {
-    await this.models.instance.stop(instNameOrId, orgNameOrId, opts);
-    let dbs = await client.getInstanceDatabases(instNameOrId, orgNameOrId);
+  async stopInstance(ctx, opts={}) {
+    await this.models.instance.stop(ctx, opts);
+    let dbs = await client.getInstanceDatabases(ctx);
     for( let db of dbs ) {
-      await this.models.pgRest.stop(db.database_id, orgNameOrId);
+      await this.models.pgRest.stop({
+        database : {name: db.name}, 
+        organization : ctx.organization
+      });
     }
   }
 
@@ -174,23 +191,22 @@ class AdminModel {
    * start the instance in restoring state and then run the restore on the
    * pg-helper container.
    *
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx context object or string
    *
    * @returns {Promise}
    **/
-  async restoreInstance(instNameOrId, orgNameOrId) {
+  async restoreInstance(ctx) {
     // start the instance in restoring state
-    await this.models.instance.start(instNameOrId, orgNameOrId, {
+    await this.models.instance.start(ctx, {
       isRestoring: true
     });
 
     // wait for the instance to accept connections
-    let instance = await this.models.instance.get(instNameOrId, orgNameOrId);
+    let instance = ctx.instance;
     await utils.waitUntil(instance.hostname, instance.port);
 
     // run the restore on the pg-helper container
-    return this.models.backup.remoteRestore(instNameOrId, orgNameOrId);
+    return this.models.backup.remoteRestore(ctx);
   }
 
   /**
@@ -201,13 +217,12 @@ class AdminModel {
    * pg_dump for each database, check that all backups have synced to GCS, and
    * then set the instance state to ARCHIVE.
    *
-   * @param {String} instNameOrId instance name or id
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx
    *
    * @returns {Promise}
    **/
-  async archiveInstance(instNameOrId, orgNameOrId) {
-    await this.models.instance.remoteArchive(instNameOrId, orgNameOrId);
+  async archiveInstance(ctx) {
+    await this.models.instance.remoteArchive(ctx);
   }
 
   /**
@@ -222,12 +237,13 @@ class AdminModel {
    *
    * @returns {Promise}
    */
-  async syncInstanceUsers(instNameOrId, orgNameOrId, updatePassword=false) {
-    logger.info('Syncing instance users', instNameOrId, orgNameOrId);
+  async syncInstanceUsers(ctx, updatePassword=false) {
+    ctx = getContext(ctx);
+    logger.info('Syncing instance users', ctx.logSignal);
 
-    let instance = await this.models.instance.get(instNameOrId, orgNameOrId);
+    let instance = ctx.instance;
     let users = await client.getInstanceUsers(instance.instance_id);
-    let con = await this.models.database.getConnection('postgres', orgNameOrId, {useSocket: true});
+    let con = await this.models.database.getConnection(ctx, {useSocket: true});
 
     for( let user of users ) {
       if( !['ADMIN', 'PUBLIC', 'USER'].includes(user.type) ) {
@@ -243,7 +259,7 @@ class AdminModel {
       let exists = (result.rows.length > 0);
 
       if( exists ) {
-        logger.info('User exists', user.username, 'updating password');
+        logger.info('User exists', user.username, 'updating password', ctx.logSignal);
         if( updatePassword ) {
           await this.resetPassword(instNameOrId, user.username);
         } else {
@@ -251,14 +267,14 @@ class AdminModel {
           await pgInstClient.query(con, formattedQuery);
         }
       } else {
-        logger.info('User does not exist', user.username, 'creating user');
+        logger.info('User does not exist', user.username, 'creating user', ctx.logSignal);
         let formattedQuery = pgFormat('CREATE ROLE "%s" WITH LOGIN PASSWORD %L', user.username, user.password);
         await pgInstClient.query(con, formattedQuery);
       }
 
       // grant the users role to the authenticator user4
       if( user.username !== config.pgInstance.adminRole ) {
-        await this.models.pgRest.grantUserAccess(instNameOrId, orgNameOrId, user.username, con);
+        await this.models.pgRest.grantUserAccess(ctx, user.username, con);
       }
     }
   }
@@ -311,13 +327,17 @@ class AdminModel {
   }
 
   /**
-   * @method updateInstancesPriorityState
+   * @method sleepInstances
    * @description Sleep instances that have been idle for too long.  Query
    * all running instances.  Then check the last database event for each
    * instance.  If the instance has been idle for longer than the availibility
    * time, shut it down.
    */
-  async sleepInstances() {
+  async sleepInstances(ctx) {
+    ctx = getContext(ctx);
+
+    logger.info('Sleeping instances', ctx.logSignal);
+
     let active = await client.getInstances({state: this.models.instance.STATES.RUN});
     
     let changed = [];
@@ -327,32 +347,32 @@ class AdminModel {
         continue;
       }
 
-      let resources = await getInstanceResources(instance);
+      let iCtx = ctx.clone();
+      iCtx.instance = instance;
+      await iCtx.update({organization: instance.organization_id});
+
+      let resources = await getInstanceResources(iCtx);
 
       if( resources.sleep ) {
-        logger.info('Instance has been idle for too long, shutting down',{
-          instance
-        });
+        logger.info('Instance has been idle for too long, shutting down', iCtx.logSignal);
         changed.push({instance, newState: 'SLEEP'});
-        await this.stopInstance(instance.instance_id, instance.organization_id);
+        await this.stopInstance(iCtx);
         continue;
       }
 
       let newPriority = parseInt(resources.name.split('-')[1]);
       if( newPriority !== instance.priority_state ) {
-        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`,{
-          instance
-        });
-        await client.updateInstancePriority(instance.instance_id, instance.organization_id, newPriority);
-        await this.models.instance.apply(instance.instance_id, instance.organization_id);
+        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, iCtx.logSignal);
+        await client.updateInstancePriority(iCtx, newPriority);
+        await this.models.instance.apply(iCtx);
         
         let query = await client.getLastDatabaseEvent(instance.instance_id);
         changed.push({
           instance, 
           newState : newPriority,
           lastDatabaseEvent : {
-            event_type : query.event_type,
-            timestamp : query.timestamp
+            event_type : query?.event_type,
+            timestamp : query?.timestamp
           }
         });
       }
@@ -371,39 +391,29 @@ class AdminModel {
    * TCP port until it is ready and accepting connections.
    *
    * To use:
-   * let respStart = await admin.startInstance('my-instance', 'my-org');
+   * let respStart = await admin.startInstance(ctx);
    * if( respStart.starting ) {
    *  await respStart.instance;
    *  await respStart.pgrest;
    * }
    *
-   * @param {String} nameOrId Either the name or id of the instance or database.  If database, set opts.isDb=true
-   * @param {String} orgNameOrId organization name or id
+   * @param {String|Object} ctx 
    * @param {Object} opts
-   * @param {Boolean} opts.isDb nameOrId parameter is a database name or id
    * @param {Boolean} opts.force force start the instance even if health check passes
    *
    * @returns {Promise<Object>}
    */
-  async startInstance(nameOrId, orgNameOrId, opts={}) {
-    let instance;
-
-    // get instance by database name or instance name depending on opts
-    if( opts.isDb ) {
-      instance = await this.models.instance.getByDatabase(nameOrId, orgNameOrId);
-      nameOrId = instance.name;
-    } else {
-      instance = await this.models.instance.get(nameOrId, orgNameOrId);
-    }
-    let iid = instance.instance_id || instance.id;
+  async startInstance(ctx, opts={}) {
+    let instance = ctx.instance;
+    let iid = instance.instance_id;
 
     // check if instance is already starting
     if( this.instancesStarting[iid] ) {
-      logger.info('Instance already starting', instance.hostname);
+      logger.info('Instance already starting', instance.hostname, ctx.logSignal);
       return this.instancesStarting[iid].promise;
     }
 
-    logger.info('Checking instance health', instance.hostname);
+    logger.info('Checking instance health', instance.hostname, ctx.logSignal);
 
     // set instance starting promise
     this.instancesStarting[iid] = {};
@@ -413,10 +423,7 @@ class AdminModel {
     });
 
     // check instance health
-    let health = await utils.getHealth(
-      instance.name,
-      instance.organization_name
-    );
+    let health = await utils.getHealth(ctx);
 
     // check if pgRest services are alive
     let dbRestTcpAlive = true;
@@ -431,19 +438,16 @@ class AdminModel {
         health.tcpStatus.instance?.isAlive &&
         dbRestTcpAlive &&
         !opts.force) {
-      logger.info('Instance running and ports are alive', instance.hostname);
+      logger.info('Instance running and ports are alive', instance.hostname, ctx.logSignal);
       this.resolveStart(instance);
       return {starting: false};
     }
 
     // log why we are starting the instance
     if( opts.force ) {
-      logger.info('Force starting instance', instance.hostname);
+      logger.info('Force starting instance', instance.hostname, ctx.logSignal);
     } else {
-      logger.info('Health test failed, starting instance', {
-        hostname: instance.hostname,
-        health
-      });
+      logger.info('Health test failed, starting instance', ctx.logSignal);
     }
 
     let response = {
@@ -454,33 +458,37 @@ class AdminModel {
 
     response.instance = (async () => {
       // start the instance
-      await this.models.instance.start(instance.instance_id, instance.organization_id);
+      await this.models.instance.start(ctx);
       // wait for the instance to accept connections
-      await utils.waitUntil(instance.hostname, instance.port);
+      await utils.waitUntil(ctx.instance.hostname, ctx.instance.port);
 
       // hack for docker-desktop to wait for the instance DNS to be ready
       // there seems to be issues with it going up and down when instance first starts
       if( config.k8s.platform === 'docker-desktop' ) {
-        logger.info('Waiting for DNS to be ready in docker-desktop');
+        logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
         await utils.sleep(5000);
       }
     })();
 
-    let dbs = await client.getInstanceDatabases(nameOrId, orgNameOrId);
+
+    let dbs = await client.getInstanceDatabases(ctx);
+    let dbContext = ctx.clone();
+
     let proms = dbs.map(db => {
       async function start() {
         // make sure instance is ready before starting pgRest
         // await response.instance;
 
+        dbContext.database = db;
         // start pgRest
-        await this.models.pgRest.start(db.database_id, db.organization_id);
+        await this.models.pgRest.start(dbContext);
         // wait for the port to be alive
         await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
 
         // hack for docker-desktop to wait for the instance DNS to be ready
         // there seems to be issues with it going up and down when instance first starts
         if( config.k8s.platform === 'docker-desktop' ) {
-          logger.info('Waiting for DNS to be ready in docker-desktop');
+          logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
           await utils.sleep(5000);
         }
 
