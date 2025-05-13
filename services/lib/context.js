@@ -1,7 +1,7 @@
 import modelUtils from '../models/utils.js'
 import pgAdminClient from './pg-admin-client.js';
 import clone from 'clone';
-import {v4 as uui4} from 'uuid';
+import {v4 as uuid4} from 'uuid';
 
 const store = new Map();
 
@@ -44,7 +44,7 @@ async function middleware(req, res, next) {
  */
 async function createContext(obj) {
   if( !obj.corkTraceId ) {
-    obj.corkTraceId = uui4();
+    obj.corkTraceId = uuid4();
   }
 
   let context = new InstanceDatabaseContext(obj);

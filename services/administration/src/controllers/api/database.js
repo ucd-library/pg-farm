@@ -109,9 +109,9 @@ async function patchFeatured(req, res, organizationList){
 
   try {
     if ( req.body.action === 'remove' ) {
-      await database.removeFeatured(ctx, req.body.organizationList);
+      await database.removeFeatured(req.context, req.body.organizationList);
     } else {
-      await database.makeFeatured(ctx, req.body);
+      await database.makeFeatured(req.context, req.body);
     }
     res.status(200).json({success: true});
   } catch(e) {
@@ -387,7 +387,7 @@ router.get('/:organization/:database/schema/:schema/access/:username',
   async (req, res) => {
   try {
     res.json(await database.getTableAccessByUser(
-      req.params.context,
+      req.context,
       req.params.schema,
       req.params.username
     ));
