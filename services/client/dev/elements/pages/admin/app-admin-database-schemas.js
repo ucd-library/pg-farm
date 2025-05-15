@@ -66,50 +66,26 @@ export default class AppAdminDatabaseSchemas extends Mixin(LitElement)
     // get data that requires the database to be awake
     r = await this.dataCtl.get([
       {
-        request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
-        ctlProp: 'users',
-        errorMessage: 'Unable to get database users'
+        request: this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
+        ctlProp: 'tablesOverview',
+        errorMessage: 'Unable to load tables overview'
       },
       {
-        request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
-        ctlProp: 'schemas',
-        errorMessage: 'Unable to load schemas'
+        request: this.DatabaseModel.getSchemasOverview(this.orgName, this.dbName),
+        ctlProp: 'schemasOverview',
+        errorMessage: 'Unable to load schemas overview'
       }
     ], {ignoreLoading: true});
     if ( !r ) return;
 
-    // get tables for each schema
-    const tables = await this.dataCtl.get(this.dataCtl.schemas.map(schema => {
+    // combine data
+    this.schemas = this.dataCtl.schemasOverview.map(schema => {
+      const tables = this.dataCtl.tablesOverview.filter(t => t.schema === schema.name);
+      const publicUser = window.APP_CONFIG?.publicUser?.username;
+      const publicTables = publicUser ? tables.filter(t => t.userAccess.some(user => user === publicUser)) : [];
       return {
-        request: this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, schema),
-        errorMessage: `Unable to load tables for schema ${schema}`,
-      }
-    }
-    ), {ignoreLoading: true});
-    if ( !tables ) return;
-
-    // get user schema access
-    const userSchemaProduct = this.dataCtl.schemas.flatMap(schema =>
-      this.dataCtl.users.map(user => ({ schema, user: user.name }))
-    );
-    const schemaAccess = await this.dataCtl.batchGet(userSchemaProduct.map(({ schema, user }) => ({
-      func: () => this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, schema, user),
-      errorMessage: `Unable to get access for user ${user} on schema ${schema}`
-    })), {ignoreLoading: true});
-    if ( !schemaAccess ) return;
-
-    // put it all together
-    this.schemas = this.dataCtl.schemas.map(schema => {
-      const access = schemaAccess.filter(r => r.response?.value?.schema === schema).map(r => r.response.value);
-      const userCt = access.filter(r => r.payload.schema.length).length;
-      const isPublic = access.find(r => r.user === 'pgfarm-public' && r.payload.schema.length ) ? true : false;
-      const publicTableCt = Object.keys(access.find(r => r.user === 'pgfarm-public')?.payload?.tables || {}).length;
-      return {
-        name: schema,
-        tables: tables.find(t => t.response.value.schema === schema).response.value.payload,
-        userCt,
-        isPublic,
-        publicTableCt
+        schema,
+        publicTableCt: publicTables.length
       }
     });
 

@@ -160,8 +160,8 @@ async function getFeatured(res){
 }
 
 /** Get **/
-router.get('/:organization/:database', 
-  contextMiddleware, 
+router.get('/:organization/:database',
+  contextMiddleware,
   async (req, res) => {
   try {
     let {organization, database, instance} = req.context;
@@ -194,9 +194,9 @@ router.get('/:organization/:database',
 });
 
 /** Create **/
-router.post('/', 
-  contextMiddleware, 
-  keycloak.protect('admin'), 
+router.post('/',
+  contextMiddleware,
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let result = await admin.ensureDatabase(req.context);
@@ -227,9 +227,9 @@ router.patch(
 });
 
 /** Restart db pgrest instance **/
-router.post('/:organization/:database/api/restart', 
+router.post('/:organization/:database/api/restart',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     await pgRest.restart(req.context);
@@ -239,9 +239,9 @@ router.post('/:organization/:database/api/restart',
   }
 });
 
-router.post('/:organization/:database/api/updated', 
+router.post('/:organization/:database/api/updated',
   contextMiddleware,
-  keycloak.protect('instance-admin'), 
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     await pgRest.updateApiSchemaCache(req.context);
@@ -251,9 +251,9 @@ router.post('/:organization/:database/api/updated',
   }
 });
 
-router.post('/:organization/:database/api/expose/:table', 
+router.post('/:organization/:database/api/expose/:table',
   contextMiddleware,
-  keycloak.protect('instance-admin'), 
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     await pgRest.exposeTable(req.context, req.params.table);
@@ -265,9 +265,9 @@ router.post('/:organization/:database/api/expose/:table',
 });
 
 /** rerun db init **/
-router.post('/:organization/:database/init', 
+router.post('/:organization/:database/init',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     await instance.initInstanceDb(req.context);
@@ -431,6 +431,7 @@ router.post('/:organization/:database/grant',
   async (req, res) => {
 
   try {
+    let resp;
     let body = req.body;
     for( let grant of body ) {
       if( grant.schema === '_' ) {
@@ -490,6 +491,7 @@ router.post('/:organization/:database/revoke',
   async (req, res) => {
 
   try {
+    let resp;
     let body = req.body;
     for( let grant of body ) {
       if( grant.schema === '_' ) {

@@ -50,7 +50,7 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
     if ( props.has('operation') ) {
       const operations = ['create', 'update', 'update-schema'];
       if( this.operation && !operations.includes(this.operation) ) {
-        this.logger.warning('Invalid operation', this.operation);
+        this.logger.warn('Invalid operation', this.operation);
         this.operation = operations[0];
       } else if ( !this.operation ) {
         this.operation = operations[0];

@@ -70,52 +70,46 @@ export default class AppAdminDatabaseTables extends Mixin(LitElement)
       return;
     }
 
-    // get schemas. db needs to be awake
+    // get schemas and table overview. db needs to be awake
     r = await this.dataCtl.get([
       {
         request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
         ctlProp: 'schemas',
         errorMessage: 'Unable to load schemas'
+      },
+      {
+        request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
+        ctlProp: 'users',
+        errorMessage: 'Unable to get database users'
+      },
+      {
+        request: this.queryCtl.schema.value ?
+          this.DatabaseModel.getSchemaTablesOverview(this.orgName, this.dbName, this.queryCtl.schema.value) :
+          this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
+        ctlProp: 'tablesOverview',
+        errorMessage: this.queryCtl.schema.value ?
+          `Unable to load tables overview for schema ${this.queryCtl.schema.value}` :
+          'Unable to load tables overview'
       }
     ], {ignoreLoading: true});
     if ( !r ) return;
 
-    // get schema tables. need to know what schemas to get
-    const selectedSchemas = this.dataCtl.schemas.includes(this.queryCtl.schema.value) ? [this.queryCtl.schema.value] : this.dataCtl.schemas;
-    r = await this.dataCtl.get(selectedSchemas.map(schema => ({
-      request: this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, schema),
-      errorMessage: `Unable to load tables for schema ${schema}`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
+    // bail if the schema does not exist
+    if (this.queryCtl.schema.value && !this.dataCtl.schemas.includes(this.queryCtl.schema.value)) {
+      this.AppStateModel.showError({message: `Selected schema "${this.queryCtl.schema.value}" does not exist.`});
+      return;
+    }
+    this.AppStateModel.hideLoading();
 
-    const tables = [];
-    r.forEach(r => {
-      (r.response.value.payload || []).forEach(table => {
-        const t = {
-          table: table
-        }
-        tables.push(t);
-      });
-    });
-
-    // get access for each table
-    r = await this.dataCtl.get(tables.map(t => ({
-      request: this.DatabaseModel.getSchemaTableAccess(this.orgName, this.dbName, t.table.table_schema, t.table.table_name),
-      errorMessage: `Unable to load table access for ${t.table.table_schema}:${t.table.name}`
-    })));
-    if ( !r ) return;
-    r.forEach(r => {
-      const response = r.response.value;
-      const table = tables.find(t => t?.table?.table_schema === response.schema && t?.table?.table_name === response.table);
-      if ( !table ) {
-        this.logger.warn(`Unable to find table ${response.schema}:${response.table} in tables list`);
-        return;
+    // transform as needed
+    const publicUser = window.APP_CONFIG?.publicUser?.username;
+    this.tables = this.dataCtl.tablesOverview.map(table => {
+      return {
+        table,
+        userCt: table.userAccess?.length || 0,
+        accessSummary: publicUser && table.userAccess?.some(user => user === publicUser) ? 'Public' : 'Restricted'
       }
-      table.access = response.payload;
-      table.userCt = Object.keys(table.access).length;
-      table.accessSummary = table.access['pgfarm-public'] ? 'Public' : 'Restricted';
     });
-    this.tables = tables;
   }
 
 }

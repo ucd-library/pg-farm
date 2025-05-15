@@ -1,3 +1,5 @@
+import { Registry } from '@ucd-lib/cork-app-utils';
+
 /**
  * @description Controller for app components
  * @property {HTMLElement} host - The host element
@@ -9,6 +11,7 @@ export default class AppComponentController {
   constructor(host){
     this.host = host;
     host.addController(this);
+    this.AppStateModel = Registry.getModel('AppStateModel');
 
     this.parentPageId = null;
     this.parentPage = null;
@@ -35,5 +38,19 @@ export default class AppComponentController {
         return false;
       }
     }
+  }
+
+  get orgName(){
+    const path = this.AppStateModel.store.data.location?.path || [];
+    if ( path.length < 2 ) return;
+    if ( path[0] !== 'db' ) return;
+    return path[1];
+  }
+
+  get dbName(){
+    const path = this.AppStateModel.store.data.location?.path || [];
+    if ( path.length < 3 ) return;
+    if ( path[0] !== 'db' ) return;
+    return path[2];
   }
 }
