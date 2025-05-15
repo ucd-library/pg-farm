@@ -99,6 +99,14 @@ class DatabaseStore extends BaseStore {
     );
   }
 
+  onGetTablesOverviewUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.tablesOverview,
+      this.events.DATABASE_TABLES_OVERVIEW_UPDATE
+    );
+  }
+
   onGetSchemasUpdate(ido, payload) {
     this._set(
       payloadUtils.generate(ido, payload),
