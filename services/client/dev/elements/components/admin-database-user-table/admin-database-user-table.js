@@ -15,8 +15,6 @@ import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-clie
 
 /**
  * @description Admin Database User Table
- * @property {String} orgName - The name of the organization
- * @property {String} dbName - The name of the database
  * @property {Array} users - The list of users to display
  * @property {Array} bulkActions - The list of bulk actions available
  * @property {String} selectedBulkAction - The selected bulk action
@@ -30,8 +28,6 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       users: {type: Array},
       bulkActions: {type: Array},
       selectedBulkAction: {type: String},
-      orgName: { type: String},
-      dbName: { type: String},
       rmFromDb: { type: Boolean }
     }
   }
@@ -223,11 +219,18 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   async removeSchemaAccess(usernames, schema) {
     this.AppStateModel.showLoading();
-    const r = await this.dataCtl.batchGet(usernames.map(username => ({
-      func: () => this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, schema, username, 'NONE'),
-      errorMessage: `Unable to remove access to schema '${schema}' for user '${username}'`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
+    const grants = usernames.map(username => ({
+      user: username,
+      schema: schema
+    }));
+    const r = await this.DatabaseModel.bulkRevokeAccess(this.compCtl.orgName, this.compCtl.dbName, grants);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: `Unable to remove user access to schema '${schema}'`,
+        error: r.error
+      });
+      return;
+    }
     const userText = usernames.length === 1 ? `User '${usernames[0]} has'` : `${usernames.length} Users have`;
     this.AppStateModel.showToast({
       text: `${userText} been removed from schema '${schema}'`,
@@ -245,11 +248,18 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   async deleteUsers(usernames) {
     this.AppStateModel.showLoading();
-    const r = await this.dataCtl.batchGet(usernames.map(username => ({
-      func: () => this.InstanceModel.deleteUser(this.orgName, this.dbName, username),
-      errorMessage: `Unable to delete user '${username}'`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
+    const grants = usernames.map(username => ({
+      user: username,
+      schema: '_'
+    }));
+    const r = await this.DatabaseModel.bulkRevokeAccess(this.compCtl.orgName, this.compCtl.dbName, grants);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: 'Unable to delete user' + usernames.length > 1 ? 's' : '',
+        error: r.error
+      });
+      return;
+    }
     this.AppStateModel.showToast({
       text: usernames.length === 1 ? `User '${usernames[0]}' has been deleted from the database` : `${usernames.length} Users have been deleted from the database`,
       type: 'success',
