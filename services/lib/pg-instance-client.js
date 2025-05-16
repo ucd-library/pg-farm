@@ -407,7 +407,7 @@ class PGInstance {
           t.table_schema,
           t.table_name,
           t.table_type,
-          ARRAY_AGG(DISTINCT rtg.grantee) AS user_access_list
+          ARRAY_AGG(DISTINCT rtg.grantee) FILTER (WHERE rtg.grantee IS NOT NULL AND rtg.grantee NOT IN ('PUBLIC', 'postgres')) AS user_access_list
       FROM
           information_schema.tables t
       LEFT JOIN
@@ -417,7 +417,7 @@ class PGInstance {
       WHERE
           t.table_catalog = %L AND
           ${schemaFilter}
-          rtg.grantee NOT IN ('PUBLIC', 'postgres')
+          TRUE
       GROUP BY
           t.table_schema,
           t.table_name,

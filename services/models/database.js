@@ -567,7 +567,7 @@ class Database {
         schema : row.table_schema,
         tableName : row.table_name,
         tableType : row.table_type,
-        userAccess : row.user_access_list.replace(/(^{|}$)/g, '').split(','),
+        userAccess : row.user_access_list ? row.user_access_list.replace(/(^{|}$)/g, '').split(',') : [],
       }
     });
   }
