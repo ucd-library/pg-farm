@@ -87,8 +87,8 @@ class PGInstance {
    * @method revokePublicOnPublic
    * @description Revoke all privileges on the public schema from the public role.
    * By default ALL users have usage on the public schema and we dont want that.
-   * 
-   * @returns 
+   *
+   * @returns
    */
   async revokePublicOnPublic(connection) {
     let query = `REVOKE ALL ON SCHEMA public FROM public`;
@@ -403,27 +403,27 @@ class PGInstance {
     }
 
     let query = pgFormat(`
-      SELECT 
-          t.table_schema, 
-          t.table_name, 
+      SELECT
+          t.table_schema,
+          t.table_name,
           t.table_type,
           ARRAY_AGG(DISTINCT rtg.grantee) AS user_access_list
-      FROM 
+      FROM
           information_schema.tables t
       LEFT JOIN
-          information_schema.role_table_grants rtg ON 
-              t.table_schema = rtg.table_schema AND 
+          information_schema.role_table_grants rtg ON
+              t.table_schema = rtg.table_schema AND
               t.table_name = rtg.table_name
-      WHERE 
+      WHERE
           t.table_catalog = %L AND
           ${schemaFilter}
           rtg.grantee NOT IN ('PUBLIC', 'postgres')
-      GROUP BY 
-          t.table_schema, 
-          t.table_name, 
+      GROUP BY
+          t.table_schema,
+          t.table_name,
           t.table_type
       ORDER BY
-          t.table_schema, 
+          t.table_schema,
           t.table_name;`,
       databaseName);
     return this.query(connection, query);
@@ -497,7 +497,7 @@ usage_check AS (
     FROM pg_namespace n
     WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
 )
-SELECT 
+SELECT
     s.schema_name,
     s.table_count,
     s.user_count,

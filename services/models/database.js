@@ -561,7 +561,7 @@ class Database {
    */
   async getTableAccessOverview(ctx, schemaName) {
     let con = await this.getConnection(ctx);
-    let resp = await pgInstClient.getTableAccessOverview(con, ctx.database.database_id, schemaName);
+    let resp = await pgInstClient.getTableAccessOverview(con, ctx.database.name, schemaName);
     return resp.rows.map(row => {
       return {
         schema : row.table_schema,
