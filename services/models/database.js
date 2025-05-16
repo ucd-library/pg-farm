@@ -91,9 +91,9 @@ class Database {
    * @method exists
    * @description Check if a database exists.  This will return false if the database
    * does not exist or will return the database object if it does exist.
-   * 
+   *
    * @param {String|Object} ctx context object or id
-   * @returns 
+   * @returns
    */
   async exists(ctx) {
     try {
@@ -120,7 +120,7 @@ class Database {
     // set a context
     ctx = {
       instance : {name: database.instance},
-      database : {name: database.name}, 
+      database : {name: database.name},
       organization : {name: database.organization}
     }
 
@@ -185,7 +185,7 @@ class Database {
   async makeFeatured(ctx, opts={}) {
     let db = ctx.database;
 
-    const featured = await this.getFeatured(opts.organizationList ? ctx.organization.name : null);
+    const featured = await this.getFeatured(opts.organizationList ? ctx : null);
     const orderIndex = Number(opts.orderIndex) || 0;
 
     const selfInList = featured.find(f => f.database_id === db.database_id);
@@ -199,7 +199,7 @@ class Database {
     } else {
       featured.splice(orderIndex, 0, {
         database_id : db.database_id,
-        database_name : db.database_name
+        database_name : db.name
       });
     }
 
@@ -220,9 +220,9 @@ class Database {
    * @param {Object} ctx - database name or ID
    * @param {Boolean} organizationList - if true, remove from organization's featured list; else, remove from global featured list
    */
-  async removeFeatured(nameOrId, orgNameOrId, organizationList) {
+  async removeFeatured(ctx, organizationList) {
     let db = ctx.database;
-    let featured = await this.getFeatured(organizationList ? db.organization.name : null);
+    let featured = await this.getFeatured(organizationList ? ctx : null);
 
     let item = featured.find(f => f.database_id === db.database_id);
     if( !item ) {
@@ -239,9 +239,9 @@ class Database {
   /**
    * @method getFeatured
    * @description Get the featured databases for an organization
-   * 
+   *
    * @param {String|Object} ctx context object or id
-   * @returns 
+   * @returns
    */
   async getFeatured(ctx) {
     return client.getFeaturedDatabases(ctx?.organization?.organization_id);
@@ -462,9 +462,9 @@ class Database {
 
   /**
    * @method getDatabaseUsers
-   * 
-   * @param {String|Object} ctx context object or id 
-   * @returns 
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns
    */
   async getDatabaseUsers(ctx) {
     let database = ctx.database;
@@ -508,9 +508,9 @@ class Database {
   /**
    * @method listSchema
    * @description List all schemas in a database
-   * 
-   * @param {Object|String} ctx context object or id 
-   * @returns 
+   *
+   * @param {Object|String} ctx context object or id
+   * @returns
    */
   async listSchema(ctx) {
     let con = await this.getConnection(ctx);
@@ -521,7 +521,7 @@ class Database {
   /**
    * @method getSchemasOverview
    * @description Get an overview of all schemas in a database
-   * 
+   *
    * @param {Object|String} ctx context object or id
    */
   async getSchemasOverview(ctx) {
@@ -540,10 +540,10 @@ class Database {
   /**
    * @method listTables
    * @description List all tables in a database
-   * 
+   *
    * @param {Object|String} ctx context object or id
    * @param {String} schemaName Schema name to list tables from
-   * @returns 
+   * @returns
    */
   async listTables(ctx, schemaName) {
     let con = await this.getConnection(ctx);
@@ -554,10 +554,10 @@ class Database {
   /**
    * @method getTableAccessOverview
    * @description Get an overview of all tables in a database
-   * 
+   *
    * @param {String|Object} ctx context object or id
    * @param {String} schemaName Optional.  If not provided, will return all tables
-   * @returns 
+   * @returns
    */
   async getTableAccessOverview(ctx, schemaName) {
     let con = await this.getConnection(ctx);
@@ -575,11 +575,11 @@ class Database {
   /**
    * @method getTableAccess
    * @description Get the access for a table
-   * 
+   *
    * @param {String|Object} ctx context object or id
-   * @param {String} schemaName 
-   * @param {String} tableName 
-   * @returns 
+   * @param {String} schemaName
+   * @param {String} tableName
+   * @returns
    */
   async getTableAccess(ctx, schemaName, tableName) {
     let con = await this.getConnection(ctx);
@@ -599,11 +599,11 @@ class Database {
   /**
    * @method getTableAccessByUser
    * @description Get the access for a table by user
-   * 
-   * @param {String|Object} ctx context object or id 
-   * @param {String} schemaName 
-   * @param {String} username 
-   * @returns 
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {String} schemaName
+   * @param {String} username
+   * @returns
    */
   async getTableAccessByUser(ctx, schemaName, username) {
     let con = await this.getConnection(ctx);

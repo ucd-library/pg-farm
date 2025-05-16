@@ -78,7 +78,7 @@ class DatabaseService extends BaseService {
     const ido = {organization, database, ...opts};
     let id = payload.getKey(ido);
     let url = `${this.basePath}/featured`;
-    if ( opts.organizationList ) url += `/${org}`;
+    if ( opts.organizationList ) url += `/${organization}`;
 
     await this.request({
       url,

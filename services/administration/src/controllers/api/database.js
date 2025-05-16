@@ -102,8 +102,8 @@ async function aggregations(req, res) {
 /**
  * Manage featured database lists
  */
-router.patch('/featured', keycloak.protect('admin'), async (req, res) => patchFeatured(req, res));
-router.patch('/featured/:organization', keycloak.protect('organization-admin'),  async (req, res) => patchFeatured(req, res, true));
+router.patch('/featured', contextMiddleware, keycloak.protect('admin'), async (req, res) => patchFeatured(req, res));
+router.patch('/featured/:organization', contextMiddleware, keycloak.protect('organization-admin'),  async (req, res) => patchFeatured(req, res, true));
 async function patchFeatured(req, res, organizationList){
   req.body.organizationList = organizationList;
 
@@ -122,8 +122,8 @@ async function patchFeatured(req, res, organizationList){
 /**
  * Get featured database lists
  */
-router.get('/featured', async (req, res) => getFeatured(res));
-router.get('/featured/:organization', async (req, res) => getFeatured(res));
+router.get('/featured', contextMiddleware, async (req, res) => getFeatured(res));
+router.get('/featured/:organization', contextMiddleware, async (req, res) => getFeatured(res));
 async function getFeatured(res){
   try {
     let results = await database.getFeatured(res.context);
