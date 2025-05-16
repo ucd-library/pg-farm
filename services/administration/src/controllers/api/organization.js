@@ -26,9 +26,9 @@ async function search(req, res) {
   }
 }
 
-router.post('/', 
+router.post('/',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     req.context.organization = req.body;
@@ -39,7 +39,7 @@ router.post('/',
   }
 });
 
-router.get('/:organization', 
+router.get('/:organization',
   contextMiddleware,
   async (req, res) => {
   try {
@@ -49,7 +49,7 @@ router.get('/:organization',
   }
 });
 
-router.get('/:organization/users', 
+router.get('/:organization/users',
   contextMiddleware,
   async (req, res) => {
   try {
@@ -98,13 +98,15 @@ router.patch('/:organization',
   }
 });
 
-router.get('/:organization/is-admin', 
-  keycloak.protect('organization-admin'), 
+router.get('/:organization/is-admin',
+  keycloak.protect('organization-admin'),
   async (req, res) => {
   return res.json({isAdmin: true});
 });
 
-router.get('/:organization/logo', async (req, res) => {
+router.get('/:organization/logo',
+  contextMiddleware,
+  async (req, res) => {
   try {
     let org = await organization.get(req.context, ['logo_file_type', 'logo', 'updated_at', 'name']);
 

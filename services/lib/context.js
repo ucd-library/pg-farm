@@ -30,16 +30,16 @@ async function middleware(req, res, next) {
 
 /**
  * @method createContext
- * @description create a context object for interacting with the models.  Note this does not 
+ * @description create a context object for interacting with the models.  Note this does not
  * register the context with the store.
- * 
+ *
  * @param {Object} obj
  * @param {String} obj.organization name or id of the organization
  * @param {String} obj.database name or id of the database
  * @param {String} obj.instance name or id of the instance
  * @param {Object} obj.user user object
  * @param {String} obj.corkTraceId context cork trace id
- *  
+ *
  * @returns {Promise<Object>} context object
  */
 async function createContext(obj) {
@@ -53,7 +53,7 @@ async function createContext(obj) {
 }
 
 class InstanceDatabaseContext {
-  
+
   constructor() {
     this._corkTraceId = null;
     this._organization = null;
@@ -134,13 +134,13 @@ class InstanceDatabaseContext {
     if( obj.corkTraceId ) {
       this.corkTraceId = obj.corkTraceId;
     }
-  
+
     if( obj.organization ) {
       if( obj.organization === '_' ) {
         this.organization = {name : null};
       } else {
         try {
-          this.organization = await pgAdminClient.getOrganization({organization: {name: obj.organization}});
+          this.organization = await pgAdminClient.getOrganization(obj.organization);
         } catch(e) {
           this.organization = {name : obj.organization};
         }
@@ -150,21 +150,21 @@ class InstanceDatabaseContext {
     if( obj.database ) {
       try {
         this.database = await pgAdminClient.getDatabase({
-          database: {name: obj.database}, 
+          database: {name: obj.database},
           organization: {name: this.organization?.name
         }});
       } catch(e) {
         this.database = {name : obj.database};
       }
     }
-  
+
     if( obj.instance ) {
       if( !modelUtils.isUUID(obj.instance) && !obj.instance.match(/^inst-/) ) {
         obj.instance = 'inst-'+obj.instance;
       }
       try {
         this.instance = await pgAdminClient.getInstance({
-          instance: {name: obj.instance}, 
+          instance: {name: obj.instance},
           organization: {name: this.organization?.name}
         });
       } catch(e) {
@@ -173,7 +173,7 @@ class InstanceDatabaseContext {
     } else if( this.database ) {
       try {
         this.instance = await pgAdminClient.getInstance({
-          instance: {name: this.database.instance_name || this.database.instance_id}, 
+          instance: {name: this.database.instance_name || this.database.instance_id},
           organization: {name: this.organization?.name}
         });
       } catch(e) {}
