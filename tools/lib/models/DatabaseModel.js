@@ -221,6 +221,14 @@ class DatabaseModel extends BaseModel {
     return this.service.revokeAccess(org, db, schemaTable, user, access);
   }
 
+  exposeTableToApi(org, db, table) {
+    return this.service.exposeTableToApi(org, db);
+  }
+
+  updateApiCache(org, db, table) {
+    return this.service.updateApiCache(org, db);
+  }
+
   bulkGrantAccess(org, db, grants) {
     return this.service.bulkGrantAccess(org, db, grants);
   }

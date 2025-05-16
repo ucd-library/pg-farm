@@ -19,8 +19,7 @@ import '@ucd-lib/theme-elements/brand/ucd-theme-search-popup/ucd-theme-search-po
 import '@ucd-lib/theme-elements/ucdlib/ucdlib-pages/ucdlib-pages.js';
 import '@ucd-lib/theme-elements/brand/ucd-theme-pagination/ucd-theme-pagination.js';
 
-import {appStateModel} from '../../../../tools/lib/index.js';
-console.log(appStateModel);
+import {config} from '../../../../tools/lib/index.js';
 
 // global app components
 import './components/app-build-info/app-build-info.js';
@@ -44,6 +43,7 @@ export default class PgfarmApp extends Mixin(LitElement)
       page : {type: String},
       pathInfo: { type: String },
       siteSearchValue: { type: String },
+      userDatabases : { type: Array },
       _firstAppStateUpdate : { state: true }
     }
   }
@@ -59,21 +59,33 @@ export default class PgfarmApp extends Mixin(LitElement)
 
     this._firstAppStateUpdate = false;
 
-    this.page = 'home';
+    this.page = config.isNativeApp ? 'native-home' : 'home';
     this.pathInfo = '';
     this.siteSearchValue = '';
+    this.userDatabases = [];
 
-    this._injectModel('AppStateModel');
+    this._injectModel('AppStateModel', 'UserModel');
     this.AppStateModel.showLoading();
     this.AppStateModel.refresh();
   }
 
   async _onAppStateUpdate(e) {
+    if( e.location.hash === 'logout' && 
+        config.isNativeApp ){
+      this._nativeLogout();
+    }
+
     if ( !this._firstAppStateUpdate ) {
+      this._firstAppStateUpdate = true;
+
       setTimeout(() => {
-        this._firstAppStateUpdate = true;
+        
         document.querySelector('#site-loader').style.display = 'none';
         this.style.display = 'block';
+
+        if( config.isNativeApp ){
+          this._loadUserDatabases();
+        }
       }, 500);
     }
     this.AppStateModel.showLoading();
@@ -122,6 +134,30 @@ export default class PgfarmApp extends Mixin(LitElement)
     return '';
   }
 
+  async _loadUserDatabases() {
+    if( config.user.loggedIn !== true ) {
+      return;
+    }
+
+    let result = await this.UserModel.myDatabases();
+    let dbs = result.payload;
+    
+    dbs.sort((a, b) => {
+      if (a.organization === b.organization) {
+        return a.title.localeCompare(b.title);
+      }
+      return a.organization.localeCompare(b.organization);
+    });
+
+    dbs.forEach(db => {
+      db.link = `/db/${db.organizationName || '_'}/${db.databaseName}`;
+      db.title = (db.organizationTitle || db.organizationName ? (db.organizationTitle || db.organizationName) + ' - ' : '') + 
+        (db.databaseTitle || db.databaseName);
+    });
+
+    this.userDatabases = dbs;
+  }
+
   _onSearch(e){
     this.AppStateModel.setLocation(`/search?text=${encodeURIComponent(e.detail.searchTerm)}`);
     this.renderRoot.querySelector('ucd-theme-search-popup').close();
@@ -141,6 +177,8 @@ export default class PgfarmApp extends Mixin(LitElement)
       return import(/* webpackChunkName: "public" */ "./pages/bundles/public.js");
     } else if( bundle == 'admin' ) {
       return import(/* webpackChunkName: "admin" */ "./pages/bundles/admin.js");
+    } else if( bundle == 'native' ) {
+      return import(/* webpackChunkName: "native" */ "./pages/bundles/native.js");
     }
     this.logger.warn(`AppMain: bundle ${bundle} not found for page ${page}. Check pages/bundles/index.js`);
     return false;
@@ -158,6 +196,12 @@ export default class PgfarmApp extends Mixin(LitElement)
     if ( ele ) {
       ele.close();
     }
+  }
+
+  async _nativeLogout() {
+    await window.electronAPI.logout();
+    this.AppStateModel.setLocation('/native/home');
+    window.location.reload();
   }
 
 

@@ -1,4 +1,5 @@
 import client from './pg-admin-client.js';
+import logger from './logger.js';
 
 const msPerHour = 1000 * 60 * 60;
 const msPerDay = msPerHour * 24;
@@ -211,15 +212,12 @@ async function getMaxPriority(availability) {
   throw new Error('No priority found for availability: ' + availability);
 }
 
-async function getInstanceResources(instance, onStart) {
-  if( typeof instance === 'string' ) {
-    instance = await client.getInstance(instance);
-  }
+async function getInstanceResources(ctx, onStart) {
 
   // TODO need start time of the instance
-  let e = await client.getLastDatabaseEvent(instance.instance_id);
+  let e = await client.getLastDatabaseEvent(ctx.instance.instance_id);
   if( !e ) {
-    console.warn('No events found for instance: ' + instance.instance_id);
+    logger.warn('No events found for instance', ctx.logSignal);
     return STATES[1];
   }
 
@@ -227,7 +225,7 @@ async function getInstanceResources(instance, onStart) {
     e.timestamp = new Date(e.timestamp);
   }
 
-  return getResources(instance.availability, e.timestamp.getTime());
+  return getResources(ctx.instance.availability, e.timestamp.getTime());
 }
 
 export {
