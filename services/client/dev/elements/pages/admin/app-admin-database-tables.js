@@ -106,7 +106,7 @@ export default class AppAdminDatabaseTables extends Mixin(LitElement)
     this.tables = this.dataCtl.tablesOverview.map(table => {
       return {
         table,
-        userCt: table.userAccess?.length || 0,
+        userCt: table.userAccess.filter(user => user !== publicUser).length,
         accessSummary: publicUser && table.userAccess?.some(user => user === publicUser) ? 'Public' : 'Restricted'
       }
     });

@@ -39,11 +39,13 @@ function save() {
 function getParsedToken() {
   let payload = config.token ? config.token.split('.')[1] : null;
   if( !payload ) return null;
-  
+
   try {
     let token = JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
     token.expires = new Date(token.exp * 1000);
-    token.expiresDays = ((token.expires.getTime() - Date.now()) / (1000*60*60*24)).toFixed(1);
+    token.expiresDays = parseFloat(
+      ((token.expires.getTime() - Date.now()) / (1000*60*60*24)).toFixed(1)
+    );
     return token;
   } catch(e) {}
 

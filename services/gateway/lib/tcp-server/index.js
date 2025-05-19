@@ -3,7 +3,7 @@ import ProxyMonitor from './monitor.js';
 import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
 import pgClient from '../../../lib/pg-admin-client.js';
-import {v4 as uui4} from 'uuid';
+import {v4 as uuid4} from 'uuid';
 
 /**
  * @class PgFarmTcpServer
@@ -12,7 +12,7 @@ import {v4 as uui4} from 'uuid';
  **/
 class PgFarmTcpServer {
   constructor(opts, onConnection) {
-    this.id = uui4();
+    this.id = uuid4();
     this.opts = opts;
     this.name = opts.name || 'pgfarm-tcp-server';
     this.metrics = new ProxyMonitor(this.name, {
@@ -54,7 +54,7 @@ class PgFarmTcpServer {
    * @returns {string}
    **/
   getSessionId() {
-    return uui4().split('-').pop();
+    return uuid4().split('-').pop();
   }
 
   /**

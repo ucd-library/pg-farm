@@ -96,6 +96,27 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
     this.AppStateModel.refresh();
   }
 
+  /**
+   * @description Table access dropdown change
+   * @param {Object} e - The custom event object
+   */
+  _onTableAccessChange(e) {
+    const access = e.detail.value;
+    const tableName = e.currentTarget.dataset.tablename || '';
+    if( !tableName || !this.username || !access ) return;
+
+    this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, `${this.schema}.${tableName}`, this.username, access);
+
+    const accessLabel = this.bulkActions.find(a => a.value === access)?.label || '';
+    const toastText = `User access has been updated to '${accessLabel}'`;
+    this.AppStateModel.showToast({
+      text: toastText,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.AppStateModel.hideLoading();
+  }
+
 }
 
 customElements.define('admin-database-user-schema-tables-table', AdminDatabaseUserSchemaTablesTable);

@@ -6,7 +6,7 @@ export function styles() {
 
   const desktopStyles = css`
     admin-database-tables-table .desktop .app-table .row {
-      grid-template-columns: 2fr 1fr 75px 140px 75px;
+      grid-template-columns: 2fr 100px 75px 140px 75px;
     }`;
 
   const elementStyles = css`
@@ -114,7 +114,7 @@ function _renderDesktopView(){
             <div class='checkbox-container'>
               <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
               <div class='table-name-container'>
-                <a href='${this.tableUrl}/${row.item?.table?.tableName}'>${row.item?.table?.tableName}</a>
+                <a href='${this.tableUrl}/${row.item?.table?.tableName}?schema=${row.item?.table?.schema}'>${row.item?.table?.tableName}</a>
               </div>
             </div>
           </div>
@@ -159,7 +159,7 @@ function _renderMobileView(){
                 <div class='u-width-100'>
                   <div>
                     <div class='table-name-container'>
-                      <a href='${this.tableUrl}/${row.item?.table?.tableName}'>${row.item?.table?.tableName}</a>
+                      <a href='${this.tableUrl}/${row.item?.table?.tableName}?schema=${row.item?.table?.schema}'>${row.item?.table?.tableName}</a>
                     </div>
                   </div>
                   <div class='details'>
@@ -180,7 +180,11 @@ function _renderMobileView(){
               </div>
             </div>
             <div class='cell cell--icon-top'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete table', row.item)}></app-icon-button>
+              <app-icon-button
+                icon='fa.solid.trash'
+                ?disabled=${row.item?.userCt == 0}
+                basic @click=${() => this._onSingleRemoveClick(row.item)}>
+              </app-icon-button>
             </div>
           </div>
         `)}

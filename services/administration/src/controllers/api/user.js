@@ -33,8 +33,12 @@ router.get('/me/db', keycloak.protect('logged-in'), async (req, res) => {
     resp = resp.map(db => {
       return {
         databaseId: db.database_id,
+        databaseName: db.database_name,
+        databaseTitle: db.database_title,
         instanceId: db.instance_id,
         organizationId: db.organization_id,
+        organizationName: db.organization_name,
+        organizationTitle: db.organization_title,
         username: db.username,
         userType: db.user_type
       }

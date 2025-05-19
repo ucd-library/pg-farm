@@ -1,0 +1,1 @@
+import '../native/app-native-home.js';

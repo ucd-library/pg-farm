@@ -122,6 +122,26 @@ class Database {
     process.exit(0);
   }
 
+  async exposeTableToApi(name, table, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
+
+    let resp = await databaseModel.exposeTableToApi(organization, database, table);
+
+    print.display(resp, opts.output, print.schemaUserAccess);
+    process.exit(0);
+  }
+
+  async updateApiCache(name, opts) {
+    let { organization, database } = this.parseOrg(name);
+    if (!organization) organization = '_';
+
+    let resp = await databaseModel.updateApiCache(organization, database);
+
+    print.display(resp, opts.output, print.schemaUserAccess);
+    process.exit(0);
+  }
+
   async init(name, opts) {
     let { organization, database } = this.parseOrg(name);
     if (!organization) organization = '_';

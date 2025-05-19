@@ -1,6 +1,9 @@
-function handleError(res, error, details) {
+import logger from '../../../lib/logger.js';
 
-  res.status(400).json({
+function handleError(res, error, details) {
+  logger.error('Error in request', {error}, res?.context?.logSignal);
+
+  res.status(500).json({
     message : error.message,
     details : details,
     stack : error.stack

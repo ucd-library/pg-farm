@@ -10,28 +10,62 @@ class AppStateModelImpl extends AppStateModel {
     this.store = AppStateStore;
 
     this.init(config.appRoutes);
+
+    if( typeof window !== 'undefined' && config.isNativeApp) {
+      this.registerExternalOpener();
+    }
+  }
+
+  registerExternalOpener() {
+    this.logger.info('registering external url opener');
+    document.addEventListener('click', (event) => {
+      var eventPath = event.composedPath();
+      var anchor = null;
+      for (var i = 0; i < eventPath.length; i++) {
+        var element = eventPath[i];
+        if (element.tagName === 'A' && element.href) {
+          anchor = element;
+          break;
+        }
+      }
+
+      if( anchor?.href && !anchor.href.startsWith(window.location.origin) ) {
+        this.logger.info('opening external url via electron api', anchor.href);
+        event.preventDefault();
+        window.electronAPI.openExternalUrl(anchor.href);
+      }
+    });
   }
 
   set(update) {
     if( update.location ) {
       update.lastLocation = clone(this.store.data.location);
 
-      let page = update.location.path ? update.location.path[0] : 'home';
-      if( !page ) page = 'home'
+      let page = update.location.path ? update.location.path[0] : '';
+      if( !page ) page = config.isNativeApp ? 'native' : 'home';
+
+
 
       if ( page === 'org' && update.location.path.length > 1 ) {
         page = 'org-single';
-      }
-
-      if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
+      } else if ( page === 'db' && update.location.path?.[3] === 'edit' ) {
 
         if ( update.location.path?.[4] === 'users' && update.location.path?.[5]){
           page = 'admin-db-user-single';
+        }
+        else if ( update.location.path?.[4] === 'tables' && update.location.path?.[5]){
+          page = 'admin-db-table-single';
         }
         else if ( update.location.path?.[4]){
           page = `admin-db-${update.location.path[4]}`;
         } else {
           page = 'admin-db-overview';
+        }
+      } else if ( page === 'native' ) {
+        if ( update.location.path.length > 1 ) {
+          page = 'native-'+update.location.path[1];
+        } else {
+          page = 'native-home';
         }
       }
 
