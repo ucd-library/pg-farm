@@ -23,7 +23,8 @@ class DatabaseStore extends BaseStore {
       isAdmin : new LruStore({name: 'database.isAdmin'}),
       tablesOverview : new LruStore({name: 'database.tablesOverview'}),
       schemasOverview : new LruStore({name: 'database.schemasOverview'}),
-      schemaTablesOverview : new LruStore({name: 'database.schemaTablesOverview'})
+      schemaTablesOverview : new LruStore({name: 'database.schemaTablesOverview'}),
+      userAccessOverview : new LruStore({name: 'database.userAccessOverview'})
     };
 
     this.events = {
@@ -49,7 +50,8 @@ class DatabaseStore extends BaseStore {
       DATABASE_IS_ADMIN_UPDATE : 'database-is-admin-update',
       DATABASE_TABLES_OVERVIEW_UPDATE : 'database-tables-overview-update',
       DATABASE_SCHEMAS_OVERVIEW_UPDATE : 'database-schemas-overview-update',
-      DATABASE_SCHEMA_TABLES_OVERVIEW_UPDATE : 'database-schema-tables-overview-update'
+      DATABASE_SCHEMA_TABLES_OVERVIEW_UPDATE : 'database-schema-tables-overview-update',
+      DATABASE_USER_ACCESS_OVERVIEW_UPDATE : 'database-user-access-overview-update'
     };
   }
 
@@ -242,6 +244,14 @@ class DatabaseStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.schemaTablesOverview,
       this.events.DATABASE_SCHEMA_TABLES_OVERVIEW_UPDATE
+    );
+  }
+
+  onUserAccessOverviewUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.userAccessOverview,
+      this.events.DATABASE_USER_ACCESS_OVERVIEW_UPDATE
     );
   }
 

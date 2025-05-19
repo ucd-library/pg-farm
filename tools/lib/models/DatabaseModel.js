@@ -185,6 +185,10 @@ class DatabaseModel extends BaseModel {
     return this.service.getSchemaTablesOverview(org, db, schema);
   }
 
+  getUserAccessOverview(org, db) {
+    return this.service.getUserAccessOverview(org, db);
+  }
+
   /**
    * @method setUserAccess
    * @description set access for a user on a database, schema or table.
