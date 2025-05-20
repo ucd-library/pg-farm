@@ -22,6 +22,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       username: { type: String },
       user: { type: Object },
       schemaGrant: { type: Object },
+      tables: { type: Array },
     }
   }
 
@@ -37,6 +38,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     this.username = '';
     this.user = {};
     this.schemaGrant = {};
+    this.tables = [];
 
     this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
@@ -53,6 +55,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
     this.username = e.location?.path?.[5] || '';
+    this.tables = [];
     this.AppStateModel.showLoading();
     let r = await this.dataCtl.get([
       {
