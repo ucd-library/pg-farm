@@ -28,6 +28,32 @@ class UcdIamApi {
   }
 
   /**
+   * @description Search user profiles from the UCD IAM API
+   * @param {String} searchTerm
+   * @returns
+   */
+  async searchUsers(searchTerm) {
+    const path = '/people/search';
+    // const path = '/people/prikerbacct/search'; // only matches exact userId, not partial
+    // const path = '/people/profile/search'; // doesn't return data
+    // const path = '/directory/search'; // full match on userId
+    const results = [];
+
+    // will circle back to this, really want to search on userId/casId,
+    // but the api endpoints seem to only return full match on userIds
+    // possibly we could search on name instead, but chat with Kimmy first
+    const urlParams = {
+      ['dFirstName']: searchTerm,
+      // ['dMiddleName']: searchTerm,
+      // ['dLastName']: searchTerm,
+    };
+    const res = await this._fetch(path, urlParams);
+    const data = await res.json();
+
+    return data?.responseData?.results || null; 
+  }
+
+  /**
    * @description Extract a user's positions from their directory listings
    * @param {Object} profile - The user's profile object from the UCD IAM API
    * @returns {Array} - An array of objects with 'dept' and 'title' keys
