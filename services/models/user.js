@@ -109,14 +109,14 @@ class User {
   /**
    * @method updateType
    * @description Updates the type of a instance user
-   * 
+   *
    * @param {Object|String} ctx context object or id
    * @param {Object} user
    * @param {String} user.username username
-   * @param {String} user.type USER, ADMIN, or PUBLIC.  Defaults to USER. 
-   * @returns 
+   * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER.
+   * @returns
    */
-  updateType(ctx, user) {
+  updateType(ctx, user, type) {
     ctx = getContext(ctx);
     logger.info('Updating user type', this.getUserForLogging(user), ctx.logSignal);
 
@@ -124,7 +124,7 @@ class User {
       `UPDATE ${config.adminDb.tables.INSTANCE_USER}
       SET type = $4
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
-      [user.username, ctx.instance.name, ctx.organization.name, user.type]
+      [user.username, ctx.instance.name, ctx.organization.name, type]
     );
   }
 
@@ -173,9 +173,9 @@ class User {
   /**
    * @method delete
    * @description Deletes a user from the database and instance
-   * 
-   * @param {String|Object} ctx context object or id 
-   * @param {String} username 
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {String} username
    */
   async delete(ctx, username) {
     ctx = getContext(ctx);
@@ -231,12 +231,12 @@ class User {
 
   /**
    * @method exists
-   * @description Checks if a user exists in the database.  
+   * @description Checks if a user exists in the database.
    * If the user exists, it will return the user object.
-   * 
+   *
    * @param {String|Object} ctx context object or id
-   * @param {String} username 
-   * @returns 
+   * @param {String} username
+   * @returns
    */
   async exists(ctx, username) {
     // no need to get context, get() will do that
@@ -286,8 +286,8 @@ class User {
   /**
    * @method checkPermissionType
    * @description Checks if the permission type is valid
-   * 
-   * @param {String} type 
+   *
+   * @param {String} type
    */
   checkPermissionType(type) {
     if( this.ALLOWED_PERMISSION_TYPES.indexOf(type) === -1 ) {
@@ -298,11 +298,11 @@ class User {
   /**
    * @method grantDatabaseAccess
    * @description Grants a user access to a database
-   * 
+   *
    * @param {Object|String} ctx context object or id
-   * @param {*} roleName 
-   * @param {*} permission 
-   * @returns 
+   * @param {*} roleName
+   * @param {*} permission
+   * @returns
    */
   async grantDatabaseAccess(ctx, roleName, permission='READ') {
     ctx = getContext(ctx);
@@ -319,7 +319,7 @@ class User {
     }
 
     logger.info(
-      'running user database grant', 
+      'running user database grant',
       logger.objToString({database, roleName, permission}),
       ctx.logSignal
     );
@@ -332,11 +332,11 @@ class User {
   /**
    * @method revokeDatabaseAccess
    * @description Revokes a user's access to a database
-   * 
-   * @param {Object|String} ctx 
-   * @param {*} roleName 
-   * @param {*} permission 
-   * @returns 
+   *
+   * @param {Object|String} ctx
+   * @param {*} roleName
+   * @param {*} permission
+   * @returns
    */
   async revokeDatabaseAccess(ctx, roleName, permission='READ') {
     ctx = getContext(ctx);
@@ -349,7 +349,7 @@ class User {
       permission = pgInstClient.ALL_PRIVILEGE;
     }
 
-    logger.info('running user database revoke', 
+    logger.info('running user database revoke',
       logger.objToString({roleName, permission}),
       ctx.logSignal
     );
@@ -384,8 +384,8 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user grant', 
-      logger.objToString({schemaName, tableName, roleName, permission}), 
+    logger.info('running user grant',
+      logger.objToString({schemaName, tableName, roleName, permission}),
       ctx.logSignal
     );
 
@@ -433,15 +433,15 @@ class User {
   /**
    * @method revoke
    * @description Revoke a user's access to a schema or table.
-   * 
-   * @param {String|Object} ctx context object or id 
-   * @param {*} schemaName 
-   * @param {*} roleName 
-   * @param {*} permission 
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {*} schemaName
+   * @param {*} roleName
+   * @param {*} permission
    */
   async revoke(ctx, schemaName, roleName, permission='READ') {
     ctx = getContext(ctx);
-    
+
     permission = permission.toUpperCase();
     this.checkPermissionType(permission);
 
@@ -454,7 +454,7 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user revoke', 
+    logger.info('running user revoke',
       logger.objToString({schemaName, tableName, roleName, permission}),
       ctx.logSignal
     );
