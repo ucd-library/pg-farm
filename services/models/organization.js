@@ -101,6 +101,10 @@ class OrganizationModel {
     if( !organization.name && organization.title ) {
       organization.name = organization.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
     }
+    if( !organization.title ) {
+      organization.title = organization.name;
+    }
+    organization.name = organization.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
 
     let exists = await this.exists(organization);
     if( exists ) {
@@ -111,7 +115,12 @@ class OrganizationModel {
     logger.info('Creating organization', ctx.logSignal);
     await client.createOrganization(organization);
 
-    return this.get(organization.name);
+    // set a context
+    await ctx.update({
+      organization: organization.name
+    });
+
+    return this.get(ctx);
   }
 
   async update(ctx) {
