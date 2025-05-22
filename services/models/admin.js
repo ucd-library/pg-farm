@@ -44,8 +44,8 @@ class AdminModel {
    * @description Creates a new user in the database.  This will also grant
    * the role to the pgrest authenticator user.
    *
-   * @param {String|Object} ctx context object or id 
-   * @param {Object} user 
+   * @param {String|Object} ctx context object or id
+   * @param {Object} user
    * @param {Object} user.username username
    * @param {Object} user.type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
    * @param {Object} user.parent parent username.  Required for SERVICE_ACCOUNT
@@ -62,9 +62,9 @@ class AdminModel {
 
   /**
    * @method updateUser
-   * @description Updates a user type in the database. 
-   * 
-   * @param {String|Object} ctx 
+   * @description Updates a user type in the database.
+   *
+   * @param {String|Object} ctx
    * @param {String} user username
    * @param {String} type pgfarm user type
    */
@@ -73,16 +73,15 @@ class AdminModel {
     if( userObj.user_type !== 'USER' && userObj.user_type !== 'ADMIN' ) {
       throw new Error('Cannot update user type: '+userObj.user_type);
     }
-
-    await this.models.user.updateType(ctx, user, type);
+    await this.models.user.updateType(ctx, userObj, type);
   }
 
   /**
    * @method deleteUser
-   * @description Deletes a user from the database. 
-   * 
+   * @description Deletes a user from the database.
+   *
    * TODO: this should also revoke all user access
-   * 
+   *
    * @param {String|Object} ctx string or context object
    * @param {String} user username
    */
@@ -179,7 +178,7 @@ class AdminModel {
     let dbs = await client.getInstanceDatabases(ctx);
     for( let db of dbs ) {
       await this.models.pgRest.stop({
-        database : {name: db.name}, 
+        database : {name: db.name},
         organization : ctx.organization
       });
     }
@@ -339,7 +338,7 @@ class AdminModel {
     logger.info('Sleeping instances', ctx.logSignal);
 
     let active = await client.getInstances({state: this.models.instance.STATES.RUN});
-    
+
     let changed = [];
 
     for( let instance of active ) {
@@ -365,10 +364,10 @@ class AdminModel {
         logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, iCtx.logSignal);
         await client.updateInstancePriority(iCtx, newPriority);
         await this.models.instance.apply(iCtx);
-        
+
         let query = await client.getLastDatabaseEvent(instance.instance_id);
         changed.push({
-          instance, 
+          instance,
           newState : newPriority,
           lastDatabaseEvent : {
             event_type : query?.event_type,
@@ -397,7 +396,7 @@ class AdminModel {
    *  await respStart.pgrest;
    * }
    *
-   * @param {String|Object} ctx 
+   * @param {String|Object} ctx
    * @param {Object} opts
    * @param {Boolean} opts.force force start the instance even if health check passes
    *

@@ -572,6 +572,74 @@ class Database {
     });
   }
 
+  async getUserAccessOverview(ctx, username) {
+    let con = await this.getConnection(ctx);
+    let users = await this.getDatabaseUsers(ctx);
+
+    // schema access
+    const schemaAccess = await pgInstClient.getSchemaAccess(con);
+    const schemas = Array.from( new Set(schemaAccess.rows.map(row => row.schema_name)) );
+
+    // table access
+    const allTablesRes = await pgInstClient.query(con, `
+      SELECT table_schema, table_name
+      FROM information_schema.tables
+      WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+    `);
+
+    const tableGrantsRes = await pgInstClient.query(con, `
+      SELECT grantee, table_schema, table_name, privilege_type
+      FROM information_schema.role_table_grants
+      WHERE grantee NOT IN ('PUBLIC', 'postgres')
+    `);
+
+
+    for( let user of users ) {
+      user.schemas = [];
+      user.tableAccessCount = 0;
+      for( let schema of schemas ) {
+        let access = schemaAccess.rows.find(row => row.role_name === user.name && row.schema_name === schema);
+        let schemaOutput = {
+          name: schema,
+          access : [],
+          tableAccess : [],
+          tableAccessCount : 0
+        };
+        if( access ) {
+          delete access.role_name;
+          delete access.schema_name;
+          access = Object.values(access).filter(v => v);
+          schemaOutput.access = access;
+        }
+
+        for( let table of allTablesRes.rows ) {
+          if( table.table_schema === schema ) {
+            let tableAccess = tableGrantsRes.rows.filter(row => row.grantee === user.name && row.table_schema === schema && row.table_name === table.table_name);
+            if( tableAccess.length ) {
+              let access = tableAccess.map(row => row.privilege_type);
+              schemaOutput.tableAccess.push({
+                name : table.table_name,
+                access
+              });
+              schemaOutput.tableAccessCount++;
+              user.tableAccessCount++;
+            } else {
+              schemaOutput.tableAccess.push({
+                name : table.table_name,
+                access : []
+              });
+            }
+          }
+        }
+
+        user.schemas.push(schemaOutput);
+      }
+    }
+
+
+    return users;
+  }
+
   /**
    * @method getTableAccess
    * @description Get the access for a table
@@ -624,7 +692,7 @@ class Database {
       }
     }
 
-    resp = await pgInstClient.getSchemaAccess(con, schemaName, username);
+    resp = await pgInstClient.getSchemaAccess(con, schemaName);
     let schemaAccess = resp.rows.find(row => row.role_name === username);
     if( schemaAccess ) {
       delete schemaAccess.role_name;
