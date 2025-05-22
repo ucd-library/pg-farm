@@ -111,7 +111,7 @@ class Database {
    * @param {*} name
    * @param {*} opts
    */
-  async create(database) {
+  async create(ctx, database) {
     // make sure the name is prefixed with inst- (instance) prefix
     // this is to avoid conflicts with accessing the postgres instance
     // by name
@@ -125,21 +125,21 @@ class Database {
     }
 
     let orgName = '';
-    if( opts.organization ) {
-      orgName = await this.models.organization.get(opts.organization);
+    if( database.organization ) {
+      orgName = await this.models.organization.get(database.organization);
       orgName = orgName.name+'-';
     }
-    database.pgrest_hostname = `rest-${orgName}${opts.name}`;
+    database.pgrest_hostname = `rest-${orgName}${database.name}`;
 
     logger.info('Creating database', {database});
 
     try {
-      await client.createDatabase(title, opts);
+      await client.createDatabase(database);
     } catch(e) {
       logger.warn('Failed to create database in admin db', {e}, {database});
     }
 
-    let db = await this.get(opts.name, opts.organization);
+    let db = await this.get(ctx);
 
     await this.ensurePgDatabase(db.instance_id, db.organization_id, db.database_name);
   }
