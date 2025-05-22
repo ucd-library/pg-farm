@@ -108,35 +108,35 @@ class Database {
    * @method create
    * @description Create a new database
    *
-   * @param {*} name
-   * @param {*} opts
+   * @param {*} ctx
    */
-  async create(ctx, database) {
-    // make sure the name is prefixed with inst- (instance) prefix
-    // this is to avoid conflicts with accessing the postgres instance
-    // by name
-    database.name = utils.cleanInstDbName(database.name);
+  async create(ctx) {
+    ctx = getContext(ctx);
 
-    // set a context
-    ctx = {
-      instance : {name: database.instance},
-      database : {name: database.name},
-      organization : {name: database.organization}
-    }
+    let opts = {
+      title: ctx.database.title,
+      name: utils.cleanInstDbName(ctx.database.name),
+      instance: ctx.instance.name,
+      short_description: ctx.organization.short_description,
+      description: ctx.organization.description,
+      tags: ctx.organization.tags,
+      url: ctx.organization.url
+    };
 
     let orgName = '';
-    if( database.organization ) {
-      orgName = await this.models.organization.get(database.organization);
+    if( ctx.organization ) {
+      orgName = await this.models.organization.get(ctx);
       orgName = orgName.name+'-';
+      opts.organization = orgName.name;
     }
-    database.pgrest_hostname = `rest-${orgName}${database.name}`;
-
-    logger.info('Creating database', {database});
+    opts.pgrest_hostname = `rest-${orgName}${database.name}`;
 
     try {
-      await client.createDatabase(database);
+      logger.info('Creating database', ctx.logSignal);
+
+      await client.createDatabase(opts);
     } catch(e) {
-      logger.warn('Failed to create database in admin db', {e}, {database});
+      logger.warn('Failed to create database in admin db', {e}, ctx.logSignal);
     }
 
     let db = await this.get(ctx);
