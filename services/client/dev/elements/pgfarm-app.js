@@ -135,7 +135,8 @@ export default class PgfarmApp extends Mixin(LitElement)
   }
 
   async _loadUserDatabases() {
-    if( config.user.loggedIn !== true ) {
+    let user = await config.getUser();
+    if( user.loggedIn !== true ) {
       return;
     }
 

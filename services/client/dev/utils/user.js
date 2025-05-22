@@ -1,4 +1,5 @@
 import { getLogger } from '@ucd-lib/cork-app-utils';
+import {config} from '../../../../tools/lib/config.js';
 
 class User {
 
@@ -17,14 +18,15 @@ class User {
     this.loadConfig();
   }
 
-  loadConfig(){
-    if (!window.APP_CONFIG?.user ){
+  async loadConfig(){
+    let user = await config.getUser();
+    if (!user ){
       this.logger.warn('No user config found');
       return;
     }
 
-    this.loggedIn = window.APP_CONFIG.user.loggedIn;
-    this.jwt = window.APP_CONFIG.user;
+    this.loggedIn = user.loggedIn;
+    this.jwt = user;
     this.isAdmin = this.user?.roles?.includes('admin');
 
     this.loginPath = window.APP_CONFIG.loginPath;

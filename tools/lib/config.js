@@ -41,11 +41,24 @@ if( typeof window === 'undefined' ) {
   config.loginPath = config.loginPath || '/login';
   config.logoutPath = config.logoutPath || '/auth/logout';
 
-  // handle electron config and overrides
-  if( window.ELECTRON_CONFIG ) {
-    config.token = window.ELECTRON_CONFIG.token;
-    config.user = window.ELECTRON_CONFIG.user;
+  config.getUser = async function() {
+    if( config.user && config.token ) {
+      return {
+        user: config.user,
+        token: config.token
+      };
+    }
+
+    if( window.electronAPI ) {
+      let user = await window.electronAPI.getUser();
+      config.user = user.user;
+      config.token = user.token;
+      return user;
+    }
+
+    console.warn('No user or token found, no electronAPI registered');
   }
+
   config.isNativeApp = window.electronAPI ? true : false;
 }
 

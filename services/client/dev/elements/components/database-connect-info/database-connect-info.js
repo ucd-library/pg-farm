@@ -7,6 +7,7 @@ import 'prismjs/components/prism-json.js';
 import 'prismjs/components/prism-python.js';
 import 'prismjs/components/prism-r.js';
 import 'prismjs/components/prism-yaml.js';
+import {config} from '../../../../../../tools/lib/config.js';
 
 import { ConnectExamples } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
@@ -38,17 +39,23 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
     this.selectedUser = 'public';
     this.userTypes = ['public'];
     this.isLoggedIn = false; 
-    if( window.APP_CONFIG?.user?.loggedIn ) {
-      this.isLoggedIn = true;
-      this.userTypes.unshift('you');
-      this.selectedUser = 'you';
-    }
+    this._initUser();
 
     this.examples = new ConnectExamples();
     this.idGen = new IdGenerator({randomPrefix: true});
 
     this._exampleCode = '';
   }
+
+  async _initUser() {
+    this.user = await config.getUser();
+    if( this.user?.loggedIn ) {
+      this.isLoggedIn = true;
+      this.userTypes.unshift('you');
+      this.selectedUser = 'you';
+    }
+  }
+
 
   willUpdate(props){
     if ( props.has('db') || props.has('selectedUser') ) {
@@ -63,11 +70,13 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
     const opts = {
       host: window.location.hostname
     };
+    
     if ( this.db?.name ){
       opts.database = `${this.db?.organization?.name || '_'}/${this.db.name}`;
     }
+
     if ( this.selectedUser === 'you' ) {
-      opts.user = window.APP_CONFIG.user.preferred_username;
+      opts.user = this.user.preferred_username;
     } else {
       opts.user = window.APP_CONFIG.publicUser.username;
       opts.password = window.APP_CONFIG.publicUser.password;

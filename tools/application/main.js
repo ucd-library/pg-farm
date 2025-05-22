@@ -23,26 +23,17 @@ function createWindow () {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     }
-  })
-  // mainWindow.loadFile('index.html')
+  });
+
   let host = config.host || 'https://pgfarm.library.ucdavis.edu';
   console.log('loading host', host);
   mainWindow.loadURL(host);
 
-  // TODO
-  // mainWindow.webContents.setWindowOpenHandler(e => {
-  //   console.log('window open handler', e);
-  //   // if (url.startsWith('http')) {
-  //   //   shell.openExternal(url);
-  //   //   return { action: 'deny' };
-  //   // }
-  //   return { action: 'allow' };
-  // });
-
-  setTimeout(() => {
-    mainWindow.webContents.openDevTools()
-  }, 1000);
-  
+  if( process.argv.includes('--dev') ) {
+    setTimeout(() => {
+      mainWindow.webContents.openDevTools()
+    }, 1000);
+  }
 }
 
 ipcMain.handle('openExternalUrl', (e, value) => {
