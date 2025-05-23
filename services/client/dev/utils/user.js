@@ -12,7 +12,8 @@ class User {
     this.loginPath = '';
     this.logoutPath = '';
 
-    this.jwt = null;
+    this.user = null;
+    this.token = null;
     this.username = '';
 
     this.loadConfig();
@@ -24,15 +25,15 @@ class User {
       this.logger.warn('No user config found');
       return;
     }
-
-    this.loggedIn = user.loggedIn;
-    this.jwt = user;
+    this.user = user.user;
+    this.token = user.token;
+    this.loggedIn = this.user?.loggedIn || false;
     this.isAdmin = this.user?.roles?.includes('admin');
 
-    this.loginPath = window.APP_CONFIG.loginPath;
-    this.logoutPath = window.APP_CONFIG.logoutPath;
+    this.loginPath = window.APP_CONFIG?.loginPath;
+    this.logoutPath = window.APP_CONFIG?.logoutPath;
 
-    this.username = this.jwt?.username || this.jwt?.preferred_username || '';
+    this.username = this.user?.username || this.user?.preferred_username || '';
   }
 }
 

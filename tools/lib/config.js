@@ -42,7 +42,7 @@ if( typeof window === 'undefined' ) {
   config.logoutPath = config.logoutPath || '/auth/logout';
 
   config.getUser = async function() {
-    if( config.user && config.token ) {
+    if( config.user ) {
       return {
         user: config.user,
         token: config.token
