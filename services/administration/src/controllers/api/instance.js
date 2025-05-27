@@ -17,9 +17,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:organization/:instance', 
+router.get('/:organization/:instance',
   contextMiddleware,
-  keycloak.protect('instance-user'), 
+  keycloak.protect('instance-user'),
   async (req, res) => {
   try {
     let resp = req.context.instance;
@@ -38,9 +38,9 @@ router.get('/:organization/:instance',
   }
 });
 
-router.post('/', 
+router.post('/',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let result = await instanceModel.create(req.ctx, req.body);
@@ -52,9 +52,9 @@ router.post('/',
 
 router.put('/:organization/:instance/:user',
   contextMiddleware,
-  keycloak.protect('instance-admin'), 
+  keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let user = req.params.user;
     let parent = req.query.parent;
@@ -64,19 +64,19 @@ router.put('/:organization/:instance/:user',
     if( type !== 'USER' && type !== 'ADMIN' && type !== 'SERVICE_ACCOUNT') {
       throw new Error('Invalid type: '+type);
     }
-
-    await model.createUser(req.context, user, type, {parent});
+    const userArg = {username: user, type, parent};
+    await model.createUser(req.context, userArg);
     res.json({success: true});
   } catch(e) {
     handleError(res, e);
   }
 });
 
-router.patch('/:organization/:instance/:user', 
+router.patch('/:organization/:instance/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
-  
+
   try {
     let user = req.params.user;
 
@@ -93,9 +93,9 @@ router.patch('/:organization/:instance/:user',
   }
 });
 
-router.delete('/:organization/:instance/:user', 
+router.delete('/:organization/:instance/:user',
   contextMiddleware,
-  keycloak.protect('instance-admin'), 
+  keycloak.protect('instance-admin'),
   async (req, res) => {
 
   try {
@@ -112,22 +112,22 @@ router.delete('/:organization/:instance/:user',
   }
 });
 
-router.post('/:organization/:instance/stop', 
+router.post('/:organization/:instance/stop',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let resp = await model.stopInstance(req.context);
-    
+
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
   }
 });
 
-router.post('/:organization/:instance/start', 
+router.post('/:organization/:instance/start',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let force = req.query.force === 'true';
@@ -143,9 +143,9 @@ router.post('/:organization/:instance/start',
   }
 });
 
-router.post('/:organization/:instance/restart', 
+router.post('/:organization/:instance/restart',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let resp = await instanceModel.restart(req.context);
@@ -155,9 +155,9 @@ router.post('/:organization/:instance/restart',
   }
 });
 
-router.post('/:organization/:instance/backup', 
+router.post('/:organization/:instance/backup',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let resp = await remoteExec(req.context.instance.hostname, '/backup');
@@ -168,13 +168,13 @@ router.post('/:organization/:instance/backup',
   }
 });
 
-router.post('/:organization/:instance/sync-users', 
+router.post('/:organization/:instance/sync-users',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
 
-    let result = await instanceModel.remoteSyncUsers(req.context, 
+    let result = await instanceModel.remoteSyncUsers(req.context,
       req.query['update-passwords'] === 'true',
       req.query['hard-reset'] === 'true'
     );
@@ -193,9 +193,9 @@ router.post('/:organization/:instance/sync-users',
   }
 });
 
-router.post('/:organization/:instance/archive', 
+router.post('/:organization/:instance/archive',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let {instance, organization} = req.context;
@@ -206,9 +206,9 @@ router.post('/:organization/:instance/archive',
   }
 });
 
-router.post('/:organization/:instance/restore', 
+router.post('/:organization/:instance/restore',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let resp = await model.restoreInstance(req.context);
@@ -218,9 +218,9 @@ router.post('/:organization/:instance/restore',
   }
 });
 
-router.post('/sleep', 
+router.post('/sleep',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     await model.sleepInstances(req.context);
@@ -230,9 +230,9 @@ router.post('/sleep',
   }
 });
 
-router.post('/:organization/:instance/resize', 
+router.post('/:organization/:instance/resize',
   contextMiddleware,
-  keycloak.protect('admin'), 
+  keycloak.protect('admin'),
   async (req, res) => {
   try {
     let resp = await instanceModel.resizeVolume(req.context, req.query.size);

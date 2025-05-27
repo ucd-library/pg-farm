@@ -11,7 +11,8 @@ export default class AppError extends Mixin(LitElement)
     return {
       heading: {type: String},
       errors: {state: true},
-      showLoginButton: {type: Boolean}
+      showLoginButton: {type: Boolean},
+      badAuth: {state: true}
     }
   }
 
@@ -25,6 +26,7 @@ export default class AppError extends Mixin(LitElement)
     this.heading = 'Error';
     this.errors = [];
     this.showLoginButton = false;
+    this.badAuth = false;
 
     this._injectModel('AppStateModel');
   }
@@ -54,9 +56,9 @@ export default class AppError extends Mixin(LitElement)
   }
 
   setLoginButtonVisibility(){
-    const badAuth = this.errors.some(error => error.statusCode === 403 || error.statusCode === 401);
+    this.badAuth = this.errors.some(error => error.statusCode === 403 || error.statusCode === 401);
     const manual = this.errors.some(error => error.showLoginButton);
-    this.showLoginButton = (badAuth || manual) && !user.loggedIn;
+    this.showLoginButton = (this.badAuth || manual) && !user.isValidUser();
   }
 
   hide(){

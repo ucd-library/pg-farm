@@ -52,11 +52,13 @@ class AdminModel {
    */
   async createUser(ctx, user) {
     ctx = getContext(ctx);
+    if ( typeof user === 'string' ) {
+      user = {username: user, parent: null};
+    }
     if( !user.type ) user.type = 'USER'
-
     await this.models.user.create(ctx, user);
     if( ['USER', 'ADMIN'].includes(user.type) ) {
-      await this.models.pgRest.grantUserAccess(ctx, user);
+      await this.models.pgRest.grantUserAccess(ctx, user.username);
     }
   }
 

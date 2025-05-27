@@ -35,6 +35,21 @@ class User {
 
     this.username = this.user?.username || this.user?.preferred_username || '';
   }
+
+  tokenIsExpired(){
+    if ( !this.user?.exp ){
+      return false;
+    }
+    let now = Math.floor(Date.now() / 1000);
+    return this.user.exp < now;
+  }
+
+  isValidUser(){
+    if ( !this.loggedIn ){
+      return false;
+    }
+    return !this.tokenIsExpired();
+  }
 }
 
 export default new User();

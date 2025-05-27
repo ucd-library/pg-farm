@@ -106,6 +106,11 @@ export function styles() {
       gap: .5rem;
       flex-wrap: wrap;
     }
+    .auth-warning {
+      color: var(--double-decker, #c10230);
+      font-weight: 700;
+      width: 100%;
+    }
   `;
 
   return [
@@ -142,6 +147,15 @@ return html`
           </div>
         </div>
       `)}
+    </div>
+    <div ?hidden=${!this.badAuth} class='auth-warning'>
+      ${user.tokenIsExpired() ? html`
+        <p>Your session has expired. Please log in again to view this page.</p>
+        ` : html`
+        <p>You must log in to view this page.</p>
+        `}
+      <div></div>
+
     </div>
     <div class='buttons'>
       <a class='btn btn--primary btn--round' @click=${() => window.location.reload(true)}>Reload Page</a>

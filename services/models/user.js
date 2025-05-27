@@ -83,7 +83,7 @@ class User {
       await client.createInstanceUser(ctx, user);
 
       // check if user exists in UCD IAM
-      if ( !parent ){
+      if ( !user.parent ){
         await this.fetchAndUpdateUcdIamData(user.username);
       }
     } else { // get current password.  make sure its set on the instance db
@@ -117,6 +117,7 @@ class User {
    * @returns
    */
   updateType(ctx, user, type) {
+    type = type || user.type;
     ctx = getContext(ctx);
     logger.info('Updating user type', this.getUserForLogging(user), ctx.logSignal);
 
