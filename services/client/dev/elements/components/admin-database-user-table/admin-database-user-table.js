@@ -192,7 +192,6 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    * @returns
    */
   _onAppDialogAction(e){
-    console.log('this.rmFromObject', this.rmFromObject);
     if (
       e.action?.value === 'db-delete-users' ||
       (e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'database')
