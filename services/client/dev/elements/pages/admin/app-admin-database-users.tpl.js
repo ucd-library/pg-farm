@@ -69,7 +69,7 @@ export function render() {
               <app-prefixed-icon-button icon='fa.solid.plus' @click=${() => this.showAddUserModal()}>Add User</app-prefixed-icon-button>
             </div>
           </div>
-          <admin-database-user-table .users=${this.users}></admin-database-user-table>
+          <admin-database-user-table .users=${this.users} instance=${this.dataCtl.db?.instance?.name || ''}></admin-database-user-table>
         </div>
       </div>
     </div>

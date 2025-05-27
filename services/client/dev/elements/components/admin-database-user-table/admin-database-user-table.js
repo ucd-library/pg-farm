@@ -18,7 +18,7 @@ import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-clie
  * @property {Array} users - The list of users to display
  * @property {Array} bulkActions - The list of bulk actions available
  * @property {String} selectedBulkAction - The selected bulk action
- * @property {Boolean} rmFromDb - Flag to indicate if the user should be removed from the database or just the schema
+ * @property {Boolean} rmFromObject - Object user should be removed from: database, schema, instance
  */
 export default class AdminDatabaseUserTable extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -28,7 +28,8 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       users: {type: Array},
       bulkActions: {type: Array},
       selectedBulkAction: {type: String},
-      rmFromDb: { type: Boolean }
+      rmFromObject: { type: Boolean },
+      instance: { type: String}
     }
   }
 
@@ -42,7 +43,8 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.users = [];
     this._setBulkActions();
     this.selectedBulkAction = '';
-    this.rmFromDb = false;
+    this.rmFromObject = 'schema';
+    this.instance = '';
 
     this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
@@ -143,10 +145,11 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _onRemoveUserButtonClick(user) {
     if ( this.queryCtl?.schema.exists() ){
-      this._showRemoveAccessForm(user);
+      this.rmFromObject = 'schema';
     } else {
-      this._showDeleteUserModal(user);
+      this.rmFromObject = 'database';
     }
+    this._showRemoveAccessForm(user);
   }
 
   /**
@@ -189,18 +192,24 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    * @returns
    */
   _onAppDialogAction(e){
+    console.log('this.rmFromObject', this.rmFromObject);
     if (
       e.action?.value === 'db-delete-users' ||
-      (e.action?.value === 'db-remove-single-user-access' && this.rmFromDb)
+      (e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'database')
     ) {
       const users = (Array.isArray(e.data.user) ? e.data.user : [e.data.user]).map(user => user.name);
       this.deleteUsers(users);
       return;
     }
-    if ( e.action?.value === 'db-remove-single-user-access' ) {
+    if ( e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'schema' ) {
       const user = e.data.user;
       const schema = this.queryCtl.schema.value;
       this.removeSchemaAccess([user.name], schema);
+      return;
+    }
+    if ( e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'instance' ) {
+      const user = e.data.user;
+      this.removeInstanceAccess(user.name);
       return;
     }
     if ( e.action?.value === 'db-rm-schema-access' ) {
@@ -209,6 +218,26 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       this.removeSchemaAccess(users, schema);
       return;
     }
+  }
+
+  async removeInstanceAccess(username) {
+    this.AppStateModel.showLoading();
+    const instanceName = this.instance || this.compCtl.dbName;
+    const r = await this.InstanceModel.deleteUser(this.compCtl.orgName, instanceName, username);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: `Unable to remove user access to instance '${instanceName}'`,
+        error: r.error
+      });
+      return;
+    }
+    this.AppStateModel.showToast({
+      text: `User '${username}' has been removed from instance '${instanceName}'`,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.tableCtl.reset();
+    this.AppStateModel.refresh();
   }
 
   /**

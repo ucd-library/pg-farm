@@ -186,7 +186,6 @@ class User {
 
     // get all databases for instance
     let databases = await pgInstClient.listDatabases(con);
-
     for( let db of databases.rows ) {
       con.database = db.datname;
       logger.info('Removing pg user', username, ctx.logSignal);
@@ -197,7 +196,7 @@ class User {
         // revoke all access from all schemas
         let schemas = await pgInstClient.listSchema(con);
         for( let schema of schemas.rows ) {
-          await this.revoke(con, null, schema.schema_name, username, 'READ');
+          await this.revoke(ctx, schema.schema_name, username, 'READ');
         }
 
         // revoke access from database and finally delete user
