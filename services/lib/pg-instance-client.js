@@ -73,6 +73,7 @@ class PGInstance {
 
     if( exists ) {
       await this.revokePublicOnPublic(connection);
+      await this.revokePublicOnDatabase(connection, dbName);
       return;
     }
 
@@ -81,6 +82,7 @@ class PGInstance {
     await this.query(connection, query);
 
     await this.revokePublicOnPublic(connection);
+    await this.revokePublicOnDatabase(connection, dbName);
   }
 
   /**
@@ -91,7 +93,21 @@ class PGInstance {
    * @returns
    */
   async revokePublicOnPublic(connection) {
+    logger.info('Revoking public on public schema');
     let query = `REVOKE ALL ON SCHEMA public FROM public`;
+    return this.query(connection, query);
+  }
+
+  /**
+   * @description Revoke all privileges on the database from the public role.
+   * We want to be able to revoke database access for a user.
+   * @param {*} connection
+   * @param {*} dbName
+   * @returns
+   */
+  async revokePublicOnDatabase(connection, dbName) {
+    logger.info('Revoking public on database', dbName);
+    let query = pgFormat(`REVOKE CONNECT, TEMPORARY ON DATABASE %I FROM public`, dbName);
     return this.query(connection, query);
   }
 

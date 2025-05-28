@@ -72,7 +72,12 @@ return html`
         @option-change=${e => this.selectedBulkAction = e.detail.value}
         @apply=${this._onBulkActionSelect}>
       </app-dropdown-button>
-      <app-search-input placeholder='Search Tables' @search=${e => this.tableCtl.search(e.detail.value)} search-bar-style='basic'></app-search-input>
+      <app-search-input
+        placeholder='Search Tables'
+        @search=${e => this.tableCtl.search(e.detail.value)}
+        .value=${this.tableCtl?.opts?.searchValue || ''}
+        search-bar-style='basic'>
+      </app-search-input>
     </div>
     ${_renderDesktopView.call(this)}
     ${_renderMobileView.call(this)}

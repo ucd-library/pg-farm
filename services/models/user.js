@@ -83,7 +83,7 @@ class User {
       await client.createInstanceUser(ctx, user);
 
       // check if user exists in UCD IAM
-      if ( !parent ){
+      if ( !user.parent ){
         await this.fetchAndUpdateUcdIamData(user.username);
       }
     } else { // get current password.  make sure its set on the instance db
@@ -117,6 +117,7 @@ class User {
    * @returns
    */
   updateType(ctx, user, type) {
+    type = type || user.type;
     ctx = getContext(ctx);
     logger.info('Updating user type', this.getUserForLogging(user), ctx.logSignal);
 
@@ -185,7 +186,6 @@ class User {
 
     // get all databases for instance
     let databases = await pgInstClient.listDatabases(con);
-
     for( let db of databases.rows ) {
       con.database = db.datname;
       logger.info('Removing pg user', username, ctx.logSignal);
@@ -196,7 +196,7 @@ class User {
         // revoke all access from all schemas
         let schemas = await pgInstClient.listSchema(con);
         for( let schema of schemas.rows ) {
-          await this.revoke(con, null, schema.schema_name, username, 'READ');
+          await this.revoke(ctx, schema.schema_name, username, 'READ');
         }
 
         // revoke access from database and finally delete user

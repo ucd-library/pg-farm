@@ -78,7 +78,12 @@ return html`
         @option-change=${e => this.selectedBulkAction = e.detail.value}
         @apply=${this._onBulkActionSelect}>
       </app-dropdown-button>
-      <app-search-input placeholder='Search Users' @search=${e => this.tableCtl.search(e.detail.value)} search-bar-style='basic'></app-search-input>
+      <app-search-input
+        placeholder='Search Users'
+        @search=${e => this.tableCtl.search(e.detail.value)}
+        .value=${this.tableCtl?.opts?.searchValue || ''}
+        search-bar-style='basic'>
+      </app-search-input>
     </div>
     ${_renderDesktopView.call(this)}
     ${_renderMobileView.call(this)}
@@ -122,7 +127,7 @@ function _renderDesktopView(){
                 ${_renderUserName.call(this, row)}
               </div>
             </div>
-            <admin-table-access-dropdown 
+            <admin-table-access-dropdown
               data-username=${row.item?.user?.name}
               .value=${row.item?.schemaRole?.grant?.roleLabel}
               @option-change=${this._onTableAccessChange}>
@@ -167,9 +172,9 @@ function _renderMobileView(){
                 <div>
                   ${_renderUserName.call(this, row)}
                 </div>
-              </div>  
+              </div>
             </div>
-            <admin-table-access-dropdown 
+            <admin-table-access-dropdown
               data-username=${row.item?.user?.name}
               .value=${row.item?.schemaRole?.grant?.roleLabel}
               @option-change=${this._onTableAccessChange}>
