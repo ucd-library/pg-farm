@@ -144,7 +144,7 @@ class AdminModel {
 
     let database = await this.models.database.exists(ctx);
     if( !database ) {
-      database = await this.models.database.create(ctx, ctx.database);
+      database = await this.models.database.create(ctx);
     } else {
       logger.info('Database already exists', ctx.logSignal);
       await this.models.database.ensurePgDatabase(ctx);

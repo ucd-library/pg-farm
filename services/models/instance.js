@@ -118,15 +118,19 @@ class Instance {
     
     let shortName = instance.name.replace(/^inst-/, '');
 
-    let exists = await this.exists();
+    let exists = await this.exists(ctx);
     if( exists ) {
       throw new Error('Instance already exists: '+instance.name);
     }
 
     // look up organization name to use in hostname
-    let orgName = instance.organization || '';
+    let orgName = instance.organization || ctx.organization || '';
     if( typeof orgName === 'object' ) {
       orgName = orgName.name;
+    }
+
+    if( orgName ) {
+      instance.organization = orgName;
     }
 
     instance.hostname = 'inst-'+orgName+shortName;
