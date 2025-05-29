@@ -67,7 +67,15 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
       return;
     }
 
-    this.searchResults = e.payload?.success ? e.payload?.resp : [];
+    // could expand to more than a single result later
+    let searchResults = [];
+    if( e.payload?.success ) {
+      searchResults.push({
+        userID: e.payload?.resp?.userID,
+        dFullName: e.payload?.resp?.dFullName
+      });
+    }
+    this.searchResults = searchResults;
   }
 
   _onSelectResult(e) {
@@ -75,7 +83,7 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
     if( !searchIndex ) return;
 
     let match = this.searchResults[searchIndex] || {};
-    this.kerberosId = match.userId || 'no kerberos id';
+    this.kerberosId = match.userID || 'no kerberos id';
     this.searchResults = [];
     this.searchTerm = '';
 

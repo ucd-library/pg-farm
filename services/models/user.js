@@ -162,15 +162,15 @@ class User {
   }
 
   /**
-   * @description Fetches user profile info from UCD IAM matching a search term
-   * @param {String} searchTerm
+   * @description Fetches the user profile from UCD IAM
+   * @param {String} username - (kerberos ID) of the user
    */
-  async fetchUcdIamData(searchTerm) {
+  async fetchUcdIamData(username) {
     let ucdUserProfiles;
     try {
-      ucdUserProfiles = await ucdIamApi.searchUsers(searchTerm);
+      ucdUserProfiles = await ucdIamApi.getUserProfile(username);
     } catch (e) {
-      logger.info('Error checking UCD IAM for user: '+searchTerm, e);
+      logger.info('Error checking UCD IAM for user: '+username, e);
       return;
     }
     return ucdUserProfiles;

@@ -46,9 +46,9 @@ class UserService extends BaseService {
     return this.store.data.myDatabases.get(id);
   }
 
-  async search(searchTerm) {
+  async search(username) {
     await this.request({
-      url : `${serviceUtils.host}/api/admin/ucd-iam-profile/search/${searchTerm}`,
+      url : `${serviceUtils.host}/api/admin/ucd-iam-profile/search/${username}`,
       fetchOptions: {
         headers: serviceUtils.authHeader()
       },

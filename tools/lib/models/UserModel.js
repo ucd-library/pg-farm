@@ -21,8 +21,8 @@ class UserModel extends BaseModel {
     return this.service.myDatabases(org);
   }
 
-  search(searchTerm) {
-    return this.service.search(searchTerm);
+  search(username) {
+    return this.service.search(username);
   }
 
 }

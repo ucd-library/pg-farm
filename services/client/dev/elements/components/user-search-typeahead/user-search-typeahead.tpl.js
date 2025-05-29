@@ -82,7 +82,7 @@ export function render() {
           (result, index) =>
             html`
               <div class='result' data-row-id=${index} @click=${this._onSelectResult}>
-                <div class='username'>${result.userId}</div>
+                <div class='username'><strong>${result.userID}</strong></div>
                 <div class='fullname'>${result.dFullName}</div>
               </div>
             `
