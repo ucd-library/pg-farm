@@ -86,9 +86,13 @@ export default class AppSubnav extends Mixin(LitElement)
   }
 
   async doSelected(){
+    let schema = this.AppStateModel.location.query?.schema; // ?schema=x
     for (const item of this._items) {
       const selected = this.selectedFn(item);
       item.selected = await Promise.resolve(selected) ? true : false;
+      if( ['users', 'tables'].includes(item.label.toLowerCase()) && schema ){
+        item.href += '?schema=' + schema;
+      }
     }
     this.requestUpdate();
   }
