@@ -200,7 +200,7 @@ class PgFarmAdminClient {
    **/
   async getInstanceByHostname(hostname) {
     let res = await client.query(
-      `SELECT * FROM ${config.adminDb.views.INSTANCE_DATABASE} WHERE instance_hostname = $1`,
+      `SELECT * FROM ${config.adminDb.tables.INSTANCE} WHERE hostname = $1`,
       [hostname]
     );
 
@@ -701,6 +701,16 @@ class PgFarmAdminClient {
     }
 
     return resp.rows[0];
+  }
+
+  async setInstanceUserPassword(ctx, username, password) {
+    // update database
+    await client.query(
+      `UPDATE ${config.adminDb.tables.INSTANCE_USER}
+      SET password = $4
+      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
+      [username, ctx.instance.name, ctx.organization.name, password]
+    );
   }
 
   async getDatabases(opts={}) {

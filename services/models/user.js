@@ -70,13 +70,18 @@ class User {
       user.password = 'postgres';
     }
 
-    // create new random password
-    if( !user.password ) {
-      user.password = utils.generatePassword();
-    }
-
     // add user to database
     let existingUser = await this.exists(ctx, user.username);
+
+    // create new random password
+    if( !user.password ) {
+      user.password = existingUser?.password;
+      if( !user.password ) {
+        logger.info('No password provided for user', user.username, 'generating', ctx.logSignal);
+        user.password = utils.generatePassword();
+      }
+    }
+
     if( !existingUser ) {
 
       logger.info('Creating instance user', this.getUserForLogging(user), ctx.logSignal);
@@ -104,6 +109,8 @@ class User {
 
     logger.info('Ensuring pg user', user.username, ctx.logSignal);
     await pgInstClient.createOrUpdatePgUser(con, user);
+
+    await client.setInstanceUserPassword(ctx, user.username, user.password);
   }
 
   /**
@@ -263,22 +270,22 @@ class User {
     ctx = getContext(ctx);
 
     // generate random password if not provided
-    if( !password ) password = utils.generatePassword();
+    if( !password ) {
+      logger.info('resetting password for user ', username, ctx.logSignal);
+      password = utils.generatePassword();
+    } else {
+      logger.info('setting password for user ', username, ctx.logSignal);
+    }
 
     let con = await this.models.instance.getConnection(ctx);
-    logger.info('resetting password for user ', username, ctx.logSignal);
 
+    
     if( updateInstance ) {
       await pgInstClient.createOrUpdatePgUser(con, { username, password });
     }
 
     // update database
-    await client.query(
-      `UPDATE ${config.adminDb.tables.INSTANCE_USER}
-      SET password = $4
-      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
-      [username, ctx.instance.name, ctx.organization.name, password]
-    );
+    await client.setInstanceUserPassword(ctx, username, password);
 
     return password;
   }

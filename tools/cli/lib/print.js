@@ -71,13 +71,15 @@ class Print {
 
   database(db) {
     if( db.organization ) {
-      console.log(`Name: ${db.organization.name}/${db.name}`);
+      console.log(`Name: ${db.organization.name}/${db.database.name}`);
+    } else if( db.database ) {
+      console.log(`Name: _/${db.database.name}`);
     } else if( db.database_name ) {
       console.log(`Name: ${db.organization_name || '_'}/${db.database_name}`);
     } else {
       console.log(`Name: ${db.name}`);
     }
-    console.log(`Title: ${db.title || db.database_title}`);
+    console.log(`Title: ${db?.database.title || db.database_title}`);
   }
 
   dbSearch(result) {

@@ -75,7 +75,7 @@ class Instance {
    * 
    * @returns {Promise<Object>}
    **/
-  async get(ctx) {
+  get(ctx) {
     ctx = getContext(ctx);
     return client.getInstance(ctx);
   }
@@ -93,7 +93,6 @@ class Instance {
     try {
       return await this.get(ctx);
     } catch(e) {}
-
     return false;
   }
 
@@ -133,7 +132,7 @@ class Instance {
       instance.organization = orgName;
     }
 
-    instance.hostname = 'inst-'+orgName+shortName;
+    instance.hostname = ['inst', orgName, shortName].join('-');
 
     logger.info('Creating instance', ctx.logSignal, {instance, organization: orgName});
     await client.createInstance(instance);
@@ -454,6 +453,8 @@ class Instance {
   }
 
   async remoteSyncUsers(ctx, updatePassword, hardReset=false) {
+    logger.info('Remote sync users', logger.objToString({updatePassword, hardReset}),ctx.logSignal, );
+
     let instance = ctx.instance;
     if( instance.state !== 'RUN' ) {
       throw new Error('Instance must be RUN state to sync users: '+instance.name);

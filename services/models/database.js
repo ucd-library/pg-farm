@@ -114,7 +114,7 @@ class Database {
     ctx = getContext(ctx);
 
     let opts = {
-      title: ctx.database.title,
+      title: ctx.database.title || utils.cleanInstDbName(ctx.database.name),
       name: utils.cleanInstDbName(ctx.database.name),
       instance: ctx.instance.name,
       short_description: ctx.organization.short_description,
@@ -123,13 +123,13 @@ class Database {
       url: ctx.organization.url
     };
 
-    let orgName = '';
+    let pgRestOrgName = '';
     if( ctx.organization ) {
-      orgName = await this.models.organization.get(ctx);
-      orgName = orgName.name+'-';
-      opts.organization = orgName.name;
+      let org = await this.models.organization.get(ctx);
+      pgRestOrgName = org.name+'-';
+      opts.organization = org.name;
     }
-    opts.pgrest_hostname = `rest-${orgName}${database.name}`;
+    opts.pgrest_hostname = `rest-${pgRestOrgName}${ctx.database.name}`;
 
     try {
       logger.info('Creating database', ctx.logSignal);
@@ -139,9 +139,9 @@ class Database {
       logger.warn('Failed to create database in admin db', {e}, ctx.logSignal);
     }
 
-    let db = await this.get(ctx);
+    await this.ensurePgDatabase(ctx);
 
-    await this.ensurePgDatabase(db.instance_id, db.organization_id, db.database_name);
+    return this.get(ctx);
   }
 
   /**

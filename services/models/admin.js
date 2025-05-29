@@ -1,7 +1,6 @@
 import client from '../lib/pg-admin-client.js';
 import pgInstClient from '../lib/pg-instance-client.js';
 import utils from '../lib/utils.js';
-import kubectl from '../lib/kubectl.js';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 import { getContext, createContext } from '../lib/context.js';
@@ -11,7 +10,6 @@ import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
 import { getInstanceResources  } from '../lib/instance-resources.js';
-import { organization } from './index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -121,8 +119,9 @@ class AdminModel {
 
     // create instance if not provided
     if( !ctx?.instance?.name ) {
-      if( !ctx.instance ) ctx.instance = {};
-      ctx.instance.name = name;
+      if( !ctx.instance ) {
+        ctx.instance = {name: modelUtils.getInstanceName(name)};
+      }
     }
 
     let instance = await this.models.instance.exists(ctx);
@@ -133,10 +132,10 @@ class AdminModel {
     }
     ctx.instance = instance;
 
-    let startResp = await this.startInstance(ctx);
+    // just wait for database to be ready
+    let startResp = await this.startInstance(ctx, {pgRest: false});
     if( startResp.starting ) {
       await startResp.instance;
-      await startResp.pgrest;
     }
 
     // ensure the public user and pg user password update
@@ -401,12 +400,17 @@ class AdminModel {
    * @param {String|Object} ctx
    * @param {Object} opts
    * @param {Boolean} opts.force force start the instance even if health check passes
+   * @param {Boolean} opts.pgRest if false, will not start pgRest services.  Default is true.
    *
    * @returns {Promise<Object>}
    */
   async startInstance(ctx, opts={}) {
     let instance = ctx.instance;
     let iid = instance.instance_id;
+
+    if( !iid ) {
+      throw new Error('Instance id is required to start instance');
+    }
 
     // check if instance is already starting
     if( this.instancesStarting[iid] ) {
@@ -471,39 +475,45 @@ class AdminModel {
       }
     })();
 
+    if( opts.pgRest === false ) {
+      logger.info('Skipping pgRest start', ctx.logSignal);
+    } else {
+      let dbs = await client.getInstanceDatabases(ctx);
+      let dbContext = ctx.clone();
 
-    let dbs = await client.getInstanceDatabases(ctx);
-    let dbContext = ctx.clone();
+      let proms = dbs.map(db => {
+        async function start() {
+          // make sure instance is ready before starting pgRest
+          // await response.instance;
 
-    let proms = dbs.map(db => {
-      async function start() {
-        // make sure instance is ready before starting pgRest
-        // await response.instance;
-
-        dbContext.database = db;
-        // start pgRest
-        await this.models.pgRest.start(dbContext);
-        // wait for the port to be alive
-        await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
-
-        // hack for docker-desktop to wait for the instance DNS to be ready
-        // there seems to be issues with it going up and down when instance first starts
-        if( config.k8s.platform === 'docker-desktop' ) {
-          logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
-          await utils.sleep(5000);
+          dbContext.database = db;
+          // start pgRest
+          await this.models.pgRest.start(dbContext);
+          // wait for the port to be alive
+          await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
+          // hack for docker-desktop to wait for the instance DNS to be ready
+          // there seems to be issues with it going up and down when instance first starts
+          if( config.k8s.platform === 'docker-desktop' ) {
+            logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
+            await utils.sleep(5000);
+          }
+          // wait for pgRest to be actually be ready
+          await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
         }
-
-        // wait for pgRest to be actually be ready
-        await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
-      }
-      return start.bind(this);
-    })
-    .map(f => f());
-    response.pgrest = Promise.all(proms);
+        return start.bind(this);
+      })
+      .map(f => f());
+      response.pgrest = Promise.all(proms);
+    }
 
 
     // wait for things to finish to resolve for others
     response.instance.then(() => {
+      if( opts.pgRest === false ) {
+        this.resolveStart(instance);
+        return;
+      }
+
       response.pgrest.then(() => {
         this.resolveStart(instance);
       }).catch(e => {

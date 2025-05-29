@@ -33,8 +33,8 @@ class PGInstance {
 
     if( opts.host !== '/var/run/postgresql' ) {
       let db = await pgAdminClient.getInstanceByHostname(opts.host);
-      if( db.instance_state !== 'RUN' ) {
-        throw new Error('Database instance is currently in a '+db.instance_state+' state. The database instance must be in a RUN state before trying this operation.');
+      if( db.state !== 'RUN' ) {
+        throw new Error('Database instance is currently in a '+db.state+' state. The database instance must be in a RUN state before trying this operation.');
       }
     }
 
@@ -107,7 +107,7 @@ class PGInstance {
    */
   async revokePublicOnDatabase(connection, dbName) {
     logger.info('Revoking public on database', dbName);
-    let query = pgFormat(`REVOKE CONNECT, TEMPORARY ON DATABASE %I FROM public`, dbName);
+    let query = pgFormat(`REVOKE TEMPORARY ON DATABASE %I FROM public`, dbName);
     return this.query(connection, query);
   }
 
