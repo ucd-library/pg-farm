@@ -33,8 +33,8 @@ class PGInstance {
 
     if( opts.host !== '/var/run/postgresql' ) {
       let db = await pgAdminClient.getInstanceByHostname(opts.host);
-      if( db.instance_state !== 'RUN' ) {
-        throw new Error('Database instance is currently in a '+db.instance_state+' state. The database instance must be in a RUN state before trying this operation.');
+      if( db.state !== 'RUN' ) {
+        throw new Error('Database instance is currently in a '+db.state+' state. The database instance must be in a RUN state before trying this operation.');
       }
     }
 
@@ -73,6 +73,7 @@ class PGInstance {
 
     if( exists ) {
       await this.revokePublicOnPublic(connection);
+      await this.revokePublicOnDatabase(connection, dbName);
       return;
     }
 
@@ -81,6 +82,7 @@ class PGInstance {
     await this.query(connection, query);
 
     await this.revokePublicOnPublic(connection);
+    await this.revokePublicOnDatabase(connection, dbName);
   }
 
   /**
@@ -91,7 +93,21 @@ class PGInstance {
    * @returns
    */
   async revokePublicOnPublic(connection) {
+    logger.info('Revoking public on public schema');
     let query = `REVOKE ALL ON SCHEMA public FROM public`;
+    return this.query(connection, query);
+  }
+
+  /**
+   * @description Revoke all privileges on the database from the public role.
+   * We want to be able to revoke database access for a user.
+   * @param {*} connection
+   * @param {*} dbName
+   * @returns
+   */
+  async revokePublicOnDatabase(connection, dbName) {
+    logger.info('Revoking public on database', dbName);
+    let query = pgFormat(`REVOKE TEMPORARY ON DATABASE %I FROM public`, dbName);
     return this.query(connection, query);
   }
 
@@ -355,22 +371,26 @@ class PGInstance {
   }
 
   getSchemaAccess(connection, schemaName) {
-    let query = pgFormat(`SELECT
-          n.nspname AS schema_name,
-          r.rolname AS role_name,
-          CASE
-            WHEN has_schema_privilege(r.rolname, n.nspname, 'USAGE') THEN 'USAGE'
-            ELSE NULL
-          END AS usage_priv,
-          CASE
-            WHEN has_schema_privilege(r.rolname, n.nspname, 'CREATE') THEN 'CREATE'
-            ELSE NULL
-          END AS create_priv
+    let query = `
+      SELECT
+        n.nspname AS schema_name,
+        r.rolname AS role_name,
+        CASE
+          WHEN has_schema_privilege(r.rolname, n.nspname, 'USAGE') THEN 'USAGE'
+          ELSE NULL
+        END AS usage_priv,
+        CASE
+          WHEN has_schema_privilege(r.rolname, n.nspname, 'CREATE') THEN 'CREATE'
+          ELSE NULL
+        END AS create_priv
       FROM
-          pg_namespace n
-          CROSS JOIN pg_roles r
-      WHERE
-          n.nspname = %L`, schemaName);
+        pg_namespace n
+        CROSS JOIN pg_roles r`;
+    if( schemaName ) {
+      query += pgFormat(` WHERE n.nspname = %L`, schemaName);
+    } else {
+      query += ` WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')`;
+    }
     return this.query(connection, query);
   }
 

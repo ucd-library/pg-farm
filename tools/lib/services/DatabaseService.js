@@ -331,6 +331,23 @@ class DatabaseService extends BaseService {
     return this.store.data.schemaTablesOverview.get(id);
   }
 
+  async getUserAccessOverview(org, db) {
+    let id = payload.getKey({org, db});
+    await this.checkRequesting(
+      id, this.store.data.userAccessOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/users-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onUserAccessOverviewUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onUserAccessOverviewUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onUserAccessOverviewUpdate({org, db}, {error})
+        })
+    );
+    return this.store.data.userAccessOverview.get(id);
+  }
+
   async grantAccess(org, db, schemaTable, user, access) {
     let ido = {org, db, schemaTable, user, access, action: 'grantAccess'};
     let id = payload.getKey(ido);

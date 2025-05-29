@@ -122,6 +122,16 @@ class ModelUtils {
       .replace(/[^a-z0-9]/g, '-');
   }
 
+  getInstanceName(name) {
+    if( this.isUUID(name) ) {
+      return name;
+    }
+    if( name.startsWith('inst-') ) {
+      return name;
+    }
+    return `inst-${name}`;
+  }
+
 
   /**
    * @method runGsutils

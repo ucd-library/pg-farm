@@ -1,4 +1,5 @@
 import { html, css } from 'lit';
+import { live } from 'lit/directives/live.js';
 
 import '@ucd-lib/pgfarm-client/elements/components/app-search-input/app-search-input.js';
 import '@ucd-lib/pgfarm-client/elements/components/app-dropdown-button/app-dropdown-button.js';
@@ -67,7 +68,12 @@ return html`
         @option-change=${e => this.selectedBulkAction = e.detail.value}
         @apply=${this._onBulkActionSelect}>
       </app-dropdown-button>
-      <app-search-input placeholder='Search Users' @search=${e => this.tableCtl.search(e.detail.value)} search-bar-style='basic'></app-search-input>
+      <app-search-input
+        placeholder='Search Users'
+        @search=${e => this.tableCtl.search(e.detail.value)}
+        .value=${this.tableCtl?.opts?.searchValue || ''}
+        search-bar-style='basic'>
+      </app-search-input>
     </div>
     ${_renderDesktopView.call(this)}
     ${_renderMobileView.call(this)}
@@ -198,6 +204,7 @@ function _renderUserName(row){
   if ( this.queryCtl?.schema?.exists() ){
     href += `?schema=${this.queryCtl.schema.value}`;
   }
+  const name = `${row.item?.user?.pgFarmUser?.firstName || ''} ${row.item?.user?.pgFarmUser?.lastName || ''}`.trim();
   return html`
     <div>
       <div class='user-name-container'>
@@ -206,9 +213,7 @@ function _renderUserName(row){
         </div>
         <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
       </div>
-      <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
-        ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
-      </div>
+      <div class='caption' ?hidden=${!name}>${name}</div>
     </div>
   `;
 }
@@ -218,23 +223,32 @@ export function renderRmAccessForm(user){
     <div class='u-space-mb'>Are you sure you want to remove access for <strong>${user?.name}</strong>?</div>
     <div class='field-container'>
       <ul class="list--reset radio">
-        <li>
+        <li ?hidden=${!this.queryCtl?.schema?.exists()}>
           <input
-            id=${this.idGen.get('rm-from-db--false')}
+            id=${this.idGen.get('rm-from-object--schema')}
             type='radio'
-            name=${this.idGen.get('rm-from-db')}
-            @input=${e => this.rmFromDb = false}
-            .checked=${!this.rmFromDb} />
-          <label for=${this.idGen.get('rm-from-db--false')}>Remove access to schema: <strong>${this.queryCtl.schema.value}</strong></label>
+            name=${this.idGen.get('rm-from-object')}
+            @input=${() => this.rmFromObject = 'schema'}
+            .checked=${live(this.rmFromObject === 'schema')} />
+          <label for=${this.idGen.get('rm-from-object--schema')}>Remove access to schema: <strong>${this.queryCtl.schema.value}</strong></label>
         </li>
         <li>
           <input
-            id=${this.idGen.get('rm-from-db--true')}
+            id=${this.idGen.get('rm-from-object--database')}
             type='radio'
-            name=${this.idGen.get('rm-from-db')}
-            @input=${e => this.rmFromDb = true}
-            .checked=${this.rmFromDb} />
-          <label for=${this.idGen.get('rm-from-db--true')}>Remove user from database (this will revoke all access)</label>
+            name=${this.idGen.get('rm-from-object')}
+            @input=${() => this.rmFromObject = 'database'}
+            .checked=${live(this.rmFromObject === 'database')} />
+          <label for=${this.idGen.get('rm-from-object--database')}>Remove user from database (this will revoke all access)</label>
+        </li>
+        <li>
+          <input
+            id=${this.idGen.get('rm-from-object--instance')}
+            type='radio'
+            name=${this.idGen.get('rm-from-object')}
+            @input=${() => this.rmFromObject = 'instance'}
+            .checked=${live(this.rmFromObject === 'instance')} />
+          <label for=${this.idGen.get('rm-from-object--instance')}>Remove user completely from instance <br>(this will revoke access to all databases running on this instance)</label>
         </li>
       </ul>
     </div>

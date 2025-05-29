@@ -75,7 +75,7 @@ class Instance {
    * 
    * @returns {Promise<Object>}
    **/
-  async get(ctx) {
+  get(ctx) {
     ctx = getContext(ctx);
     return client.getInstance(ctx);
   }
@@ -93,7 +93,6 @@ class Instance {
     try {
       return await this.get(ctx);
     } catch(e) {}
-
     return false;
   }
 
@@ -118,18 +117,22 @@ class Instance {
     
     let shortName = instance.name.replace(/^inst-/, '');
 
-    let exists = await this.exists();
+    let exists = await this.exists(ctx);
     if( exists ) {
       throw new Error('Instance already exists: '+instance.name);
     }
 
     // look up organization name to use in hostname
-    let orgName = instance.organization || '';
+    let orgName = instance.organization || ctx.organization || '';
     if( typeof orgName === 'object' ) {
       orgName = orgName.name;
     }
 
-    instance.hostname = 'inst-'+orgName+shortName;
+    if( orgName ) {
+      instance.organization = orgName;
+    }
+
+    instance.hostname = ['inst', orgName, shortName].join('-');
 
     logger.info('Creating instance', ctx.logSignal, {instance, organization: orgName});
     await client.createInstance(instance);
@@ -450,6 +453,8 @@ class Instance {
   }
 
   async remoteSyncUsers(ctx, updatePassword, hardReset=false) {
+    logger.info('Remote sync users', logger.objToString({updatePassword, hardReset}),ctx.logSignal, );
+
     let instance = ctx.instance;
     if( instance.state !== 'RUN' ) {
       throw new Error('Instance must be RUN state to sync users: '+instance.name);

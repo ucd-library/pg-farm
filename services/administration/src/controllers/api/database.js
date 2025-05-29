@@ -310,6 +310,17 @@ router.get('/:organization/:database/schemas',
   }
 });
 
+router.get('/:organization/:database/users-overview',
+  contextMiddleware,
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    res.json(await database.getUserAccessOverview(req.context));
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 /** Get Tables **/
 router.get('/:organization/:database/tables-overview',
   contextMiddleware,

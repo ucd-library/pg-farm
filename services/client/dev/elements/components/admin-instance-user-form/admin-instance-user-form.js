@@ -129,6 +129,8 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
 
   async _create(){
     this._loading = true;
+
+    // create user in instance
     const opts = {
       admin: this.payload.admin
     }
@@ -140,17 +142,18 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
         error: create.error
       });
     }
-    if ( !this.payload.admin && this.payload.access && this.payload.access !== 'READ' ) {
-      const access = await this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, '_', this.payload.username, this.payload.access);
-      const error = access.find(r => r.state === 'error');
-      if( error ) {
-        this._loading = false;
-        return this.AppStateModel.showError({
-          message: 'Unable to set user access',
-          error: error.error
-        });
-      }
+
+    // set user access to database
+    const access = await this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, '_', this.payload.username, this.payload.access || 'READ');
+    const error = access.find(r => r.state === 'error');
+    if( error ) {
+      this._loading = false;
+      return this.AppStateModel.showError({
+        message: 'Unable to set user access',
+        error: error.error
+      });
     }
+
     this._loading = false;
     this.AppStateModel.showToast({
       type: 'success',

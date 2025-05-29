@@ -1,7 +1,6 @@
 import client from '../lib/pg-admin-client.js';
 import pgInstClient from '../lib/pg-instance-client.js';
 import utils from '../lib/utils.js';
-import kubectl from '../lib/kubectl.js';
 import config from '../lib/config.js';
 import logger from '../lib/logger.js';
 import { getContext, createContext } from '../lib/context.js';
@@ -11,7 +10,6 @@ import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
 import { getInstanceResources  } from '../lib/instance-resources.js';
-import { organization } from './index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,27 +42,29 @@ class AdminModel {
    * @description Creates a new user in the database.  This will also grant
    * the role to the pgrest authenticator user.
    *
-   * @param {String|Object} ctx context object or id 
-   * @param {Object} user 
+   * @param {String|Object} ctx context object or id
+   * @param {Object} user
    * @param {Object} user.username username
    * @param {Object} user.type instance_user_type USER, ADMIN, PGREST, SERVICE_ACCOUNT or PUBLIC
    * @param {Object} user.parent parent username.  Required for SERVICE_ACCOUNT
    */
   async createUser(ctx, user) {
     ctx = getContext(ctx);
+    if ( typeof user === 'string' ) {
+      user = {username: user, parent: null};
+    }
     if( !user.type ) user.type = 'USER'
-
     await this.models.user.create(ctx, user);
     if( ['USER', 'ADMIN'].includes(user.type) ) {
-      await this.models.pgRest.grantUserAccess(ctx, user);
+      await this.models.pgRest.grantUserAccess(ctx, user.username);
     }
   }
 
   /**
    * @method updateUser
-   * @description Updates a user type in the database. 
-   * 
-   * @param {String|Object} ctx 
+   * @description Updates a user type in the database.
+   *
+   * @param {String|Object} ctx
    * @param {String} user username
    * @param {String} type pgfarm user type
    */
@@ -73,16 +73,15 @@ class AdminModel {
     if( userObj.user_type !== 'USER' && userObj.user_type !== 'ADMIN' ) {
       throw new Error('Cannot update user type: '+userObj.user_type);
     }
-
-    await this.models.user.updateType(ctx, user, type);
+    await this.models.user.updateType(ctx, userObj, type);
   }
 
   /**
    * @method deleteUser
-   * @description Deletes a user from the database. 
-   * 
+   * @description Deletes a user from the database.
+   *
    * TODO: this should also revoke all user access
-   * 
+   *
    * @param {String|Object} ctx string or context object
    * @param {String} user username
    */
@@ -120,8 +119,9 @@ class AdminModel {
 
     // create instance if not provided
     if( !ctx?.instance?.name ) {
-      if( !ctx.instance ) ctx.instance = {};
-      ctx.instance.name = name;
+      if( !ctx.instance ) {
+        ctx.instance = {name: modelUtils.getInstanceName(name)};
+      }
     }
 
     let instance = await this.models.instance.exists(ctx);
@@ -132,10 +132,10 @@ class AdminModel {
     }
     ctx.instance = instance;
 
-    let startResp = await this.startInstance(ctx);
+    // just wait for database to be ready
+    let startResp = await this.startInstance(ctx, {pgRest: false});
     if( startResp.starting ) {
       await startResp.instance;
-      await startResp.pgrest;
     }
 
     // ensure the public user and pg user password update
@@ -143,7 +143,7 @@ class AdminModel {
 
     let database = await this.models.database.exists(ctx);
     if( !database ) {
-      database = await this.models.database.create(ctx, ctx.database);
+      database = await this.models.database.create(ctx);
     } else {
       logger.info('Database already exists', ctx.logSignal);
       await this.models.database.ensurePgDatabase(ctx);
@@ -179,7 +179,7 @@ class AdminModel {
     let dbs = await client.getInstanceDatabases(ctx);
     for( let db of dbs ) {
       await this.models.pgRest.stop({
-        database : {name: db.name}, 
+        database : {name: db.name},
         organization : ctx.organization
       });
     }
@@ -339,7 +339,7 @@ class AdminModel {
     logger.info('Sleeping instances', ctx.logSignal);
 
     let active = await client.getInstances({state: this.models.instance.STATES.RUN});
-    
+
     let changed = [];
 
     for( let instance of active ) {
@@ -365,10 +365,10 @@ class AdminModel {
         logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, iCtx.logSignal);
         await client.updateInstancePriority(iCtx, newPriority);
         await this.models.instance.apply(iCtx);
-        
+
         let query = await client.getLastDatabaseEvent(instance.instance_id);
         changed.push({
-          instance, 
+          instance,
           newState : newPriority,
           lastDatabaseEvent : {
             event_type : query?.event_type,
@@ -397,15 +397,20 @@ class AdminModel {
    *  await respStart.pgrest;
    * }
    *
-   * @param {String|Object} ctx 
+   * @param {String|Object} ctx
    * @param {Object} opts
    * @param {Boolean} opts.force force start the instance even if health check passes
+   * @param {Boolean} opts.pgRest if false, will not start pgRest services.  Default is true.
    *
    * @returns {Promise<Object>}
    */
   async startInstance(ctx, opts={}) {
     let instance = ctx.instance;
     let iid = instance.instance_id;
+
+    if( !iid ) {
+      throw new Error('Instance id is required to start instance');
+    }
 
     // check if instance is already starting
     if( this.instancesStarting[iid] ) {
@@ -470,39 +475,45 @@ class AdminModel {
       }
     })();
 
+    if( opts.pgRest === false ) {
+      logger.info('Skipping pgRest start', ctx.logSignal);
+    } else {
+      let dbs = await client.getInstanceDatabases(ctx);
+      let dbContext = ctx.clone();
 
-    let dbs = await client.getInstanceDatabases(ctx);
-    let dbContext = ctx.clone();
+      let proms = dbs.map(db => {
+        async function start() {
+          // make sure instance is ready before starting pgRest
+          // await response.instance;
 
-    let proms = dbs.map(db => {
-      async function start() {
-        // make sure instance is ready before starting pgRest
-        // await response.instance;
-
-        dbContext.database = db;
-        // start pgRest
-        await this.models.pgRest.start(dbContext);
-        // wait for the port to be alive
-        await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
-
-        // hack for docker-desktop to wait for the instance DNS to be ready
-        // there seems to be issues with it going up and down when instance first starts
-        if( config.k8s.platform === 'docker-desktop' ) {
-          logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
-          await utils.sleep(5000);
+          dbContext.database = db;
+          // start pgRest
+          await this.models.pgRest.start(dbContext);
+          // wait for the port to be alive
+          await utils.waitUntil(db.pgrest_hostname, config.pgRest.port);
+          // hack for docker-desktop to wait for the instance DNS to be ready
+          // there seems to be issues with it going up and down when instance first starts
+          if( config.k8s.platform === 'docker-desktop' ) {
+            logger.info('Waiting for DNS to be ready in docker-desktop', ctx.logSignal);
+            await utils.sleep(5000);
+          }
+          // wait for pgRest to be actually be ready
+          await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
         }
-
-        // wait for pgRest to be actually be ready
-        await waitForPgRestDb(db.pgrest_hostname, config.pgRest.port);
-      }
-      return start.bind(this);
-    })
-    .map(f => f());
-    response.pgrest = Promise.all(proms);
+        return start.bind(this);
+      })
+      .map(f => f());
+      response.pgrest = Promise.all(proms);
+    }
 
 
     // wait for things to finish to resolve for others
     response.instance.then(() => {
+      if( opts.pgRest === false ) {
+        this.resolveStart(instance);
+        return;
+      }
+
       response.pgrest.then(() => {
         this.resolveStart(instance);
       }).catch(e => {

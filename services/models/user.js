@@ -70,20 +70,25 @@ class User {
       user.password = 'postgres';
     }
 
-    // create new random password
-    if( !user.password ) {
-      user.password = utils.generatePassword();
-    }
-
     // add user to database
     let existingUser = await this.exists(ctx, user.username);
+
+    // create new random password
+    if( !user.password ) {
+      user.password = existingUser?.password;
+      if( !user.password ) {
+        logger.info('No password provided for user', user.username, 'generating', ctx.logSignal);
+        user.password = utils.generatePassword();
+      }
+    }
+
     if( !existingUser ) {
 
       logger.info('Creating instance user', this.getUserForLogging(user), ctx.logSignal);
       await client.createInstanceUser(ctx, user);
 
       // check if user exists in UCD IAM
-      if ( !parent ){
+      if ( !user.parent ){
         await this.fetchAndUpdateUcdIamData(user.username);
       }
     } else { // get current password.  make sure its set on the instance db
@@ -104,19 +109,22 @@ class User {
 
     logger.info('Ensuring pg user', user.username, ctx.logSignal);
     await pgInstClient.createOrUpdatePgUser(con, user);
+
+    await client.setInstanceUserPassword(ctx, user.username, user.password);
   }
 
   /**
    * @method updateType
    * @description Updates the type of a instance user
-   * 
+   *
    * @param {Object|String} ctx context object or id
    * @param {Object} user
    * @param {String} user.username username
-   * @param {String} user.type USER, ADMIN, or PUBLIC.  Defaults to USER. 
-   * @returns 
+   * @param {String} type USER, ADMIN, or PUBLIC.  Defaults to USER.
+   * @returns
    */
-  updateType(ctx, user) {
+  updateType(ctx, user, type) {
+    type = type || user.type;
     ctx = getContext(ctx);
     logger.info('Updating user type', this.getUserForLogging(user), ctx.logSignal);
 
@@ -124,7 +132,7 @@ class User {
       `UPDATE ${config.adminDb.tables.INSTANCE_USER}
       SET type = $4
       WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
-      [user.username, ctx.instance.name, ctx.organization.name, user.type]
+      [user.username, ctx.instance.name, ctx.organization.name, type]
     );
   }
 
@@ -188,9 +196,9 @@ class User {
   /**
    * @method delete
    * @description Deletes a user from the database and instance
-   * 
-   * @param {String|Object} ctx context object or id 
-   * @param {String} username 
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {String} username
    */
   async delete(ctx, username) {
     ctx = getContext(ctx);
@@ -200,7 +208,6 @@ class User {
 
     // get all databases for instance
     let databases = await pgInstClient.listDatabases(con);
-
     for( let db of databases.rows ) {
       con.database = db.datname;
       logger.info('Removing pg user', username, ctx.logSignal);
@@ -211,7 +218,7 @@ class User {
         // revoke all access from all schemas
         let schemas = await pgInstClient.listSchema(con);
         for( let schema of schemas.rows ) {
-          await this.revoke(con, null, schema.schema_name, username, 'READ');
+          await this.revoke(ctx, schema.schema_name, username, 'READ');
         }
 
         // revoke access from database and finally delete user
@@ -246,12 +253,12 @@ class User {
 
   /**
    * @method exists
-   * @description Checks if a user exists in the database.  
+   * @description Checks if a user exists in the database.
    * If the user exists, it will return the user object.
-   * 
+   *
    * @param {String|Object} ctx context object or id
-   * @param {String} username 
-   * @returns 
+   * @param {String} username
+   * @returns
    */
   async exists(ctx, username) {
     // no need to get context, get() will do that
@@ -278,22 +285,22 @@ class User {
     ctx = getContext(ctx);
 
     // generate random password if not provided
-    if( !password ) password = utils.generatePassword();
+    if( !password ) {
+      logger.info('resetting password for user ', username, ctx.logSignal);
+      password = utils.generatePassword();
+    } else {
+      logger.info('setting password for user ', username, ctx.logSignal);
+    }
 
     let con = await this.models.instance.getConnection(ctx);
-    logger.info('resetting password for user ', username, ctx.logSignal);
 
+    
     if( updateInstance ) {
       await pgInstClient.createOrUpdatePgUser(con, { username, password });
     }
 
     // update database
-    await client.query(
-      `UPDATE ${config.adminDb.tables.INSTANCE_USER}
-      SET password = $4
-      WHERE instance_user_id = ${this.schema}.get_instance_user_id($1, $2, $3)`,
-      [username, ctx.instance.name, ctx.organization.name, password]
-    );
+    await client.setInstanceUserPassword(ctx, username, password);
 
     return password;
   }
@@ -301,8 +308,8 @@ class User {
   /**
    * @method checkPermissionType
    * @description Checks if the permission type is valid
-   * 
-   * @param {String} type 
+   *
+   * @param {String} type
    */
   checkPermissionType(type) {
     if( this.ALLOWED_PERMISSION_TYPES.indexOf(type) === -1 ) {
@@ -313,11 +320,11 @@ class User {
   /**
    * @method grantDatabaseAccess
    * @description Grants a user access to a database
-   * 
+   *
    * @param {Object|String} ctx context object or id
-   * @param {*} roleName 
-   * @param {*} permission 
-   * @returns 
+   * @param {*} roleName
+   * @param {*} permission
+   * @returns
    */
   async grantDatabaseAccess(ctx, roleName, permission='READ') {
     ctx = getContext(ctx);
@@ -334,7 +341,7 @@ class User {
     }
 
     logger.info(
-      'running user database grant', 
+      'running user database grant',
       logger.objToString({database, roleName, permission}),
       ctx.logSignal
     );
@@ -347,11 +354,11 @@ class User {
   /**
    * @method revokeDatabaseAccess
    * @description Revokes a user's access to a database
-   * 
-   * @param {Object|String} ctx 
-   * @param {*} roleName 
-   * @param {*} permission 
-   * @returns 
+   *
+   * @param {Object|String} ctx
+   * @param {*} roleName
+   * @param {*} permission
+   * @returns
    */
   async revokeDatabaseAccess(ctx, roleName, permission='READ') {
     ctx = getContext(ctx);
@@ -364,7 +371,7 @@ class User {
       permission = pgInstClient.ALL_PRIVILEGE;
     }
 
-    logger.info('running user database revoke', 
+    logger.info('running user database revoke',
       logger.objToString({roleName, permission}),
       ctx.logSignal
     );
@@ -399,8 +406,8 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user grant', 
-      logger.objToString({schemaName, tableName, roleName, permission}), 
+    logger.info('running user grant',
+      logger.objToString({schemaName, tableName, roleName, permission}),
       ctx.logSignal
     );
 
@@ -448,15 +455,15 @@ class User {
   /**
    * @method revoke
    * @description Revoke a user's access to a schema or table.
-   * 
-   * @param {String|Object} ctx context object or id 
-   * @param {*} schemaName 
-   * @param {*} roleName 
-   * @param {*} permission 
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {*} schemaName
+   * @param {*} roleName
+   * @param {*} permission
    */
   async revoke(ctx, schemaName, roleName, permission='READ') {
     ctx = getContext(ctx);
-    
+
     permission = permission.toUpperCase();
     this.checkPermissionType(permission);
 
@@ -469,7 +476,7 @@ class User {
       tableName = parts[1];
     }
 
-    logger.info('running user revoke', 
+    logger.info('running user revoke',
       logger.objToString({schemaName, tableName, roleName, permission}),
       ctx.logSignal
     );

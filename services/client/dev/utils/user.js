@@ -1,4 +1,5 @@
 import { getLogger } from '@ucd-lib/cork-app-utils';
+import {config} from '../../../../tools/lib/config.js';
 
 class User {
 
@@ -11,26 +12,43 @@ class User {
     this.loginPath = '';
     this.logoutPath = '';
 
-    this.jwt = null;
+    this.user = null;
+    this.token = null;
     this.username = '';
 
     this.loadConfig();
   }
 
-  loadConfig(){
-    if (!window.APP_CONFIG?.user ){
+  async loadConfig(){
+    let user = await config.getUser();
+    if (!user ){
       this.logger.warn('No user config found');
       return;
     }
-
-    this.loggedIn = window.APP_CONFIG.user.loggedIn;
-    this.jwt = window.APP_CONFIG.user;
+    this.user = user.user;
+    this.token = user.token;
+    this.loggedIn = this.user?.loggedIn || false;
     this.isAdmin = this.user?.roles?.includes('admin');
 
-    this.loginPath = window.APP_CONFIG.loginPath;
-    this.logoutPath = window.APP_CONFIG.logoutPath;
+    this.loginPath = window.APP_CONFIG?.loginPath;
+    this.logoutPath = window.APP_CONFIG?.logoutPath;
 
-    this.username = this.jwt?.username || this.jwt?.preferred_username || '';
+    this.username = this.user?.username || this.user?.preferred_username || '';
+  }
+
+  tokenIsExpired(){
+    if ( !this.user?.exp ){
+      return false;
+    }
+    let now = Math.floor(Date.now() / 1000);
+    return this.user.exp < now;
+  }
+
+  isValidUser(){
+    if ( !this.loggedIn ){
+      return false;
+    }
+    return !this.tokenIsExpired();
   }
 }
 

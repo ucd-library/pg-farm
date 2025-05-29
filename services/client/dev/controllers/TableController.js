@@ -95,7 +95,7 @@ export default class TableController {
    * @param {*} value
    */
   search(value){
-    this.opts.searchValue = (value || '').toLowerCase();
+    this.opts.searchValue = (value || '');
     this.data.forEach( item => {
       item.hidden = this._itemIsHidden(item.item);
     });

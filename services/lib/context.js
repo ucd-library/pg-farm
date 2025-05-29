@@ -159,9 +159,7 @@ class InstanceDatabaseContext {
     }
 
     if( obj.instance ) {
-      if( !modelUtils.isUUID(obj.instance) && !obj.instance.match(/^inst-/) ) {
-        obj.instance = 'inst-'+obj.instance;
-      }
+      obj.instance = modelUtils.getInstanceName(obj.instance);
       try {
         this.instance = await pgAdminClient.getInstance({
           instance: {name: obj.instance},

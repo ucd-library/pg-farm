@@ -1,0 +1,93 @@
+name: Build Electron App
+
+on:
+  push:
+    tags:
+      - "v*.*.*"  # Trigger only on version tag pushes (e.g., v1.0.0)
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-13, macos-14, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies
+        working-directory: tools
+        run: npm install
+
+
+      - name: Decode macOS certificate
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "$CSC_BASE64_CONTENT" | base64 --decode > certificate.p12
+        env:
+          CSC_BASE64_CONTENT: ${{ secrets.CSC_BASE64_CONTENT }}
+
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: tools
+        run: npm run dist-windows
+
+      - name: Build (macOS Intel)
+        if: matrix.os == 'macos-13'
+        working-directory: tools
+        run: npm run dist-mac-intel
+        env:
+          CSC_LINK: certificate.p12
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Build (macOS ARM)
+        if: matrix.os == 'macos-14'
+        working-directory: tools
+        run: npm run dist-mac-arm
+        env:
+          CSC_LINK: certificate.p12
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: tools
+        run: npm run dist-linux
+
+      - name: Upload Artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Build
+          path: dist/*.exe
+
+      - name: Upload Artifacts (macOS)
+        if: matrix.os == 'macos-13'
+        working-directory: tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x86-build
+          path: dist/*.dmg
+
+      - name: Upload Artifacts (macOS)
+        if: matrix.os == 'macos-14'
+        working-directory: tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS-arm64-Build
+          path: dist/*.dmg
+
+      - name: Upload Artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linux-Build
+          path: dist/*.AppImage

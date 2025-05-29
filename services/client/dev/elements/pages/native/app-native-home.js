@@ -47,6 +47,25 @@ export default class AppNativeHome extends Mixin(LitElement)
     window.location.reload();
   }
 
+  async _copyToken() {
+    let user = await config.getUser();
+    if (user?.token) {
+      try {
+        await navigator.clipboard.writeText(user.token);
+        this.AppStateModel.showToast({
+          text: 'Copied token to clipboard',
+          type: 'success'
+        });
+      } catch (err) {
+        console.error('Failed to copy token:', err);
+        this.AppStateModel.showToast({
+          text: 'Failed to copy token to clipboard',
+          type: 'error'
+        });
+      }
+    }
+  }
+
 }
 
 customElements.define('app-native-home', AppNativeHome);
