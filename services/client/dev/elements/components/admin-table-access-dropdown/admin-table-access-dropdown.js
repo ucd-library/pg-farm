@@ -1,5 +1,6 @@
 import { LitElement } from 'lit';
 import {render, styles} from "./admin-table-access-dropdown.tpl.js";
+import { grantDefinitions } from '../../../utils/service-lib.js';
 
 export default class AdminTableAccessDropdown extends LitElement {
 
@@ -8,6 +9,7 @@ export default class AdminTableAccessDropdown extends LitElement {
       value: { type: String },
       disabled: { type: Boolean },
       opened: { type: Boolean },
+      grantAccess: { type: Array }
     }
   }
 
@@ -18,6 +20,7 @@ export default class AdminTableAccessDropdown extends LitElement {
   constructor() {
     super();
     this.render = render.bind(this);
+    this.grantAccess = [grantDefinitions.getNoAccessGrant('TABLE'), ...grantDefinitions.getObjectGrants('TABLE', true)].reverse();
 
     this.value = '';
     this.disabled = false;
@@ -53,7 +56,7 @@ export default class AdminTableAccessDropdown extends LitElement {
   }
 
   _onSelectChange(e) {
-    this.value = e.currentTarget.dataset.type;
+    this.value = e.currentTarget.dataset.grant;
    
     this.dispatchEvent(new CustomEvent('option-change', {
       detail: {
