@@ -129,7 +129,7 @@ function _renderDesktopView(){
             </div>
             <admin-table-access-dropdown
               data-username=${row.item?.user?.name}
-              .value=${row.item?.schemaRole?.grant?.roleLabel}
+              .value=${row.item?.schemaRole?.grant?.action}
               @option-change=${this._onTableAccessChange}>
             </admin-table-access-dropdown>
           </div>

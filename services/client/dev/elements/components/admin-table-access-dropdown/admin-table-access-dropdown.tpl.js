@@ -142,36 +142,23 @@ export function render() {
 return html`
   <div class='container' @click=${this._onToggleOpen}>
     <div class='selected'>
-      <span>${this.value}</span>
+      <span>${(this.grantAccess.find(def => def.action === this.value) || {}).roleLabel}</span>
       <app-icon slug='fa.solid.caret-down'></app-icon>
     </div>
     <div class='content ${this.opened ? 'opened' : ''}'>
-      <div class='option ${this.value === 'Editor' ? 'selected' : ''}' data-type='Editor' data-grant='WRITE' @click=${this._onSelectChange}>
+      ${this.grantAccess.map(def => html`
+        <div class='option ${this.value === def.action ? 'selected' : ''}' data-type='${def.roleLabel}' data-grant='${def.action}' @click=${this._onSelectChange}>
         <div class='icon'>
           <app-icon slug='fa.solid.check'></app-icon>          
         </div>
-        <div class='label'>
-          <h4>Editor (default)</h4>
-          <p>Insert, select, update, delete, truncate, references, trigger</p>
+        <div class='label'> 
+          <h4>${def.roleLabel} ${def.action === 'WRITE' ? '(default)' : ''}</h4>
+          <p>
+            ${def.grant.join(', ').toLowerCase()}
+          </p>
         </div>
       </div>
-      <div class='option ${this.value === 'Viewer' ? 'selected' : ''}' data-type='Viewer' data-grant='READ' @click=${this._onSelectChange}>
-        <div class='icon'>
-          <app-icon slug='fa.solid.check'></app-icon>          
-        </div>
-        <div class='label'>
-          <h4>Viewer</h4>
-          <p>Select</p>
-        </div>
-      </div>
-      <div class='option ${this.value === 'No Access' ? 'selected' : ''}' data-type='No Access' data-grant='NONE' @click=${this._onSelectChange}>
-        <div class='icon'>
-          <app-icon slug='fa.solid.check'></app-icon>          
-        </div>
-        <div class='label'>
-          <h4>No Access</h4>
-        </div>      
-      </div>
+      `)}
     </div>
   </div>
 `;}
