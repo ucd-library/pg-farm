@@ -70,6 +70,15 @@ export default class AppAdminDatabaseTableSingle extends Mixin(LitElement)
         ctlProp: 'db',
         errorMessage: 'Unable to load database'
       },
+    ], {ignoreLoading: true});
+    if ( !r ) return;
+
+    if ( this.dataCtl?.db?.instance?.state === 'SLEEP' ) {
+      this.AppStateModel.hideLoading();
+      return;
+    }
+
+    r = await this.dataCtl.get([
       {
         request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
         ctlProp: 'schemas',
