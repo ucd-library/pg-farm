@@ -155,32 +155,52 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
    * @description Update users access for the table being viewed
    */
   async updateUserAccess() {
-    const users = this.tableCtl.getRows().filter(u => u.selected);
-    const access = this.selectedBulkAction;
-    const accessLabel = this.bulkActions.find(a => a.value === this.selectedBulkAction)?.label || '';
+    let users = this.tableCtl.getRows().filter(u => u.selected);
     if (!users.length) return;
 
-    this.AppStateModel.showLoading();
-    const r = await this.dataCtl.batchGet(users.map(user => ({
-      func: () => {
-        console.log('about to update access', {
-          orgName: this.orgName, 
-          dbName: this.dbName, 
-          schemaTableName: `${this.schema}.${this.tableName}`, 
-          username: user.item?.user?.name, 
-          access
-        });
-        this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, `${this.schema}.${this.tableName}`, user.item?.user?.name, access)
-      },
-      errorMessage: `Failed to update access for ${user.item?.user?.name}`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
-    let toastText = `User access has been updated to '${accessLabel}'`;
-    this.AppStateModel.showToast({
-      text: toastText,
-      type: 'success',
-      showOnPageLoad: true
+    users = users.map(row => row.item?.user?.name);
+    const access = this.selectedBulkAction;
+    // const accessLabel = this.bulkActions.find(a => a.value === this.selectedBulkAction)?.label || '';
+    const grants = users.map(user => {
+      let permission = 'READ';
+      if( access !== 'NONE' ) permission = access;
+      return {
+          user,
+          schema: `${this.schema}.${this.tableName}`,
+          permission
+        }
     });
+
+    this.AppStateModel.showLoading();
+
+    if( access !== 'NONE' ) {
+      const r = await this.DatabaseModel.bulkGrantAccess(this.orgName, this.dbName, grants);
+      if ( r.state === 'error' ){
+        this.AppStateModel.showError({
+          message: 'Unable to add user access',
+          error: r.error
+        });
+      }
+      this.AppStateModel.showToast({
+        type: 'success',
+        text: `User access has been added`,
+        showOnPageLoad: true
+      });
+    } else {
+      const r = await this.DatabaseModel.bulkRevokeAccess(this.orgName, this.dbName, grants);
+      if ( r.state === 'error' ){
+        this.AppStateModel.showError({
+          message: 'Unable to remove user access',
+          error: r.error
+        });
+      }
+      this.AppStateModel.showToast({
+        type: 'success',
+        text: `User access has been removed`,
+        showOnPageLoad: true
+      });
+    }
+
     this.AppStateModel.hideLoading();
     this.tableCtl.reset();
     this.AppStateModel.refresh();
