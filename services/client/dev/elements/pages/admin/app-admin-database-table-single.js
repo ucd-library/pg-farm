@@ -66,66 +66,42 @@ export default class AppAdminDatabaseTableSingle extends Mixin(LitElement)
         errorMessage: 'You do not have permission to view this page'
       },
       {
-        request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
-        ctlProp: 'users',
-        errorMessage: 'Unable to get database users'
-      },
-      {
         request: this.DatabaseModel.get(this.orgName, this.dbName),
         ctlProp: 'db',
         errorMessage: 'Unable to load database'
       },
       {
-        request: this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
-        ctlProp: 'tablesOverview',
-        errorMessage: 'Unable to load tables overview'
-      },
-      {
         request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
         ctlProp: 'schemas',
         errorMessage: 'Unable to load schemas'
-      }
-    ], {ignoreLoading: true});
-    if ( !r ) return;
-
-    this.tablesOverview = this.dataCtl.tablesOverview.find(t => t.tableName === this.tableName) || {};
-    this.schema = this.AppStateModel.location.query.schema || '';
-    this.users = (this.dataCtl.users || []).filter(user => (this.tablesOverview.userAccess || []).includes(user.name));
-    
-    r = await this.dataCtl.get([
+      },
       {
-        request: this.DatabaseModel.getSchemaTableAccess(this.orgName, this.dbName, this.schema, this.tableName),
-        ctlProp: 'schemaTableAccess',
-        errorMessage: `Unable to load table access for ${this.schema}:${this.tableName}`
+        request: this.DatabaseModel.getUserAccessOverview(this.orgName, this.dbName),
+        ctlProp: 'userAccessOverview',
+        errorMessage: 'Unable to load user access overview'
       }
     ], {ignoreLoading: true});
     if ( !r ) return;
 
-    const userSchemaProduct = [this.schema].flatMap(schema =>
-      this.users.map(user => ({ schema, user: user.name }))
-    );
-    const schemaAccess = await this.dataCtl.batchGet(userSchemaProduct.map(({ schema, user }) => ({
-      func: () => this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, schema, user),
-      errorMessage: `Unable to get access for user ${user} on schema ${schema}`
-    })), {ignoreLoading: true});
-    if ( !schemaAccess ) return;
-
-    // merge it all together
-    this.users = this.users.map(user => {
-      const access = schemaAccess.filter(r => r.response?.value?.user === user.name).map(r => r.response.value);
-
+    this.schema = this.AppStateModel.location.query.schema || '';
+    this.users = this.dataCtl.userAccessOverview.map(user => {
       let schemaRole;
       let schemaRoles = [];
-      if ( access.length ){
-        schemaRole = {
-          grant: grantDefinitions.getGrant('TABLE', access[0].payload?.tables[this.tableName])
-        }
-      }
+      const schema = user.schemas.find(s => s.name === this.schema);
+      if( schema ) {
+        const tableAccess = (schema.tableAccess || []).find(t => t.name === this.tableName)?.access || [];          
 
-      return {
-        user,
-        schemaRole,
-        schemaRoles
+        schemaRole = {
+          privileges: tableAccess,
+          grant: grantDefinitions.getGrant('TABLE', tableAccess)
+        }
+
+        return {
+          user,
+          schemaRole,
+          schemaRoles,
+          tableCt: user.tableAccessCount
+        }
       }
     });
 

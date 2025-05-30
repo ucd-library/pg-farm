@@ -70,20 +70,7 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
     await this.queryCtl.setFromLocation();
     this._setBulkActions();
 
-    this.AppStateModel.showLoading();
-    let r = await this.dataCtl.get([
-      {
-        request: this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
-        ctlProp: 'tablesOverview',
-        errorMessage: 'Unable to load tables overview'
-      }
-    ], {ignoreLoading: true});
-    if ( !r ) return;
-
-    this.tablesOverview = this.dataCtl.tablesOverview?.[0] || {};
-    this.schema = this.tablesOverview.schema || '';
-
-    this.AppStateModel.hideLoading();
+    this.schema = this.AppStateModel.location.query.schema || '';
   }
 
   /**
