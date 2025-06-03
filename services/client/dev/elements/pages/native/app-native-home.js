@@ -23,7 +23,13 @@ export default class AppNativeHome extends Mixin(LitElement)
   constructor() {
     super();
     this.render = render.bind(this);
-    this.isLoggedIn = config.user.loggedIn;
+    this._renderLogin();
+    this._injectModel('AppStateModel');
+  }
+
+  async _renderLogin() {
+    let user = await config.getUser();
+    this.isLoggedIn = user.loggedIn;
 
     if( this.isLoggedIn ) {
       this.username = config.user.username || config.user.preferred_username;
@@ -32,9 +38,6 @@ export default class AppNativeHome extends Mixin(LitElement)
       this.username = '';
       this.expiresText = '';
     }
-
-    this._injectModel('AppStateModel');
-
   }
 
   async _onAppStateUpdate(e){

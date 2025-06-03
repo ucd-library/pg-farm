@@ -42,18 +42,24 @@ if( typeof window === 'undefined' ) {
   config.logoutPath = config.logoutPath || '/auth/logout';
 
   config.getUser = async function() {
+    if( window.electronAPI ) {
+      if( config?.user?.setFromIpc ) {
+        return config.user;
+      }
+
+      let {user, token} = await window.electronAPI.getUser();
+      user.setFromIpc = true;
+      user.token = token;
+      config.user = user;
+      config.token = token;
+      return config.user;
+    }
+
     if( config.user ) {
       return {
         user: config.user,
         token: config.token
       };
-    }
-
-    if( window.electronAPI ) {
-      let user = await window.electronAPI.getUser();
-      config.user = user.user;
-      config.token = user.token;
-      return user;
     }
 
     console.warn('No user or token found, no electronAPI registered');
