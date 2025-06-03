@@ -176,7 +176,7 @@ function _renderMobileView(){
             </div>
             <admin-table-access-dropdown
               data-username=${row.item?.user?.name}
-              .value=${row.item?.schemaRole?.grant?.roleLabel}
+              .value=${row.item?.schemaRole?.grant?.action}
               @option-change=${this._onTableAccessChange}>
             </admin-table-access-dropdown>
           </div>
@@ -192,6 +192,7 @@ function _renderUserName(row){
   if ( this.queryCtl?.schema?.exists() ){
     href += `?schema=${this.queryCtl.schema.value}`;
   }
+  const name = `${row.item?.user?.pgFarmUser?.firstName || ''} ${row.item?.user?.pgFarmUser?.lastName || ''}`.trim();
   return html`
     <div>
       <div class='user-name-container'>
@@ -200,9 +201,7 @@ function _renderUserName(row){
         </div>
         <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
       </div>
-      <div class='caption' ?hidden=${!(row.item?.user?.pgFarmUser.firstName || row.item?.user?.pgFarmUser.lastName)}>
-        ${row.item?.user?.pgFarmUser.firstName} ${row.item?.user?.pgFarmUser.lastName}
-      </div>
+      <div class='caption' ?hidden=${!name}>${name}</div>
     </div>
   `;
 }

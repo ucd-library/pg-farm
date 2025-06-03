@@ -56,7 +56,7 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
-    
+
     this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel');
   }
 
@@ -195,6 +195,7 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
           message: 'Unable to remove user access',
           error: r.error
         });
+        return;
       }
       this.AppStateModel.showToast({
         type: 'success',

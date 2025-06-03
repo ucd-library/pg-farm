@@ -44,7 +44,7 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
     if ( e.location?.path?.[0] !== 'db' ) return;
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
-    this.dbSetting = e.location?.path?.[4] || '';    
+    this.dbSetting = e.location?.path?.[4] || '';
     this.dbSettingFiltered = e.location?.path?.[5] || '';
     this.items = this.getItems(e);
   }
@@ -63,11 +63,11 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
     ];
 
     if( this.dbSettingFiltered ) {
-      const parentNavItem = dbItems.find(item => item.href === `${adminUrl}/${this.dbSetting}`);
+      const parentNavItem = dbItems.find(item => item.href.split('?')[0] === `${adminUrl}/${this.dbSetting}`);
       if( parentNavItem ) {
         parentNavItem.children = [{
-          label: this.dbSettingFiltered, 
-          icon: 'fa.solid.arrow-turn-up', 
+          label: this.dbSettingFiltered,
+          icon: 'fa.solid.arrow-turn-up',
           href: `${adminUrl}/${this.dbSetting}/${this.dbSettingFiltered}`,
           transformDegrees: '90',
           indented: true
