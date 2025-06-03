@@ -56,7 +56,7 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
-    
+
     this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel');
   }
 
@@ -102,10 +102,12 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
    */
   _onSchemaAccessFilterChange(user, value) {
     if ( !value ) return true;
+    if ( value === 'SOME' ) {
+      return user?.schemaRole?.grant?.action !== 'NONE';
+    }
     const isThisSchema = value === user?.schemaRole?.grant?.action;
-    const isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
 
-    return isThisSchema || isAnySchema;
+    return isThisSchema;
   }
 
   /**
@@ -195,6 +197,7 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
           message: 'Unable to remove user access',
           error: r.error
         });
+        return;
       }
       this.AppStateModel.showToast({
         type: 'success',

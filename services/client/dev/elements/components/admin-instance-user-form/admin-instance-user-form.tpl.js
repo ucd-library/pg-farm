@@ -20,8 +20,8 @@ export function render() {
   <form @submit=${this._onSubmit}>
     <div class='field-container' ?hidden=${!isCreate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
-      <user-search-typeahead 
-        .username=${this.payload.username || ''}
+      <user-search-typeahead
+        .kerberosId=${this.payload.username || ''}
         @select=${e => this._onInput('username', e.detail.kerberosId)}
         required>
       </user-search-typeahead>

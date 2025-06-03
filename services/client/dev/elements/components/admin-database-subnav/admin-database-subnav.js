@@ -44,7 +44,7 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
     if ( e.location?.path?.[0] !== 'db' ) return;
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
-    this.dbSetting = e.location?.path?.[4] || '';    
+    this.dbSetting = e.location?.path?.[4] || '';
     this.dbSettingFiltered = e.location?.path?.[5] || '';
     this.items = this.getItems(e);
   }
