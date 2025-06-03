@@ -102,10 +102,12 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
    */
   _onSchemaAccessFilterChange(user, value) {
     if ( !value ) return true;
+    if ( value === 'SOME' ) {
+      return user?.schemaRole?.grant?.action !== 'NONE';
+    }
     const isThisSchema = value === user?.schemaRole?.grant?.action;
-    const isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
 
-    return isThisSchema || isAnySchema;
+    return isThisSchema;
   }
 
   /**
