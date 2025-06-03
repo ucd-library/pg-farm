@@ -3,6 +3,7 @@ import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import pgClient from '../../../../lib/pg-admin-client.js';
 import { admin, user } from '../../../../models/index.js';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
 
 const router = Router();
 
@@ -42,6 +43,20 @@ router.get('/sleep-instances', async (req, res) => {
   try {
     let resp = await admin.sleepInstances(req.context);
     res.json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/ucd-iam-profile/search/:username',
+  contextMiddleware,
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    let success = false;
+    let resp = await user.fetchUcdIamData(req.params.username);
+    if ( resp ) success = true;
+    res.json({success, resp});
   } catch(e) {
     handleError(res, e);
   }

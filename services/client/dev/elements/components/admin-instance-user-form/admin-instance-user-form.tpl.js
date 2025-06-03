@@ -1,5 +1,6 @@
 import { html, css } from 'lit';
 import { grantDefinitions } from '../../../utils/service-lib.js';
+import '../user-search-typeahead/user-search-typeahead.js';
 
 export function styles() {
   const elementStyles = css`
@@ -19,11 +20,11 @@ export function render() {
   <form @submit=${this._onSubmit}>
     <div class='field-container' ?hidden=${!isCreate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
-      <input
-        id=${this.idGen.get('username')}
-        .value=${this.payload.username || ''}
-        @input=${e => this._onInput('username', e.target.value)}
+      <user-search-typeahead 
+        .username=${this.payload.username || ''}
+        @select=${e => this._onInput('username', e.detail.kerberosId)}
         required>
+      </user-search-typeahead>
     </div>
     <div class='field-container' ?hidden=${isCreate}>
       <label>Username</label>

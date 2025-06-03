@@ -22,6 +22,7 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
       orgName: { type: String },
       dbName: { type: String },
       instanceName: { type: String },
+      username: { type: String },
       schema: { type: String },
       payload: { type: Object },
     }

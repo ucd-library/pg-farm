@@ -161,6 +161,21 @@ class User {
     return ucdUserProfile;
   }
 
+  /**
+   * @description Fetches the user profile from UCD IAM
+   * @param {String} username - (kerberos ID) of the user
+   */
+  async fetchUcdIamData(username) {
+    let ucdUserProfiles;
+    try {
+      ucdUserProfiles = await ucdIamApi.getUserProfile(username);
+    } catch (e) {
+      logger.info('Error checking UCD IAM for user: '+username, e);
+      return;
+    }
+    return ucdUserProfiles;
+  }
+
   async pgFarmUserExists(username) {
     const res = await this.getPgFarmUser(username);
     return res ? true : false;
