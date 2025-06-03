@@ -67,7 +67,7 @@ export function render() {
             </div>
             <admin-table-access-dropdown 
               data-tablename=${row.item.table?.table_name}
-              .value=${row.item?.grant?.roleLabel}
+              .value=${row.item?.grant?.action}
               @option-change=${this._onTableAccessChange}>
             </admin-table-access-dropdown>
           </div>

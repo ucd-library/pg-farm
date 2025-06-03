@@ -430,6 +430,7 @@ class User {
           await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.ALL_PRIVILEGES, seq, 'SEQUENCE');
         }
       } else {
+        await pgInstClient.revokeSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.WRITE, tableName, 'TABLE');
         await pgInstClient.grantSchemaObjectAccess(con, schemaName, roleName, pgInstClient.GRANTS.TABLE.READ, tableName, 'TABLE');
       }
 
