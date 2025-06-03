@@ -180,7 +180,9 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
           message: 'Unable to add user access',
           error: r.error
         });
+        return;
       }
+
       this.AppStateModel.showToast({
         type: 'success',
         text: `User access has been added`,

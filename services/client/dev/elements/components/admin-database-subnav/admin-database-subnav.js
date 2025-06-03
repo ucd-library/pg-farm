@@ -52,12 +52,14 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
   getItems(appState){
     const dbUrl = `/db/${this.orgName}/${this.dbName}`;
     const adminUrl = `${dbUrl}/edit`;
+    let schema = this.AppStateModel.location.query?.schema || '';
+    if( schema ) schema = `?schema=${schema}`;
 
     const dbItems = [
       {label: 'Overview', icon: 'fa.solid.magnifying-glass-chart', href: adminUrl},
       {label: 'Schemas', icon: 'fa.solid.diagram-project', href: `${adminUrl}/schemas`},
-      {label: 'Users', icon: 'fa.solid.user', href: `${adminUrl}/users`},
-      {label: 'Tables', icon: 'fa.solid.table', href: `${adminUrl}/tables`},
+      {label: 'Users', icon: 'fa.solid.user', href: `${adminUrl}/users${schema}`},
+      {label: 'Tables', icon: 'fa.solid.table', href: `${adminUrl}/tables${schema}`},
     ];
 
     if( this.dbSettingFiltered ) {
@@ -79,7 +81,7 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
   async selectedFn(item){
     const state = await this.AppStateModel.get();
     const path = '/' + state.location.path.join('/');
-    return item.href === path;
+    return item.href.split('?')[0] === path;
   }
 
 }
