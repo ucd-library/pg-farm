@@ -33,7 +33,7 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
 
     this.idGen = new IdGenerator({randomPrefix: true});
 
-    this._injectModel('UserModel');
+    this._injectModel('UserModel', 'AppStateModel');
 
     this._handleOutsideClick = this._handleOutsideClick.bind(this);
   }
@@ -56,7 +56,15 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
   }
 
   _onInput(prop, value){
-    this.UserModel.search(value.trim());
+    const organization = this.AppStateModel.location?.path?.[1] || '';
+    const database = this.AppStateModel.location?.path?.[2] || '';
+
+    let contextOptions = {
+      organization,
+      database,
+    };
+    
+    this.UserModel.search(value.trim(), contextOptions);
     this.searchTerm = value.trim();
     this.requestUpdate();
   }
@@ -83,7 +91,7 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
     if( !searchIndex ) return;
 
     let match = this.searchResults[searchIndex] || {};
-    this.kerberosId = match.userID || 'no kerberos id';
+    this.kerberosId = match.userID || '';
     this.searchResults = [];
     this.searchTerm = '';
 
