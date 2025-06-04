@@ -503,7 +503,7 @@ class PGInstance {
     let query = pgFormat(`WITH schema_info AS (
     SELECT
         n.nspname AS schema_name,
-        COUNT(c.oid) FILTER (WHERE c.relkind = 'r') AS table_count,
+        COUNT(c.oid) FILTER (WHERE c.relkind IN ('r', 'v')) AS table_count,
         COUNT(DISTINCT c.relowner) AS user_count
     FROM pg_namespace n
     LEFT JOIN pg_class c ON c.relnamespace = n.oid

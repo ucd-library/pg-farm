@@ -29,3 +29,8 @@ a.bold-link:hover {
   display: inline-flex;
   padding: 0 .25rem;
 }
+.break-word {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
