@@ -16,7 +16,8 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
     return {
       kerberosId: { type: String },
       searchTerm: { type: String },
-      searchResults: { type: Array }
+      searchResults: { type: Array },
+      userFullName: { type: String },
     }
   }
 
@@ -30,12 +31,17 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
     this.kerberosId = '';
     this.searchTerm = '';
     this.searchResults = [];
+    this.userFullName = '';
 
     this.idGen = new IdGenerator({randomPrefix: true});
 
     this._injectModel('UserModel', 'AppStateModel');
 
     this._handleOutsideClick = this._handleOutsideClick.bind(this);
+  }
+
+  _onAppDialogOpen(){
+    this.reset();
   }
 
   connectedCallback() {
@@ -51,11 +57,18 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
   _handleOutsideClick(e) {
     if (!this.contains(e.target)) {
       this.searchResults = [];
-      this.searchTerm = '';
     }
   }
 
+  reset() {
+    this.kerberosId = '';
+    this.searchTerm = '';
+    this.searchResults = [];
+    this.userFullName = '';
+  }
+
   _onInput(prop, value){
+    this.userFullName = '';
     const organization = this.AppStateModel.location?.path?.[1] || '';
     const database = this.AppStateModel.location?.path?.[2] || '';
 
@@ -63,7 +76,7 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
       organization,
       database,
     };
-    
+
     this.UserModel.search(value.trim(), contextOptions);
     this.searchTerm = value.trim();
     this.requestUpdate();
@@ -92,14 +105,14 @@ export default class UserSearchTypeahead extends Mixin(LitElement)
 
     let match = this.searchResults[searchIndex] || {};
     this.kerberosId = match.userID || '';
+    this.userFullName = match.dFullName || '';
     this.searchResults = [];
-    this.searchTerm = '';
 
     this.dispatchEvent(new CustomEvent('select', {
       detail: {kerberosId: this.kerberosId}
     }));
   }
-  
+
 }
 
 customElements.define('user-search-typeahead', UserSearchTypeahead);

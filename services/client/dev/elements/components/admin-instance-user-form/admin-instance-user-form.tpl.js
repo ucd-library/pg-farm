@@ -50,7 +50,7 @@ export function render() {
     <div class='field-container'>
       <label>${isSchemaUpdate ? 'Schema Access' : 'Database Access'}</label>
       <ul class="list--reset radio">
-        ${grantDefinitions.getObjectGrants(isSchemaUpdate ? 'SCHEMA' : 'DATABASE', !isSchemaUpdate).map(def => html`
+        ${grantDefinitions.getObjectGrants(isSchemaUpdate ? 'SCHEMA' : 'DATABASE', isCreate).map(def => html`
           <li>
             <input
               id=${this.idGen.get(`access.${def.action}`)}

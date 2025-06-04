@@ -1,13 +1,9 @@
 import { html, css } from 'lit';
 import '@ucd-lib/pgfarm-client/elements/components/app-search-input/app-search-input.js';
 import '@ucd-lib/pgfarm-client/elements/components/app-dropdown-button/app-dropdown-button.js';
+import labels from '@ucd-lib/pgfarm-client/utils/labelGetter.js';
 
 export function styles() {
-
-  const desktopStyles = css`
-    admin-database-tables-table .desktop .app-table .row {
-      grid-template-columns: 2fr 100px 75px 140px 75px;
-    }`;
 
   const elementStyles = css`
     admin-database-tables-table {
@@ -19,6 +15,9 @@ export function styles() {
     }
     admin-database-tables-table .mobile {
       display: block;
+    }
+    admin-database-tables-table .desktop .app-table .row {
+      grid-template-columns: 2fr 125px 100px 75px 140px 75px;
     }
     admin-database-tables-table .mobile .app-table .row {
       grid-template-columns: 1fr auto;
@@ -54,8 +53,7 @@ export function styles() {
   `;
 
   return [
-    elementStyles,
-    desktopStyles
+    elementStyles
   ];
 }
 
@@ -100,6 +98,17 @@ function _renderDesktopView(){
           </div>
         </div>
         <div class='cell'>Schema</div>
+        <div class='cell'>
+          <div>Type</div>
+          <div>
+            <select .value=${this.tableCtl.getFilterValue('table-type')} @change=${e => this.tableCtl.setFilterValue('table-type', e.target.value)}>
+              <option value='' ?selected=${!this.tableCtl.getFilterValue('table-type')}>Any Type</option>
+              ${labels.getLabels('tableType', true).map( type => html`
+                <option value=${type.value} ?selected=${this.tableCtl.getFilterValue('table-type') === type.value}>${type.label}</option>
+              `)}
+            </select>
+          </div>
+        </div>
         <div class='cell'>Users</div>
         <div class='cell'>
           <div>Access</div>
@@ -123,9 +132,10 @@ function _renderDesktopView(){
               </div>
             </div>
           </div>
-          <div class='cell'>
+          <div class='cell break-word'>
             <div>${row.item?.table?.schema}</div>
           </div>
+          <div class='cell'>${labels.tableType(row.item?.table?.tableType)}</div>
           <div class='cell'>${row.item?.userCt}</div>
           <div class='cell'>${row.item?.accessSummary}</div>
           <div class='cell cell--center'>
@@ -171,6 +181,10 @@ function _renderMobileView(){
                     <div>
                       <div>Schema:</div>
                       <div>${row.item?.table?.schema}</div>
+                    </div>
+                    <div>
+                      <div>Type:</div>
+                      <div>${labels.tableType(row.item?.table?.tableType)}</div>
                     </div>
                     <div>
                       <div>Users:</div>

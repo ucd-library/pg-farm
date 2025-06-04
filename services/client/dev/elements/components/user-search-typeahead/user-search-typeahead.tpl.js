@@ -12,7 +12,7 @@ export function styles() {
       left: 0;
       right: 0;
       z-index: 10;
-  
+
       display: flex;
       padding: 9.5px;
       flex-direction: column;
@@ -63,6 +63,18 @@ export function styles() {
       font-weight: 400;
       line-height: 19px;
     }
+    .user-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .user-status--found app-icon {
+      color: var(--quad, #3dae2b);
+    }
+    .user-status--not-found app-icon {
+      color: var(--gunrock, #0047ba);
+    }
   `;
 
   return [elementStyles];
@@ -76,6 +88,20 @@ export function render() {
         .value=${this.kerberosId || ''}
         @input=${e => this._onInput('username', e.target.value)}
         required>
+      <div ?hidden=${!this.searchTerm}>
+        <div ?hidden=${this.userFullName}>
+          <div class='user-status user-status--not-found'>
+            <app-icon slug='fa.solid.circle-question'></app-icon>
+            <div>No UC Davis affiliate has this Kerberos ID</div>
+          </div>
+        </div>
+        <div ?hidden=${!this.userFullName}>
+          <div class='user-status user-status--found'>
+            <app-icon slug='fa.solid.circle-check'></app-icon>
+            <div>Kerberos ID exists: <strong>${this.userFullName}</strong></div>
+          </div>
+        </div>
+      </div>
 
       <div class='results-list ${this.searchResults.length > 0 ? 'opened' : ''}' ?hidden=${!this.searchResults.length}>
         ${this.searchResults.map(
