@@ -41,7 +41,13 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
     this.username = '';
     this.schema = '';
 
-    this.tableCtl = new TableController(this, 'tables');
+    const ctlOptions = {
+      searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
+      filters: [
+        {id: 'table-access', cb: this._onTableAccessFilterChange}
+      ]
+    }
+    this.tableCtl = new TableController(this, 'tables', ctlOptions);
     this.dataCtl = new PageDataController(this);
 
     this._injectModel('AppStateModel', 'DatabaseModel');
@@ -127,6 +133,22 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
       showOnPageLoad: true
     });
     this.AppStateModel.hideLoading();
+  }
+
+  /**
+   * @description Callback to determine whether to show user based on table access filter
+   * @param {Object} table - The table object from this.tables array
+   * @param {String} value - The value of the filter
+   * @returns {Boolean} - True if the table should be shown, false otherwise
+   */
+  _onTableAccessFilterChange(table, value) {
+    if ( !value ) return true;
+
+    if ( value === 'SOME' ) {
+      return table?.grant?.action !== 'NONE';
+    } else {
+      return table?.grant?.action === value;
+    }
   }
 
 }
