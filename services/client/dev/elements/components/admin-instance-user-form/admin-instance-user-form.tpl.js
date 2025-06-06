@@ -7,6 +7,10 @@ export function styles() {
     admin-instance-user-form {
       display: block;
     }
+    admin-instance-user-form .custom-validations {
+      margin-bottom: 1rem;
+      color: var(--double-decker, #c10230);
+    }
   `;
 
   return [elementStyles];
@@ -18,6 +22,11 @@ export function render() {
   const isCreate = this.operation === 'create';
   return html`
   <form @submit=${this._onSubmit}>
+    <div class='custom-validations' ?hidden=${!this.customValidations.length}>
+      ${this.customValidations.map( v => html`
+        <div class='validation-error'>${v.message}</div>
+      `)}
+    </div>
     <div class='field-container' ?hidden=${!isCreate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
       <kerberos-lookup-input

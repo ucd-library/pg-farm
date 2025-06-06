@@ -12,6 +12,7 @@ import IdGenerator from '../../../utils/IdGenerator.js';
  * @property {String} dbName - database name
  * @property {String} instanceName - instance name
  * @property {Object} payload - the form data
+ * @property {Array} customValidations - list of custom validation messages
  */
 export default class AdminInstanceUserForm extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -25,6 +26,7 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
       username: { type: String },
       schema: { type: String },
       payload: { type: Object },
+      customValidations: { type: Array },
     }
   }
 
@@ -41,6 +43,7 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
     this.dbName = '';
     this.instanceName = '';
     this.schema = '';
+    this.customValidations = [];
 
     this.idGen = new IdGenerator({randomPrefix: true});
     this._injectModel('InstanceModel', 'AppStateModel', 'DatabaseModel');
@@ -174,7 +177,17 @@ export default class AdminInstanceUserForm extends Mixin(LitElement)
   }
 
   reportValidity(){
-    return this.renderRoot.querySelector('form').reportValidity();
+    let nativeValidation =  this.renderRoot.querySelector('form').reportValidity();
+
+    const customValidations = [];
+    if( !this.payload.username ) {
+      customValidations.push({
+        message: 'Please select at least one user'
+      });
+    }
+    this.customValidations = customValidations;
+
+    return nativeValidation && !this.customValidations.length;
   }
 
 }
