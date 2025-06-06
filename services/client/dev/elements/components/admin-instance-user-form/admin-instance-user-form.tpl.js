@@ -1,11 +1,15 @@
 import { html, css } from 'lit';
 import { grantDefinitions } from '../../../utils/service-lib.js';
-import '../user-search-typeahead/user-search-typeahead.js';
+import '../kerberos-lookup-input/kerberos-lookup-input.js';
 
 export function styles() {
   const elementStyles = css`
     admin-instance-user-form {
       display: block;
+    }
+    admin-instance-user-form .custom-validations {
+      margin-bottom: 1rem;
+      color: var(--double-decker, #c10230);
     }
   `;
 
@@ -18,13 +22,18 @@ export function render() {
   const isCreate = this.operation === 'create';
   return html`
   <form @submit=${this._onSubmit}>
+    <div class='custom-validations' ?hidden=${!this.customValidations.length}>
+      ${this.customValidations.map( v => html`
+        <div class='validation-error'>${v.message}</div>
+      `)}
+    </div>
     <div class='field-container' ?hidden=${!isCreate}>
       <label for=${this.idGen.get('username')}>UC Davis Kerberos ID</label>
-      <user-search-typeahead
-        .kerberosId=${this.payload.username || ''}
-        @select=${e => this._onInput('username', e.detail.kerberosId)}
+      <kerberos-lookup-input
+        .value=${this.payload.username || ''}
+        @user-found=${e => this._onInput('username', e.detail.kerberosId)}
         required>
-      </user-search-typeahead>
+      </kerberos-lookup-input>
     </div>
     <div class='field-container' ?hidden=${isCreate}>
       <label>Username</label>

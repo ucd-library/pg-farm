@@ -109,11 +109,11 @@ function _renderDesktopView(){
           <div class='cell access'>
             <div>Access</div>
             <div>
-              <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
-                <option value='' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Any Access</option>
-                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Some Access</option>
+              <select .value=${this.tableCtl.getFilterValue('table-access')} @change=${e => this.tableCtl.setFilterValue('table-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('table-access')}>Any Access</option>
+                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('table-access')}>Some Access</option>
                 ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
-                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('schema-access') === value}>${label}</option>
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('table-access') === value}>${label}</option>
                 `)}
               </select>
             </div>
@@ -155,11 +155,11 @@ function _renderMobileView(){
           <div class='cell access'>
             <div>Access</div>
             <div>
-              <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
-                <option value='' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Any Access</option>
-                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Some Access</option>
+              <select .value=${this.tableCtl.getFilterValue('table-access')} @change=${e => this.tableCtl.setFilterValue('table-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('table-access')}>Any Access</option>
+                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('table-access')}>Some Access</option>
                 ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
-                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('schema-access') === value}>${label}</option>
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('table-access') === value}>${label}</option>
                 `)}
               </select>
             </div>

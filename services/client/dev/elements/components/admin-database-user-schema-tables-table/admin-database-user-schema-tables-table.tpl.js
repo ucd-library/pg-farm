@@ -2,6 +2,8 @@ import { html, css } from 'lit';
 
 import '@ucd-lib/pgfarm-client/elements/components/admin-table-access-dropdown/admin-table-access-dropdown.js';
 
+import {grantDefinitions} from '@ucd-lib/pgfarm-client/utils/service-lib.js';
+
 export function styles() {
   const elementStyles = css`
     admin-database-user-schema-tables-table {
@@ -55,7 +57,18 @@ export function render() {
               <div>Tables (${this.tableCtl.getRowCt()})</div>
             </div>
           </div>
-          <div class='cell access'>Access</div>
+          <div class='cell access'>
+            <div>Access</div>
+            <div>
+              <select .value=${this.tableCtl.getFilterValue('table-access')} @change=${e => this.tableCtl.setFilterValue('table-access', e.target.value)}>
+                <option value='' ?selected=${this.tableCtl.getFilterValue('table-access')}>Any Access</option>
+                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('table-access')}>Some Access</option>
+                ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
+                  <option value=${value} ?selected=${this.tableCtl.getFilterValue('table-access') === value}>${label}</option>
+                `)}
+              </select>
+            </div>
+          </div>
         </div>
         ${this.tableCtl.getRows().map( row => html`
           <div class=${row.classes}>

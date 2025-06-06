@@ -52,7 +52,7 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
     const ctlOptions = {
       searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
       filters: [
-        {id: 'schema-access', cb: this._onSchemaAccessFilterChange}
+        {id: 'table-access', cb: this._onTableAccessFilterChange}
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
@@ -95,19 +95,19 @@ export default class AdminDatabaseUserTableAccessTable extends Mixin(LitElement)
   }
 
   /**
-   * @description Callback to determine whether to show user based on schema access filter
+   * @description Callback to determine whether to show user based on table access filter
    * @param {Object} user - The user object from this.users array
    * @param {String} value - The value of the filter
    * @returns {Boolean} - True if the user should be shown, false otherwise
    */
-  _onSchemaAccessFilterChange(user, value) {
+  _onTableAccessFilterChange(user, value) {
     if ( !value ) return true;
+
     if ( value === 'SOME' ) {
       return user?.schemaRole?.grant?.action !== 'NONE';
+    } else {
+      return user?.schemaRole?.grant?.action === value;
     }
-    const isThisSchema = value === user?.schemaRole?.grant?.action;
-
-    return isThisSchema;
   }
 
   /**
