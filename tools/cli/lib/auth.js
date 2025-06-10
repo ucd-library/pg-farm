@@ -14,17 +14,18 @@ class Auth {
     this.PG_FARM_PEM = path.join(os.homedir(), '.pgfarm.pem');
     this.PG_SERVICE_NAME = 'pgfarm'
 
-    this.ROOT_CERT = 'system';
-    if (process.platform === 'win32' && !(config.host || '').includes('localhost')) {
-      this.ROOT_CERT = this.PG_FARM_PEM;
+    this.ROOT_SYSTEM_CERT = 'system';
+    this.ROOT_CERT = this.PG_FARM_PEM;
+    if ( (config.host || '').includes('localhost') ) {
+      this.ROOT_CERT = this.ROOT_SYSTEM_CERT;
     }
   }
 
   login(opts) {
     opts.authUrl = config.host + config.loginPath;
 
-    if( opts.forceRemoteCert ) {
-      this.ROOT_CERT = this.PG_FARM_PEM;
+    if( opts.forceSystemCert ) {
+      this.ROOT_CERT = this.ROOT_SYSTEM_CERT;
     }
 
     if( opts.headless ) {
@@ -103,9 +104,11 @@ class Auth {
   }
 
   async updateService() {
-    // for windows, we need to use the system cert store
-    if( this.ROOT_CERT !== 'system' ) {
+    if( this.ROOT_CERT !== this.ROOT_SYSTEM_CERT ) {
+      console.log('🔐 Using PG Farm certificate');
       await this.getPemFile();
+    } else {
+      console.log('🔐 Using system certificate');
     }
 
     let pgService = {};

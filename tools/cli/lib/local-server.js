@@ -55,10 +55,9 @@ class LocalLoginServer {
 ${colors.green('🎉 Logged in successfully!')}
       
 You can access your PG Farm password token at any time by using '${colors.yellow('pgfarm auth token')}'.  
-Alternatively, can set the password to the PGPASSWORD environment variable. For example:
+Alternatively, can use the ${colors.yellow('PGSERVICE=pgfarm')} environment variable. For example:
 
-> export PGPASSWORD=$(pgfarm auth token)
-> psql -U ${username} -h ${hostname} [database]
+> PGSERVICE=pgfarm psql [organization/database]
 
 For more examples on how to connect run '${colors.yellow('pgfarm connect --help')}'
 `);
