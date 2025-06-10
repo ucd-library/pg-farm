@@ -51,8 +51,20 @@ program.command('update <org/database>')
     database.update(dbName, opts, cmd.optsWithGlobals());
   });
 
+program.command('expose-table <org/database> <schema.table>')
+  .description('Expose a table to the PostgREST API for an database'+print.dbAdminOnlyMsg())
+  .action((dbName, table, opts, cmd) => {
+    database.exposeTableToApi(dbName, table, cmd.optsWithGlobals());
+  });
+
+program.command('update-api-cache <org/database> <schema.table>')
+  .description('Update the PostgREST API cache for an database'+print.dbAdminOnlyMsg())
+  .action((dbName, opts, cmd) => {
+    database.updateApiCache(dbName, cmd.optsWithGlobals());
+  });
+
 program.command('restart-api <org/database>')
-  .description('Restart the PostgREST API for an instance '+print.pgFarmAdminOnlyMsg())
+  .description('Restart the PostgREST API for an database '+print.pgFarmAdminOnlyMsg())
   .action((dbName, opts, cmd) => {
     database.restartApi(dbName, cmd.optsWithGlobals());
   });

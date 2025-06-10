@@ -173,6 +173,22 @@ class DatabaseModel extends BaseModel {
     return this.service.isAdmin(org, db);
   }
 
+  getTablesOverview(org, db) {
+    return this.service.getTablesOverview(org, db);
+  }
+
+  getSchemasOverview(org, db) {
+    return this.service.getSchemasOverview(org, db);
+  }
+
+  getSchemaTablesOverview(org, db, schema) {
+    return this.service.getSchemaTablesOverview(org, db, schema);
+  }
+
+  getUserAccessOverview(org, db) {
+    return this.service.getUserAccessOverview(org, db);
+  }
+
   /**
    * @method setUserAccess
    * @description set access for a user on a database, schema or table.
@@ -207,6 +223,22 @@ class DatabaseModel extends BaseModel {
 
   revokeAccess(org, db, schemaTable, user, access) {
     return this.service.revokeAccess(org, db, schemaTable, user, access);
+  }
+
+  exposeTableToApi(org, db, table) {
+    return this.service.exposeTableToApi(org, db);
+  }
+
+  updateApiCache(org, db, table) {
+    return this.service.updateApiCache(org, db);
+  }
+
+  bulkGrantAccess(org, db, grants) {
+    return this.service.bulkGrantAccess(org, db, grants);
+  }
+
+  bulkRevokeAccess(org, db, grants) {
+    return this.service.bulkRevokeAccess(org, db, grants);
   }
 
   restartApi(org, db) {

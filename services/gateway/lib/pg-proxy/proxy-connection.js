@@ -4,6 +4,7 @@ import keycloak from '../../../lib/keycloak.js';
 import config from '../../../lib/config.js';
 import utils from '../../../lib/utils.js';
 import logger from '../../../lib/logger.js';
+import { createContext } from '../../../lib/context.js';
 import monitor from './monitor.js';
 import {admin, user as userModel, instance} from '../../../models/index.js';
 
@@ -447,11 +448,12 @@ class ProxyConnection {
 
     // before attempt connection, check user is registered with database
     try {
-      this.pgFarmUser = await userModel.get(
-        this.startupProperties.database,
-        this.dbOrganization,
-        this.startupProperties.user
-      );
+      this.ctx = await createContext({
+        organization: this.dbOrganization,
+        database: this.startupProperties.database,
+      });
+
+      this.pgFarmUser = await userModel.get(this.ctx, this.startupProperties.user);
     } catch (e) {}
 
     let userError = false;
@@ -501,10 +503,7 @@ class ProxyConnection {
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.CREATE_SERVER_SOCKET, {fromReconnect});
 
       // get the instance information from the database/organization
-      this.instance = await instance.getByDatabase(
-        this.startupProperties.database,
-        this.dbOrganization
-      );
+      this.instance = this.ctx.instance;
   
       // this clients seem to be upset if you send a notice message when they don't expect it :(
       // Leaving as a TODO.  but this might not be possible.
@@ -676,12 +675,12 @@ class ProxyConnection {
 
   async getInstanceStatus() {
     this.checkingPgInstStatus = true;
-    let instStatus = await instance.getByDatabase(
-      this.startupProperties.database,
-      this.dbOrganization
-    );
+    let ctx = await createContext({
+      database: this.startupProperties.database,
+      organization: this.dbOrganization
+    });
     this.checkingPgInstStatus = false;
-    return instStatus;
+    return ctx;
   }
 
   /**
@@ -980,11 +979,7 @@ class ProxyConnection {
     if( this.serverSocket?.readyState == 'open' ) return false;
 
     logger.info('Checking instance is up', this.getConnectionInfo());
-    let resp = await admin.startInstance(
-      this.startupProperties.database, 
-      this.dbOrganization,
-      {isDb: true}
-    );
+    let resp = await admin.startInstance(this.ctx, {pgRest: false});
 
     if( resp.starting ) {
       await resp.instance;

@@ -1,6 +1,7 @@
 import logger from '../lib/logger.js';
 import client from '../lib/pg-admin-client.js';
 import config from '../lib/config.js';
+import { getContext } from '../lib/context.js';
 
 class OrganizationModel {
 
@@ -13,23 +14,38 @@ class OrganizationModel {
     ];
   }
 
-  async get(nameOrId, columns) {
+  /**
+   * @method get
+   * @description get an organization by name or id
+   * 
+   * @param {String|Object} ctx context object or id 
+   * @param {Array} columns columns to select 
+   * @returns 
+   */
+  async get(ctx, columns) {
+    ctx = getContext(ctx);
+
     if ( !columns ) {
       columns = this.API_FIELDS;
     }
-    const org = await client.getOrganization(nameOrId, columns);
+    const org = await client.getOrganization(ctx.organization.name, columns);
     if ( org.database_count !== undefined ) {
       org.database_count = parseInt(org.database_count);
     }
     return org;
   }
 
-  async exists(name) {
+  /**
+   * @method exists
+   * @description check if an organization exists
+   * 
+   * @param {String|Object} ctx context object or id
+   * @returns {Promise<Boolean>}
+   */
+  async exists(ctx) {
     try {
-      let org = await this.get(name);
-      return org;
+      return await this.get(ctx);
     } catch(e) {}
-
     return false;
   }
 
@@ -75,48 +91,59 @@ class OrganizationModel {
    * @method create
    * @description create a new organization
    *
-   * @param {String} title name of the organization
-   * @param {Object} opts
-   * @param {String} opts.description description of the organization
-   * @param {String} opts.url url of the organization
+   * @param {String|Object} ctx
    *
    * @returns {Promise<Object>}
    */
-  async create(title, opts={}) {
-    if( !opts.name ) {
-      opts.name = title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
-    }
+  async create(ctx, organization) {
+    ctx = getContext(ctx);
 
-    let exists = await this.exists(opts.name);
+    if( !organization.name && organization.title ) {
+      organization.name = organization.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+    }
+    if( !organization.title ) {
+      organization.title = organization.name;
+    }
+    organization.name = organization.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+
+    let exists = await this.exists(organization);
     if( exists ) {
-      throw new Error('Organization already exists: '+opts.name);
+      throw new Error('Organization already exists: '+organization.name);
     }
-    this._convertLogoToBytes(opts);
+    this._convertLogoToBytes(organization);
 
-    logger.info('Creating organization', title, opts);
-    await client.createOrganization(title, opts);
+    logger.info('Creating organization', ctx.logSignal);
+    await client.createOrganization(organization);
 
-    return this.get(opts.name);
+    // set a context
+    await ctx.update({
+      organization: organization.name
+    });
+
+    return this.get(ctx);
   }
 
-  async setMetadata(nameOrId, metadata={}) {
-    if( Object.keys(metadata).length === 0 ) {
-      throw new Error('No metadata fields provided');
+  async update(ctx) {
+    ctx = getContext(ctx);
+
+    if( !ctx.organization.organization_id ) {
+      throw new Error('Context organization_id is required');
     }
 
-    let org = await this.get(nameOrId);
-    let props = Object.keys(metadata);
+    let update = {};
+    let props = Object.keys(ctx.organization);
     for( let prop of props ) {
       if( !this.METADATA_FIELDS.includes(prop) ) {
-        throw new Error(`Invalid metadata field ${prop}`);
+        continue;
       }
+      update[prop] = ctx.organization[prop];
     }
 
-    this._convertLogoToBytes(metadata);
+    this._convertLogoToBytes(update);
 
-    logger.info('Updating organization metadata', org.name, metadata);
+    logger.info('Updating organization', ctx.logSignal);
 
-    await client.setOrganizationMetadata(org.organization_id, metadata);
+    await client.setOrganizationMetadata(org.organization_id, update);
   }
 
   _convertLogoToBytes(metadata) {
@@ -131,10 +158,17 @@ class OrganizationModel {
     }
   }
 
-  async getUsers(nameOrId) {
-    return client.getOrganizationUsers(nameOrId);
+  /**
+   * @method getUsers
+   * @description get all users of the organization
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns {Promise<Array>}
+   */
+  async getUsers(ctx) {
+    ctx = getContext(ctx);
+    return client.getOrganizationUsers(ctx.organization.name);
   }
-
 
 }
 

@@ -20,8 +20,7 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     return {
       pageId: { type: String, attribute: 'page-id' },
       orgName: { type: String},
-      dbName: { type: String},
-      counts: { type: Object }
+      dbName: { type: String}
     }
   }
 
@@ -34,25 +33,25 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     this.render = render.bind(this);
     this.orgName = '';
     this.dbName = '';
-    this.resetCounts();
 
     this.dataCtl = new PageDataController(this);
+    this.resetDataCtl();
 
     this._injectModel('AppStateModel', 'DatabaseModel');
   }
 
-  /**
-   * @description Reset the counts object to default values
-   */
-  resetCounts(){
-    const counts = {};
-    ['schemas', 'users', 'tables'].forEach(key => {
-      counts[key] = {
-        total: 0,
-        totalPublic: 0
-      }
-    })
-    this.counts = counts;
+  resetDataCtl(){
+    this.dataCtl.schemasOverview = [];
+    this.dataCtl.tablesOverview = [];
+    this.dataCtl.users = [];
+    this.dataCtl.isFeatured = false;
+  }
+
+  tableIsPublic(table){
+    const users = table.userAccess || [];
+    const publicUser = window.APP_CONFIG?.publicUser?.username
+    if ( !publicUser ) return false;
+    return users.some(user => user === publicUser);
   }
 
   /**
@@ -64,9 +63,8 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
     if ( e.page !== this.pageId ) return;
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
-    this.dataCtl.isFeatured = false;
+    this.resetDataCtl();
     this.AppStateModel.showLoading();
-    this.resetCounts();
     let r = await this.dataCtl.get([
       {
         request: this.DatabaseModel.isAdmin(this.orgName, this.dbName),
@@ -99,45 +97,18 @@ export default class AppAdminDatabaseOverview extends Mixin(LitElement)
         errorMessage: 'Unable to get database users'
       },
       {
-        request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
-        ctlProp: 'schemas',
-        errorMessage: 'Unable to load schemas'
+        request: this.DatabaseModel.getTablesOverview(this.orgName, this.dbName),
+        ctlProp: 'tablesOverview',
+        errorMessage: 'Unable to load tables overview'
       },
+      {
+        request: this.DatabaseModel.getSchemasOverview(this.orgName, this.dbName),
+        ctlProp: 'schemasOverview',
+        errorMessage: 'Unable to load schemas overview'
+      }
     ], {ignoreLoading: true});
     if ( !r ) return;
 
-    this.counts.users.total = this.dataCtl.users.length;
-    this.counts.users.totalPublic = this.dataCtl.users.filter(u => u.pgFarmUser?.type === 'PUBLIC').length;
-    this.counts.schemas.total = this.dataCtl.schemas.length;
-
-    // get tables for each schema
-    const tables = (await this.dataCtl.batchGet(this.dataCtl.schemas.map(schema => {
-      return {
-        func: () => this.DatabaseModel.getSchemaTables(this.orgName, this.dbName, schema),
-        errorMessage: `Unable to load tables for schema ${schema}`,
-      }
-    }
-    ), {ignoreLoading: true})).flatMap(t => t.response.value.payload);
-    if ( !tables ) return;
-    this.counts.tables.total = tables.length;
-
-    // get schema access for all public users
-    const userSchemaProduct = this.dataCtl.schemas.flatMap(schema =>
-      this.dataCtl.users
-        .filter(u => u.pgFarmUser?.type === 'PUBLIC')
-        .map(user => ({ schema, user: user.name }))
-    );
-    const schemaAccess = (await this.dataCtl.batchGet(userSchemaProduct.map(({ schema, user }) => ({
-      func: () => this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, schema, user),
-      errorMessage: `Unable to get access for user ${user} on schema ${schema}`
-    })), {ignoreLoading: true})).map(r => r.response.value);
-    if ( !schemaAccess ) return;
-
-    // get counts of public schemas and tables
-    this.counts.schemas.totalPublic = this.dataCtl.schemas.filter(schema => schemaAccess.find(r => r.schema == schema && r.payload.schema.length)).length;
-    this.counts.tables.totalPublic = tables.filter(t => schemaAccess.find(r => r.schema == t.table_schema && r.payload.tables[t.table_name])).length;
-
-    this.requestUpdate();
     this.AppStateModel.hideLoading();
   }
 

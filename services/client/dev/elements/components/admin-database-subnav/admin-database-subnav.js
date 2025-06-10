@@ -44,7 +44,7 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
     if ( e.location?.path?.[0] !== 'db' ) return;
     this.orgName = e.location?.path?.[1] || '';
     this.dbName = e.location?.path?.[2] || '';
-    this.dbSetting = e.location?.path?.[4] || '';    
+    this.dbSetting = e.location?.path?.[4] || '';
     this.dbSettingFiltered = e.location?.path?.[5] || '';
     this.items = this.getItems(e);
   }
@@ -52,38 +52,36 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
   getItems(appState){
     const dbUrl = `/db/${this.orgName}/${this.dbName}`;
     const adminUrl = `${dbUrl}/edit`;
+    let schema = this.AppStateModel.location.query?.schema || '';
+    if( schema ) schema = `?schema=${schema}`;
 
     const dbItems = [
-      {position: 1, label: 'Overview', icon: 'fa.solid.magnifying-glass-chart', href: adminUrl},
-      {position: 2, label: 'Schemas', icon: 'fa.solid.diagram-project', href: `${adminUrl}/schemas`},
-      {position: 3, label: 'Users', icon: 'fa.solid.user', href: `${adminUrl}/users`},
-      {position: 4, label: 'Tables', icon: 'fa.solid.table', href: `${adminUrl}/tables`},
+      {label: 'Overview', icon: 'fa.solid.magnifying-glass-chart', href: adminUrl},
+      {label: 'Schemas', icon: 'fa.solid.diagram-project', href: `${adminUrl}/schemas`},
+      {label: 'Users', icon: 'fa.solid.user', href: `${adminUrl}/users${schema}`},
+      {label: 'Tables', icon: 'fa.solid.table', href: `${adminUrl}/tables${schema}`},
     ];
 
     if( this.dbSettingFiltered ) {
-      const parentNavItem = dbItems.find(item => item.href === `${adminUrl}/${this.dbSetting}`);
+      const parentNavItem = dbItems.find(item => item.href.split('?')[0] === `${adminUrl}/${this.dbSetting}`);
       if( parentNavItem ) {
-        dbItems.push(
-          {
-            position: parentNavItem.position,
-            label: this.dbSettingFiltered, 
-            icon: 'fa.solid.arrow-turn-up', 
-            href: `${adminUrl}/${this.dbSetting}/${this.dbSettingFiltered}`, 
-            transformDegrees: '90', 
-            indented: true 
-          },
-        );
+        parentNavItem.children = [{
+          label: this.dbSettingFiltered,
+          icon: 'fa.solid.arrow-turn-up',
+          href: `${adminUrl}/${this.dbSetting}/${this.dbSettingFiltered}`,
+          transformDegrees: '90',
+          indented: true
+        }];
       }
     }
 
-    // sort by position, then by href so subfilters show below main db setting
-    return dbItems.sort((a, b) => a.position - b.position || a.href.localeCompare(b.href));
+    return dbItems;
   }
 
   async selectedFn(item){
     const state = await this.AppStateModel.get();
     const path = '/' + state.location.path.join('/');
-    return item.href === path;
+    return item.href.split('?')[0] === path;
   }
 
 }

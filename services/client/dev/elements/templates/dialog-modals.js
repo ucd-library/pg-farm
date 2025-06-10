@@ -5,7 +5,7 @@ import { html } from 'lit';
  * @param {Object|Array} user - A user object or array of user objects
  * @returns {TemplateResult}
  */
-export function deleteUserConfirmation(user){
+export function deleteUserConfirmation(user, deleteFromInstance = false){
   if ( !Array.isArray(user) ) user = [user];
   return html`
     <div>
@@ -14,7 +14,12 @@ export function deleteUserConfirmation(user){
         ` : html`
         <p>Are you sure you want to delete user <strong>${user[0].name}</strong>?</p>
         `}
-      <p class='double-decker'>This will revoke all database access</p>
+      <div ?hidden=${!deleteFromInstance}>
+        <p class='double-decker'>This will remove the user from the instance and revoke access to all databases running on this instance</p>
+      </div>
+      <div ?hidden=${deleteFromInstance}>
+        <p class='double-decker'>This will revoke all database access</p>
+      </div>
     </div>
   `
 }

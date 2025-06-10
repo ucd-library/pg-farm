@@ -54,7 +54,10 @@ export function render() {
               </select>
             </div>
           </div>
-          <admin-database-tables-table .tables=${this.tables}></admin-database-tables-table>
+          <admin-database-tables-table
+            .users=${this.dataCtl?.users || []}
+            .tables=${this.tables}>
+          </admin-database-tables-table>
         </div>
       </div>
     </div>

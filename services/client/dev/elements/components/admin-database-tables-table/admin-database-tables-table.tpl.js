@@ -1,13 +1,9 @@
 import { html, css } from 'lit';
 import '@ucd-lib/pgfarm-client/elements/components/app-search-input/app-search-input.js';
 import '@ucd-lib/pgfarm-client/elements/components/app-dropdown-button/app-dropdown-button.js';
+import labels from '@ucd-lib/pgfarm-client/utils/labelGetter.js';
 
 export function styles() {
-
-  const desktopStyles = css`
-    admin-database-tables-table .desktop .app-table .row {
-      grid-template-columns: 2fr 1fr 75px 140px 75px;
-    }`;
 
   const elementStyles = css`
     admin-database-tables-table {
@@ -19,6 +15,9 @@ export function styles() {
     }
     admin-database-tables-table .mobile {
       display: block;
+    }
+    admin-database-tables-table .desktop .app-table .row {
+      grid-template-columns: 2fr 125px 100px 75px 140px 75px;
     }
     admin-database-tables-table .mobile .app-table .row {
       grid-template-columns: 1fr auto;
@@ -54,8 +53,7 @@ export function styles() {
   `;
 
   return [
-    elementStyles,
-    desktopStyles
+    elementStyles
   ];
 }
 
@@ -72,7 +70,12 @@ return html`
         @option-change=${e => this.selectedBulkAction = e.detail.value}
         @apply=${this._onBulkActionSelect}>
       </app-dropdown-button>
-      <app-search-input placeholder='Search Tables' @search=${e => this.tableCtl.search(e.detail.value)} search-bar-style='basic'></app-search-input>
+      <app-search-input
+        placeholder='Search Tables'
+        @search=${e => this.tableCtl.search(e.detail.value)}
+        .value=${this.tableCtl?.opts?.searchValue || ''}
+        search-bar-style='basic'>
+      </app-search-input>
     </div>
     ${_renderDesktopView.call(this)}
     ${_renderMobileView.call(this)}
@@ -95,6 +98,17 @@ function _renderDesktopView(){
           </div>
         </div>
         <div class='cell'>Schema</div>
+        <div class='cell'>
+          <div>Type</div>
+          <div>
+            <select .value=${this.tableCtl.getFilterValue('table-type')} @change=${e => this.tableCtl.setFilterValue('table-type', e.target.value)}>
+              <option value='' ?selected=${!this.tableCtl.getFilterValue('table-type')}>Any Type</option>
+              ${labels.getLabels('tableType', true).map( type => html`
+                <option value=${type.value} ?selected=${this.tableCtl.getFilterValue('table-type') === type.value}>${type.label}</option>
+              `)}
+            </select>
+          </div>
+        </div>
         <div class='cell'>Users</div>
         <div class='cell'>
           <div>Access</div>
@@ -114,17 +128,22 @@ function _renderDesktopView(){
             <div class='checkbox-container'>
               <input type='checkbox' .checked=${row.selected} @change=${row.toggleSelected}>
               <div class='table-name-container'>
-                <a href='${this.tableUrl}/${row.item?.table?.table_name}'>${row.item?.table?.table_name}</a>
+                <a href='${this.tableUrl}/${row.item?.table?.tableName}?schema=${row.item?.table?.schema}'>${row.item?.table?.tableName}</a>
               </div>
             </div>
           </div>
-          <div class='cell'>
-            <div>${row.item?.table?.table_schema}</div>
+          <div class='cell break-word'>
+            <div>${row.item?.table?.schema}</div>
           </div>
+          <div class='cell'>${labels.tableType(row.item?.table?.tableType)}</div>
           <div class='cell'>${row.item?.userCt}</div>
           <div class='cell'>${row.item?.accessSummary}</div>
           <div class='cell cell--center'>
-            <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete table', row.item)}></app-icon-button>
+            <app-icon-button
+              icon='fa.solid.trash'
+              ?disabled=${row.item?.userCt == 0}
+              basic @click=${() => this._onSingleRemoveClick(row.item)}>
+            </app-icon-button>
           </div>
         </div>
       `)}
@@ -155,13 +174,17 @@ function _renderMobileView(){
                 <div class='u-width-100'>
                   <div>
                     <div class='table-name-container'>
-                      <a href='${this.tableUrl}/${row.item?.table?.table_name}'>${row.item?.table?.table_name}</a>
+                      <a href='${this.tableUrl}/${row.item?.table?.tableName}?schema=${row.item?.table?.schema}'>${row.item?.table?.tableName}</a>
                     </div>
                   </div>
                   <div class='details'>
                     <div>
                       <div>Schema:</div>
-                      <div>${row.item?.table?.table_schema}</div>
+                      <div>${row.item?.table?.schema}</div>
+                    </div>
+                    <div>
+                      <div>Type:</div>
+                      <div>${labels.tableType(row.item?.table?.tableType)}</div>
                     </div>
                     <div>
                       <div>Users:</div>
@@ -176,7 +199,11 @@ function _renderMobileView(){
               </div>
             </div>
             <div class='cell cell--icon-top'>
-              <app-icon-button icon='fa.solid.trash' basic @click=${() => console.log('todo: delete table', row.item)}></app-icon-button>
+              <app-icon-button
+                icon='fa.solid.trash'
+                ?disabled=${row.item?.userCt == 0}
+                basic @click=${() => this._onSingleRemoveClick(row.item)}>
+              </app-icon-button>
             </div>
           </div>
         `)}

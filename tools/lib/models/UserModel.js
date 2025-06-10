@@ -21,6 +21,10 @@ class UserModel extends BaseModel {
     return this.service.myDatabases(org);
   }
 
+  search(username, contextOptions = {}) {
+    return this.service.search(username, contextOptions);
+  }
+
 }
 
 const model = new UserModel();

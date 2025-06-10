@@ -50,7 +50,6 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
 
   _onBulkActionSelect() {
     const tables = this.tableCtl.getSelectedItems().map(item => item.table);
-    console.log(this.selectedBulkAction, tables);
     this.AppStateModel.showDialogModal({
       title: `Update Table Access`,
       actions: [
@@ -77,12 +76,25 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
     if ( !tables ) tables = this.tableCtl.getSelectedItems().map(item => item.table);
     if ( !access ) access = this.selectedBulkAction;
     if (!tables.length) return;
+
+    const grants = tables.map(table => {
+      return {
+        user: this.username,
+        schema: `${table.table_schema}.${table.table_name}`,
+        permission: access === 'NONE' ? 'READ' : access
+      }
+    });
     this.AppStateModel.showLoading();
-    const r = await this.dataCtl.batchGet(tables.map(table => ({
-      func: () => this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, `${table.table_schema}.${table.table_name}`, this.username, access),
-      errorMessage: `Failed to update access for ${table.table_name}`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
+    const r = access === 'NONE' ?
+      await this.DatabaseModel.bulkRevokeAccess(this.orgName, this.dbName, grants) :
+      await this.DatabaseModel.bulkGrantAccess(this.orgName, this.dbName, grants);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: 'Error updating table access',
+        error: r.error
+      });
+      return;
+    }
     let toastText = tables.length === 1 ?
       `Table '${tables[0].table_name}' access has been updated to '${access}'` :
       `${tables.length} tables access have been updated to '${access}'`;
@@ -94,6 +106,27 @@ export default class AdminDatabaseUserSchemaTablesTable extends Mixin(LitElement
     this.AppStateModel.hideLoading();
     this.tableCtl.reset();
     this.AppStateModel.refresh();
+  }
+
+  /**
+   * @description Table access dropdown change
+   * @param {Object} e - The custom event object
+   */
+  _onTableAccessChange(e) {
+    const access = e.detail.value;
+    const tableName = e.currentTarget.dataset.tablename || '';
+    if( !tableName || !this.username || !access ) return;
+
+    this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, `${this.schema}.${tableName}`, this.username, access);
+
+    const accessLabel = this.bulkActions.find(a => a.value === access)?.label || '';
+    const toastText = `User access has been updated to '${accessLabel}'`;
+    this.AppStateModel.showToast({
+      text: toastText,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.AppStateModel.hideLoading();
   }
 
 }

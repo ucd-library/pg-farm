@@ -75,75 +75,63 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
     // get data that requires the database to be awake
     r = await this.dataCtl.get([
       {
-        request: this.DatabaseModel.getUsers(this.orgName, this.dbName),
-        ctlProp: 'users',
-        errorMessage: 'Unable to get database users'
-      },
-      {
         request: this.DatabaseModel.getSchemas(this.orgName, this.dbName),
         ctlProp: 'schemas',
         errorMessage: 'Unable to load schemas'
       },
+      {
+        request: this.DatabaseModel.getUserAccessOverview(this.orgName, this.dbName),
+        ctlProp: 'userAccessOverview',
+        errorMessage: 'Unable to load user access overview'
+      }
     ], {ignoreLoading: true});
     if ( !r ) return;
 
-    // get schema access
     const selectedSchemas = this.dataCtl.schemas.includes(this.queryCtl.schema.value) ? [this.queryCtl.schema.value] : this.dataCtl.schemas;
-    const userSchemaProduct = selectedSchemas.flatMap(schema =>
-      this.dataCtl.users.map(user => ({ schema, user: user.name }))
-    );
-    const schemaAccess = await this.dataCtl.batchGet(userSchemaProduct.map(({ schema, user }) => ({
-      func: () => this.DatabaseModel.getSchemaUserAccess(this.orgName, this.dbName, schema, user),
-      errorMessage: `Unable to get access for user ${user} on schema ${schema}`
-    })), {ignoreLoading: true});
-    if ( !schemaAccess ) return;
-
-    // merge it all together
-    this.users = this.dataCtl.users.map(user => {
-      const access = schemaAccess.filter(r => r.response?.value?.user === user.name).map(r => r.response.value);
-      const tableCt = access.reduce((acc, r) => acc + Object.keys(r.payload.tables).length, 0);
+    this.users = this.dataCtl.userAccessOverview.map(user => {
 
       let schemaRole;
       let schemaRoles = [];
-      if ( access.length ){
 
-        // one schema selected, only need to show access summary to that one
-        if ( selectedSchemas.length === 1 ){
-          schemaRole = {
-            privileges: access[0].payload?.schema,
-            grant: grantDefinitions.getGrant('SCHEMA', access[0].payload?.schema)
+      // one schema selected, only need to show access summary to that one
+      if ( selectedSchemas.length === 1 ){
+        const schemaAccess = user.schemas.find(s => s.name === selectedSchemas[0])?.access || [];
+        schemaRole = {
+          privileges: schemaAccess,
+          grant: grantDefinitions.getGrant('SCHEMA', schemaAccess)
+        }
+      // multiple schemas selected, If all access the same, show that. Otherwise show 'varies'
+      } else {
+        schemaRoles = user.schemas.map(s => {
+          return {
+            schema: s.name,
+            privileges: s.access,
+            grant: grantDefinitions.getGrant('SCHEMA', s.access)
           }
+        });
 
-        // multiple schemas selected, If all access the same, show that. Otherwise show 'varies'
+        const allSame = schemaRoles.every((r, i, arr) => r.grant.action === arr[0].grant.action);
+        if ( allSame ){
+          schemaRole = {
+            privileges: schemaRoles[0].privileges,
+            grant: schemaRoles[0].grant
+          }
         } else {
-          schemaRoles = access.map(r => ({
-            schema: r.payload?.schema,
-            privileges: r.payload?.schema,
-            grant: grantDefinitions.getGrant('SCHEMA', r.payload?.schema)
-          }));
-
-          const allSame = schemaRoles.every((r, i, arr) => r.grant.action === arr[0].grant.action);
-          if ( allSame ){
-            schemaRole = {
-              privileges: schemaRoles[0].privileges,
-              grant: schemaRoles[0].grant
-            }
-          } else {
-            schemaRole = {
-              privileges: [],
-              grant: {action: 'VARIES', roleLabel: 'Varies' }
-            }
+          schemaRole = {
+            privileges: [],
+            grant: {action: 'VARIES', roleLabel: 'Varies' }
           }
         }
       }
 
       return {
         user,
-        tableCt,
         schemaRole,
-        schemaRoles
+        schemaRoles,
+        tableCt: user.tableAccessCount
       }
     });
+
     this.AppStateModel.hideLoading();
   }
 

@@ -74,11 +74,11 @@ class DatabaseService extends BaseService {
     return this.store.data.update.get(id);
   }
 
-  async updateFeaturedList(org, db, opts={}) {
-    const ido = {org, db, ...opts};
+  async updateFeaturedList(organization, database, opts={}) {
+    const ido = {organization, database, ...opts};
     let id = payload.getKey(ido);
     let url = `${this.basePath}/featured`;
-    if ( opts.organizationList ) url += `/${org}`;
+    if ( opts.organizationList ) url += `/${organization}`;
 
     await this.request({
       url,
@@ -280,6 +280,74 @@ class DatabaseService extends BaseService {
     return this.store.data.schemaTableAccess.get(id);
   }
 
+  async getTablesOverview(org, db) {
+    let id = payload.getKey({org, db});
+    await this.checkRequesting(
+      id, this.store.data.tablesOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/tables-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onTablesOverviewUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onTablesOverviewUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onTablesOverviewUpdate({org, db}, {error})
+        })
+    );
+    return this.store.data.tablesOverview.get(id);
+  }
+
+  async getSchemasOverview(org, db) {
+    let id = payload.getKey({org, db});
+    await this.checkRequesting(
+      id, this.store.data.schemasOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/schemas-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onSchemasOverviewUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onSchemasOverviewUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onSchemasOverviewUpdate({org, db}, {error})
+        })
+    );
+    return this.store.data.schemasOverview.get(id);
+  }
+
+  async getSchemaTablesOverview(org, db, schema) {
+    let id = payload.getKey({org, db, schema});
+    await this.checkRequesting(
+      id, this.store.data.schemaTablesOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/schema/${schema}/tables-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onSchemaTablesOverviewUpdate({org, db, schema}, {request}),
+          onLoad: payload => this.store.onSchemaTablesOverviewUpdate({org, db, schema}, {payload: payload.body}),
+          onError: error => this.store.onSchemaTablesOverviewUpdate({org, db, schema}, {error})
+        })
+    );
+    return this.store.data.schemaTablesOverview.get(id);
+  }
+
+  async getUserAccessOverview(org, db) {
+    let id = payload.getKey({org, db});
+    await this.checkRequesting(
+      id, this.store.data.userAccessOverview,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/users-overview`,
+          fetchOptions: {
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onUserAccessOverviewUpdate({org, db}, {request}),
+          onLoad: payload => this.store.onUserAccessOverviewUpdate({org, db}, {payload: payload.body}),
+          onError: error => this.store.onUserAccessOverviewUpdate({org, db}, {error})
+        })
+    );
+    return this.store.data.userAccessOverview.get(id);
+  }
+
   async grantAccess(org, db, schemaTable, user, access) {
     let ido = {org, db, schemaTable, user, access, action: 'grantAccess'};
     let id = payload.getKey(ido);
@@ -289,6 +357,26 @@ class DatabaseService extends BaseService {
       fetchOptions: {
         method : 'PUT',
         body: {schemaTable, user, access},
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onGrantAccessUpdate(ido, {request}),
+      onLoad: payload => this.store.onGrantAccessUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onGrantAccessUpdate(ido, {error})
+    });
+
+    return this.store.data.actions.get(id);
+  }
+
+  async bulkGrantAccess(org, db, grants) {
+    let ido = {org, db, grants, action: 'bulkGrantAccess'};
+    let id = payload.getKey(ido);
+
+    await this.request({
+      url: `${this.basePath}/${org}/${db}/grant`,
+      fetchOptions: {
+        method : 'POST',
+        body: grants,
         headers: serviceUtils.authHeader()
       },
       json: true,
@@ -319,6 +407,24 @@ class DatabaseService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  async bulkRevokeAccess(org, db, grants) {
+    let ido = {org, db, grants, action: 'bulkRevokeAccess'};
+    let id = payload.getKey(ido);
+    await this.request({
+      url: `${this.basePath}/${org}/${db}/revoke`,
+      fetchOptions: {
+        method : 'POST',
+        body: grants,
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onRevokeAccessUpdate(ido, {request}),
+      onLoad: payload => this.store.onRevokeAccessUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onRevokeAccessUpdate(ido, {error})
+    });
+    return this.store.data.actions.get(id);
+  }
+
   async restartApi(org, db) {
     let ido = {org, db, action: 'restartApi'};
     let id = payload.getKey(ido);
@@ -326,7 +432,7 @@ class DatabaseService extends BaseService {
     await this.checkRequesting(
       id, this.store.data.actions,
       () => this.request({
-          url: `${this.basePath}/${org}/${db}/restart/api`,
+          url: `${this.basePath}/${org}/${db}/api/restart`,
           fetchOptions: {
             method : 'POST',
             headers: serviceUtils.authHeader()
@@ -334,6 +440,48 @@ class DatabaseService extends BaseService {
           onLoading: request => this.store.onRestartApiUpdate(ido, {request}),
           onLoad: payload => this.store.onRestartApiUpdate(ido, {payload: payload.body}),
           onError: error => this.store.onRestartApiUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
+  async exposeTableToApi(org, db, table) {
+    let ido = {org, db, table, action: 'exposeTableToApi'};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/api/expose/${table}`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onExposeTableToApiUpdate(ido, {request}),
+          onLoad: payload => this.store.onExposeTableToApiUpdate(ido, {payload: payload.body}),
+          onError: error => this.store.onExposeTableToApiUpdate(ido, {error})
+        })
+    );
+
+    return this.store.data.actions.get(id);
+  }
+
+  async updateApiCache(org, db, table) {
+    let ido = {org, db, table, action: 'updateApiCache'};
+    let id = payload.getKey(ido);
+
+    await this.checkRequesting(
+      id, this.store.data.actions,
+      () => this.request({
+          url: `${this.basePath}/${org}/${db}/api/updated`,
+          fetchOptions: {
+            method : 'POST',
+            headers: serviceUtils.authHeader()
+          },
+          onLoading: request => this.store.onUpdateApiCacheUpdated(ido, {request}),
+          onLoad: payload => this.store.onUpdateApiCacheUpdated(ido, {payload: payload.body}),
+          onError: error => this.store.onUpdateApiCacheUpdated(ido, {error})
         })
     );
 

@@ -254,6 +254,9 @@ class KeycloakUtils {
     // }
 
     if( req.user ) {
+      if( req.context ) {
+        await req.context.update({requestor: req.user.username});
+      }
       return next();
     }
 
@@ -304,6 +307,10 @@ class KeycloakUtils {
 
     req.headers[config.jwt.header] = JSON.stringify(user);
 
+    if( req.context ) {
+      await req.context.update({requestor: user.username});
+    }
+
     next();
   }
 
@@ -319,6 +326,10 @@ class KeycloakUtils {
 
         if( roles.includes('instance-admin') ) {
           return this._protectInstance(req, res, next, ['ADMIN']);
+        }
+
+        if( roles.includes('instance-user') ) {
+          return this._protectInstance(req, res, next, ['ADMIN', 'USER']);
         }
 
         if( roles.includes('organization-admin') ) {
@@ -381,9 +392,8 @@ class KeycloakUtils {
       return next();
     }
 
-    let nameOrId = req.params.instance || req.params.database;
-    let organization = req.params.organization;
-    if( organization === '_' ) organization = null;
+    let nameOrId = req.context.instance.name;
+    let organization = req.context.organization.name;
 
     try {
       let instUser = await adminClient.getInstanceUser(nameOrId, organization, req.user.username);

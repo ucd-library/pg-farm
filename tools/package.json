@@ -2,10 +2,16 @@
   "name": "@ucd-lib/pgfarm",
   "version": "0.0.13",
   "description": "PG Farm client; library, cli and desktop applicaiton",
-  "main": "index.js",
+  "main": "./application/main.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-app": "./build/build.sh",
+    "start-app": "electron ./application/main.js --dev",
+    "dist-linux": "electron-builder -l --publish never",
+    "dist-windows": "electron-builder -w --publish never",
+    "dist-mac-intel": "electron-builder -m --x64 --publish never",
+    "dist-mac-arm": "electron-builder -m --arm64 --publish never"
   },
   "bin": {
     "pgfarm": "cli/bin/pgfarm.js"
@@ -26,5 +32,35 @@
   },
   "resolutions": {
     "@ucd-lib/cork-app-utils": "^6.0.5"
+  },
+  "devDependencies": {
+    "electron": "^36.1.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "edu.ucdavis.library.pgfarm",
+    "productName": "PG Farm",
+    "files": [
+      "./application/preload.js",
+      "./application/main.js",
+      "/application/main/*"
+    ],
+    "directories": {
+      "buildResources": "./build-resources"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg"
+        }
+      ]
+    },
+    "win": {},
+    "linux": {
+      "category": "Development",
+      "executableName": "pgdm-ui",
+      "artifactName": "${productName}-${version}.${ext}"
+    }
   }
 }

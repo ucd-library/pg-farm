@@ -2,9 +2,9 @@ import client from '../lib/pg-admin-client.js';
 import pgInstClient from '../lib/pg-instance-client.js';
 import logger from '../lib/logger.js';
 import config from '../lib/config.js';
-import remoteExec from '../lib/pg-helper-remote-exec.js';
 import utils from './utils.js';
 import ucdIamApi from '../lib/ucd-iam-api.js';
+import {getContext} from '../lib/context.js';
 
 class Database {
 
@@ -16,26 +16,26 @@ class Database {
    * @method getConnection
    * @description Returns a postgres user connection object for a postgres instance
    *
-   * @param {String} dbNameOrId PG Farm instance name or ID
-   * @param {String} orgNameOrId PG Farm organization name or ID
+   * @param {String|Object} ctx context object or id
    * @param {Object} opts
+   * @param {String} opts.database optional.  Defaults to ctx.database.name
    * @param {String} opts.username optional.  Defaults to 'postgres'
    * @param {Boolean} opts.useSocket optional.  If true, returns a connection object for a unix socket
    *
    * @returns {Promise<Object>}
    */
-  async getConnection(dbNameOrId, orgNameOrId=null, opts={}) {
+  async getConnection(ctx, opts={}) {
+    ctx = getContext(ctx);
 
     if( !opts.username ) {
       opts.username = 'postgres';
     }
 
     let db;
-    if( dbNameOrId === 'postgres' ) {
-      db = {name: 'postgres'};
-      opts.useSocket = true;
+    if( opts.database ) {
+      db = {name: opts.database.name};
     } else {
-      db = await this.get(dbNameOrId, orgNameOrId);
+      db = ctx.database
     }
 
     if( opts.useSocket ) {
@@ -48,15 +48,16 @@ class Database {
 
     let user;
     try {
-      user = await this.models.user.get(dbNameOrId, orgNameOrId, opts.username);
+      user = await this.models.user.get(ctx, opts.username);
     } catch(e) {
-      if( username === 'postgres' ) {
-        let instance = await this.models.instance.get(db.instance_id);
+      // fall back to the default user
+      if( opts.username === 'postgres' ) {
+        let instance = ctx.instance;
         return {
           host : instance.hostname,
           port : instance.port,
           user : username,
-          database : db.name || db.database_name,
+          database : db.name,
           password : config.pgInstance.adminInitPassword
         }
       }
@@ -82,19 +83,21 @@ class Database {
    *
    * @returns
    */
-  async get(nameOrId, orgNameOrId, columns=null) {
-    let organizationId = null;
-    if( orgNameOrId ) {
-      let org = await client.getOrganization(orgNameOrId);
-      organizationId = org.organization_id;
-    }
-
-    return client.getDatabase(nameOrId, organizationId, columns);
+  async get(ctx, columns=null) {
+    return client.getDatabase(ctx, columns);
   }
 
-  async exists(name, orgNameOrId) {
+  /**
+   * @method exists
+   * @description Check if a database exists.  This will return false if the database
+   * does not exist or will return the database object if it does exist.
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns
+   */
+  async exists(ctx) {
     try {
-      let db = await this.get(name, orgNameOrId);
+      let db = await this.get(ctx);
       return db;
     } catch(e) {}
 
@@ -105,45 +108,47 @@ class Database {
    * @method create
    * @description Create a new database
    *
-   * @param {*} name
-   * @param {*} opts
+   * @param {*} ctx
    */
-  async create(title, opts) {
-    if( !opts.name ) {
-      opts.name = title;
+  async create(ctx) {
+    ctx = getContext(ctx);
+
+    let opts = {
+      title: ctx.database.title || utils.cleanInstDbName(ctx.database.name),
+      name: utils.cleanInstDbName(ctx.database.name),
+      instance: ctx.instance.name,
+      short_description: ctx.organization.short_description,
+      description: ctx.organization.description,
+      tags: ctx.organization.tags,
+      url: ctx.organization.url
+    };
+
+    let pgRestOrgName = '';
+    if( ctx.organization ) {
+      let org = await this.models.organization.get(ctx);
+      pgRestOrgName = org.name+'-';
+      opts.organization = org.name;
     }
-
-    // make sure the name is prefixed with inst- (instance) prefix
-    // this is to avoid conflicts with accessing the postgres instance
-    // by name
-    opts.name = utils.cleanInstDbName(opts.name);
-
-    let orgName = '';
-    if( opts.organization ) {
-      orgName = await this.models.organization.get(opts.organization);
-      orgName = orgName.name+'-';
-    }
-    opts.pgrest_hostname = `rest-${orgName}${opts.name}`;
-
-    logger.info('Creating database', title, opts);
+    opts.pgrest_hostname = `rest-${pgRestOrgName}${ctx.database.name}`;
 
     try {
-      await client.createDatabase(title, opts);
+      logger.info('Creating database', ctx.logSignal);
+
+      await client.createDatabase(opts);
     } catch(e) {
-      logger.warn('Failed to create database in admin db', title, e.message);
+      logger.warn('Failed to create database in admin db', {e}, ctx.logSignal);
     }
 
-    let db = await this.get(opts.name, opts.organization);
+    await this.ensurePgDatabase(ctx);
 
-    await this.ensurePgDatabase(db.instance_id, db.organization_id, db.database_name);
+    return this.get(ctx);
   }
 
   /**
    * @method setMetadata
    * @description Set/patch metadata for a database
    *
-   * @param {String} nameOrId database name or ID
-   * @param {String} orgNameOrId database organization name or ID
+   * @param {Object} ctx context object or id
    * @param {Object} metadata
    * @param {String} metadata.title optional.  The human title of the database
    * @param {String} metadata.description optional.  A description of the database.  Markdown is supported.
@@ -153,12 +158,12 @@ class Database {
    * @param {String} metadata.url optional.  A website for more information about the database
    * @param {Array<String>} metadata.tags optional.  An array of search tags for the database
    */
-  async setMetadata(nameOrId, orgNameOrId, metadata={}) {
+  async update(ctx, metadata={}) {
     if( Object.keys(metadata).length === 0 ) {
       throw new Error('No metadata fields provided');
     }
 
-    let db = await this.get(nameOrId, orgNameOrId);
+    let db = ctx.database;
     let props = Object.keys(metadata);
     for( let prop of props ) {
       if( !this.METADATA_FIELDS.includes(prop) ) {
@@ -170,17 +175,17 @@ class Database {
   }
 
   /**
+   * @method makeFeatured
    * @description Add a database to an organization's or the global featured list
-   * @param {String} nameOrId - database name or ID
-   * @param {String} orgNameOrId - organization name or ID
+   * @param {Object} ctx - database name or ID
    * @param {Object} opts - options
    * @param {Number} opts.orderIndex - order index of the database in the list
    * @param {Boolean} opts.organizationList - if true, add to organization's featured list.  If false or not provided, add to global featured list
    */
-  async makeFeatured(nameOrId, orgNameOrId, opts={}) {
-    let db = await this.get(nameOrId, orgNameOrId);
+  async makeFeatured(ctx, opts={}) {
+    let db = ctx.database;
 
-    const featured = await this.getFeatured(opts.organizationList ? orgNameOrId : null);
+    const featured = await this.getFeatured(opts.organizationList ? ctx : null);
     const orderIndex = Number(opts.orderIndex) || 0;
 
     const selfInList = featured.find(f => f.database_id === db.database_id);
@@ -194,7 +199,7 @@ class Database {
     } else {
       featured.splice(orderIndex, 0, {
         database_id : db.database_id,
-        database_name : db.database_name
+        database_name : db.name
       });
     }
 
@@ -210,14 +215,14 @@ class Database {
   }
 
   /**
+   * @method removeFeatured
    * @description Remove a database from an organization's or the global featured list
-   * @param {String} nameOrId - database name or ID
-   * @param {String} orgNameOrId - organization name or ID
+   * @param {Object} ctx - database name or ID
    * @param {Boolean} organizationList - if true, remove from organization's featured list; else, remove from global featured list
    */
-  async removeFeatured(nameOrId, orgNameOrId, organizationList) {
-    let db = await this.get(nameOrId, orgNameOrId);
-    let featured = await this.getFeatured(organizationList ? orgNameOrId : null);
+  async removeFeatured(ctx, organizationList) {
+    let db = ctx.database;
+    let featured = await this.getFeatured(organizationList ? ctx : null);
 
     let item = featured.find(f => f.database_id === db.database_id);
     if( !item ) {
@@ -231,14 +236,15 @@ class Database {
     }
   }
 
-  async getFeatured(orgNameOrId) {
-    let organizationId = null;
-    if( orgNameOrId ) {
-      let org = await client.getOrganization(orgNameOrId);
-      organizationId = org.organization_id;
-    }
-
-    return client.getFeaturedDatabases(organizationId);
+  /**
+   * @method getFeatured
+   * @description Get the featured databases for an organization
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns
+   */
+  async getFeatured(ctx) {
+    return client.getFeaturedDatabases(ctx?.organization?.organization_id);
   }
 
   /**
@@ -246,17 +252,15 @@ class Database {
    * @description Ensure a database exists on a postgres instance.
    * Creates the database if it does not exist.
    *
-   * @param {String} instNameOrId instance name or ID
-   * @param {String} orgNameOrId organization name or ID
-   * @param {String} dbName database name
+   * @param {String|Object} ctx context object or id
    */
-  async ensurePgDatabase(instNameOrId, orgNameOrId, dbName) {
-    let con = await this.models.instance.getConnection(instNameOrId, orgNameOrId);
+  async ensurePgDatabase(ctx) {
+    let con = await this.models.instance.getConnection(ctx);
     try {
-      logger.info('Ensuring database '+dbName+' on instance', orgNameOrId, instNameOrId);
-      await pgInstClient.ensurePgDatabase(con, dbName);
+      logger.info('Ensuring database on instance', ctx.logSignal);
+      await pgInstClient.ensurePgDatabase(con, ctx.database.name);
     } catch(e) {
-      logger.warn(`Failed to create database ${dbName} on host ${con.host}`, e.message);
+      logger.warn(`Failed to create database on host ${con.host}`, {e}, ctx.logSignal);
     }
   }
 
@@ -456,17 +460,23 @@ class Database {
     }
   }
 
-  async getDatabaseUsers(orgNameOrId, dbNameOrId) {
-    let database = await this.get(dbNameOrId, orgNameOrId);
+  /**
+   * @method getDatabaseUsers
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns
+   */
+  async getDatabaseUsers(ctx) {
+    let database = ctx.database;
 
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+    let con = await this.getConnection(ctx);
     let resp = await pgInstClient.getDatabaseUsers(con);
 
-    let access = await pgInstClient.getDatabaseAccess(con, database.database_name);
+    let access = await pgInstClient.getDatabaseAccess(con, database.name);
     access = access.rows;
 
     const userColumns = ['u.username', 'u.user_id', 'type', 'u.first_name', 'u.last_name', 'u.ucd_iam_payload'];
-    let pgFarmUsers = await client.getInstanceUsers(database.instance_id, userColumns);
+    let pgFarmUsers = await client.getInstanceUsers(ctx.instance.instance_id, userColumns);
 
     let users = resp.rows.filter(row => !row.rolname.match(/^pg_/))
       .map(row => {
@@ -495,14 +505,27 @@ class Database {
     return users;
   }
 
-  async listSchema(orgNameOrId, dbNameOrId) {
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+  /**
+   * @method listSchema
+   * @description List all schemas in a database
+   *
+   * @param {Object|String} ctx context object or id
+   * @returns
+   */
+  async listSchema(ctx) {
+    let con = await this.getConnection(ctx);
     let resp = await pgInstClient.listSchema(con);
     return resp.rows.map(row => row.schema_name);
   }
 
-  async getSchemasOverview(orgNameOrId, dbNameOrId) {
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+  /**
+   * @method getSchemasOverview
+   * @description Get an overview of all schemas in a database
+   *
+   * @param {Object|String} ctx context object or id
+   */
+  async getSchemasOverview(ctx) {
+    let con = await this.getConnection(ctx);
     let resp = await pgInstClient.getSchemasOverview(con);
     return resp.rows.map(row => {
       return {
@@ -514,8 +537,16 @@ class Database {
     });
   }
 
-  async listTables(orgNameOrId, dbNameOrId, schemaName) {
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+  /**
+   * @method listTables
+   * @description List all tables in a database
+   *
+   * @param {Object|String} ctx context object or id
+   * @param {String} schemaName Schema name to list tables from
+   * @returns
+   */
+  async listTables(ctx, schemaName) {
+    let con = await this.getConnection(ctx);
     let resp = await pgInstClient.listTables(con, schemaName);
     return resp.rows;
   }
@@ -523,27 +554,103 @@ class Database {
   /**
    * @method getTableAccessOverview
    * @description Get an overview of all tables in a database
-   * 
-   * @param {*} orgNameOrId 
-   * @param {*} dbNameOrId 
-   * @param {*} schemaName Optional.  If not provided, will return all tables
-   * @returns 
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {String} schemaName Optional.  If not provided, will return all tables
+   * @returns
    */
-  async getTableAccessOverview(orgNameOrId, dbNameOrId, schemaName) {
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
-    let resp = await pgInstClient.getTableAccessOverview(con, dbNameOrId, schemaName);
+  async getTableAccessOverview(ctx, schemaName) {
+    let con = await this.getConnection(ctx);
+    let resp = await pgInstClient.getTableAccessOverview(con, ctx.database.name, schemaName);
     return resp.rows.map(row => {
       return {
         schema : row.table_schema,
         tableName : row.table_name,
         tableType : row.table_type,
-        userAccess : row.user_access_list.replace(/(^{|}$)/g, '').split(','),
+        userAccess : row.user_access_list ? row.user_access_list.replace(/(^{|}$)/g, '').split(',') : [],
       }
     });
   }
 
-  async getTableAccess(orgNameOrId, dbNameOrId, schemaName, tableName) {
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
+  async getUserAccessOverview(ctx, username) {
+    let con = await this.getConnection(ctx);
+    let users = await this.getDatabaseUsers(ctx);
+
+    // schema access
+    const schemaAccess = await pgInstClient.getSchemaAccess(con);
+    const schemas = Array.from( new Set(schemaAccess.rows.map(row => row.schema_name)) );
+
+    // table access
+    const allTablesRes = await pgInstClient.query(con, `
+      SELECT table_schema, table_name
+      FROM information_schema.tables
+      WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+    `);
+
+    const tableGrantsRes = await pgInstClient.query(con, `
+      SELECT grantee, table_schema, table_name, privilege_type
+      FROM information_schema.role_table_grants
+      WHERE grantee NOT IN ('PUBLIC', 'postgres')
+    `);
+
+
+    for( let user of users ) {
+      user.schemas = [];
+      user.tableAccessCount = 0;
+      for( let schema of schemas ) {
+        let access = schemaAccess.rows.find(row => row.role_name === user.name && row.schema_name === schema);
+        let schemaOutput = {
+          name: schema,
+          access : [],
+          tableAccess : [],
+          tableAccessCount : 0
+        };
+        if( access ) {
+          delete access.role_name;
+          delete access.schema_name;
+          access = Object.values(access).filter(v => v);
+          schemaOutput.access = access;
+        }
+
+        for( let table of allTablesRes.rows ) {
+          if( table.table_schema === schema ) {
+            let tableAccess = tableGrantsRes.rows.filter(row => row.grantee === user.name && row.table_schema === schema && row.table_name === table.table_name);
+            if( tableAccess.length ) {
+              let access = tableAccess.map(row => row.privilege_type);
+              schemaOutput.tableAccess.push({
+                name : table.table_name,
+                access
+              });
+              schemaOutput.tableAccessCount++;
+              user.tableAccessCount++;
+            } else {
+              schemaOutput.tableAccess.push({
+                name : table.table_name,
+                access : []
+              });
+            }
+          }
+        }
+
+        user.schemas.push(schemaOutput);
+      }
+    }
+
+
+    return users;
+  }
+
+  /**
+   * @method getTableAccess
+   * @description Get the access for a table
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {String} schemaName
+   * @param {String} tableName
+   * @returns
+   */
+  async getTableAccess(ctx, schemaName, tableName) {
+    let con = await this.getConnection(ctx);
     let resp = await pgInstClient.getTableAccess(con, con.database, schemaName, tableName);
 
     let userMap = {};
@@ -557,9 +664,18 @@ class Database {
     return userMap;
   }
 
-  async getTableAccessByUser(orgNameOrId, dbNameOrId, schemaName, username) {
-    let con = await this.getConnection(dbNameOrId, orgNameOrId);
-    let tables = await this.listTables(orgNameOrId, dbNameOrId, schemaName);
+  /**
+   * @method getTableAccessByUser
+   * @description Get the access for a table by user
+   *
+   * @param {String|Object} ctx context object or id
+   * @param {String} schemaName
+   * @param {String} username
+   * @returns
+   */
+  async getTableAccessByUser(ctx, schemaName, username) {
+    let con = await this.getConnection(ctx);
+    let tables = await this.listTables(ctx, schemaName);
     let resp = await pgInstClient.getTableAccessByUser(con, con.database, schemaName, username);
 
     let tableMap = {};
@@ -576,7 +692,7 @@ class Database {
       }
     }
 
-    resp = await pgInstClient.getSchemaAccess(con, schemaName, username);
+    resp = await pgInstClient.getSchemaAccess(con, schemaName);
     let schemaAccess = resp.rows.find(row => row.role_name === username);
     if( schemaAccess ) {
       delete schemaAccess.role_name;

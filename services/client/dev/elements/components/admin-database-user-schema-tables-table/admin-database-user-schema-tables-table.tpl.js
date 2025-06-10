@@ -1,5 +1,7 @@
 import { html, css } from 'lit';
 
+import '@ucd-lib/pgfarm-client/elements/components/admin-table-access-dropdown/admin-table-access-dropdown.js';
+
 export function styles() {
   const elementStyles = css`
     admin-database-user-schema-tables-table {
@@ -7,7 +9,20 @@ export function styles() {
       container-type: inline-size;
     }
     admin-database-user-schema-tables-table .app-table .row {
-      grid-template-columns: 1fr 150px;
+      grid-template-columns: 3fr 2fr;
+    }
+
+    admin-database-user-schema-tables-table .cell.access {
+      margin: 0 .5rem;
+    }
+
+    @media (min-width: 768px) {
+      admin-database-user-schema-tables-table .app-table .row {
+        grid-template-columns: 1fr 250px;
+      }
+      admin-database-user-schema-tables-table .cell.access {
+        margin: 0 1rem;
+      }
     }
   `;
 
@@ -40,7 +55,7 @@ export function render() {
               <div>Tables (${this.tableCtl.getRowCt()})</div>
             </div>
           </div>
-          <div class='cell'>Access</div>
+          <div class='cell access'>Access</div>
         </div>
         ${this.tableCtl.getRows().map( row => html`
           <div class=${row.classes}>
@@ -50,11 +65,11 @@ export function render() {
                 <div>${row.item.table?.table_name}</div>
               </div>
             </div>
-            <div class='cell'>
-              <!-- TODO: Replace this with an app-select component for selecting roles -->
-              ${row.item.grant?.roleLabel}
-            </div>
-
+            <admin-table-access-dropdown 
+              data-tablename=${row.item.table?.table_name}
+              .value=${row.item?.grant?.action}
+              @option-change=${this._onTableAccessChange}>
+            </admin-table-access-dropdown>
           </div>
         `)}
       </div>

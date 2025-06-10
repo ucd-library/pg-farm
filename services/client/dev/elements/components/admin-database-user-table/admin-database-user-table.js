@@ -15,12 +15,10 @@ import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-clie
 
 /**
  * @description Admin Database User Table
- * @property {String} orgName - The name of the organization
- * @property {String} dbName - The name of the database
  * @property {Array} users - The list of users to display
  * @property {Array} bulkActions - The list of bulk actions available
  * @property {String} selectedBulkAction - The selected bulk action
- * @property {Boolean} rmFromDb - Flag to indicate if the user should be removed from the database or just the schema
+ * @property {Boolean} rmFromObject - Object user should be removed from: database, schema, instance
  */
 export default class AdminDatabaseUserTable extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -30,9 +28,8 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       users: {type: Array},
       bulkActions: {type: Array},
       selectedBulkAction: {type: String},
-      orgName: { type: String},
-      dbName: { type: String},
-      rmFromDb: { type: Boolean }
+      rmFromObject: { type: Boolean },
+      instance: { type: String}
     }
   }
 
@@ -46,7 +43,8 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.users = [];
     this._setBulkActions();
     this.selectedBulkAction = '';
-    this.rmFromDb = false;
+    this.rmFromObject = 'schema';
+    this.instance = '';
 
     this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
@@ -81,14 +79,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _onDbAccessFilterChange(user, value) {
     if ( !value ) return true;
-    if ( value === 'ADMIN') {
-      return user?.user?.pgFarmUser?.type === 'ADMIN';
-    } else {
-      const roleLabel = grantDefinitions.getRoleLabel('DATABASE', user.user);
-      for ( const [role, label] of Object.entries(grantDefinitions.roleLabels) ) {
-        if ( roleLabel === label ) return role === value;
-      }
-    }
+    const userGrant = grantDefinitions.getGrant('DATABASE', user.user);
+    if ( value === 'SOME' ) return userGrant?.action !== 'NONE';
+    return userGrant?.action === value;
   }
 
   /**
@@ -99,8 +92,12 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _onSchemaAccessFilterChange(user, value) {
     if ( !value ) return true;
-    const isThisSchema = value === user?.schemaRole?.grant?.action;
-    const isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
+    let isThisSchema = value === user?.schemaRole?.grant?.action;
+    let isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
+    if ( value === 'SOME' ) {
+      isThisSchema = user?.schemaRole?.grant?.action !== 'VARIES' && user?.schemaRole?.grant?.action !== 'NONE';
+      isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action !== 'NONE');
+    }
 
     return isThisSchema || isAnySchema;
   }
@@ -147,10 +144,11 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _onRemoveUserButtonClick(user) {
     if ( this.queryCtl?.schema.exists() ){
-      this._showRemoveAccessForm(user);
+      this.rmFromObject = 'schema';
     } else {
-      this._showDeleteUserModal(user);
+      this.rmFromObject = 'database';
     }
+    this._showRemoveAccessForm(user);
   }
 
   /**
@@ -195,16 +193,21 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
   _onAppDialogAction(e){
     if (
       e.action?.value === 'db-delete-users' ||
-      (e.action?.value === 'db-remove-single-user-access' && this.rmFromDb)
+      (e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'database')
     ) {
       const users = (Array.isArray(e.data.user) ? e.data.user : [e.data.user]).map(user => user.name);
       this.deleteUsers(users);
       return;
     }
-    if ( e.action?.value === 'db-remove-single-user-access' ) {
+    if ( e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'schema' ) {
       const user = e.data.user;
       const schema = this.queryCtl.schema.value;
       this.removeSchemaAccess([user.name], schema);
+      return;
+    }
+    if ( e.action?.value === 'db-remove-single-user-access' && this.rmFromObject === 'instance' ) {
+      const user = e.data.user;
+      this.removeInstanceAccess(user.name);
       return;
     }
     if ( e.action?.value === 'db-rm-schema-access' ) {
@@ -215,6 +218,26 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
   }
 
+  async removeInstanceAccess(username) {
+    this.AppStateModel.showLoading();
+    const instanceName = this.instance || this.compCtl.dbName;
+    const r = await this.InstanceModel.deleteUser(this.compCtl.orgName, instanceName, username);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: `Unable to remove user access to instance '${instanceName}'`,
+        error: r.error
+      });
+      return;
+    }
+    this.AppStateModel.showToast({
+      text: `User '${username}' has been removed from instance '${instanceName}'`,
+      type: 'success',
+      showOnPageLoad: true
+    });
+    this.tableCtl.reset();
+    this.AppStateModel.refresh();
+  }
+
   /**
    * @description Removes schema access for a user or users
    * @param {Array} usernames - The array of usernames to remove access for
@@ -223,11 +246,18 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   async removeSchemaAccess(usernames, schema) {
     this.AppStateModel.showLoading();
-    const r = await this.dataCtl.batchGet(usernames.map(username => ({
-      func: () => this.DatabaseModel.setSchemaUserAccess(this.orgName, this.dbName, schema, username, 'NONE'),
-      errorMessage: `Unable to remove access to schema '${schema}' for user '${username}'`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
+    const grants = usernames.map(username => ({
+      user: username,
+      schema: schema
+    }));
+    const r = await this.DatabaseModel.bulkRevokeAccess(this.compCtl.orgName, this.compCtl.dbName, grants);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: `Unable to remove user access to schema '${schema}'`,
+        error: r.error
+      });
+      return;
+    }
     const userText = usernames.length === 1 ? `User '${usernames[0]} has'` : `${usernames.length} Users have`;
     this.AppStateModel.showToast({
       text: `${userText} been removed from schema '${schema}'`,
@@ -245,11 +275,18 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   async deleteUsers(usernames) {
     this.AppStateModel.showLoading();
-    const r = await this.dataCtl.batchGet(usernames.map(username => ({
-      func: () => this.InstanceModel.deleteUser(this.orgName, this.dbName, username),
-      errorMessage: `Unable to delete user '${username}'`
-    })), {ignoreLoading: true});
-    if ( !r ) return;
+    const grants = usernames.map(username => ({
+      user: username,
+      schema: '_'
+    }));
+    const r = await this.DatabaseModel.bulkRevokeAccess(this.compCtl.orgName, this.compCtl.dbName, grants);
+    if ( r.state === 'error' ){
+      this.AppStateModel.showError({
+        message: 'Unable to delete user' + usernames.length > 1 ? 's' : '',
+        error: r.error
+      });
+      return;
+    }
     this.AppStateModel.showToast({
       text: usernames.length === 1 ? `User '${usernames[0]}' has been deleted from the database` : `${usernames.length} Users have been deleted from the database`,
       type: 'success',

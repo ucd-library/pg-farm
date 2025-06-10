@@ -3,10 +3,13 @@ import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import pgClient from '../../../../lib/pg-admin-client.js';
 import { admin, user } from '../../../../models/index.js';
+import {middleware as contextMiddleware} from '../../../../lib/context.js';
 
 const router = Router();
 
-router.get('/connections', keycloak.protect('admin'), async (req, res) => {
+router.use(keycloak.protect('admin'));
+
+router.get('/connections', async (req, res) => {
   try {
     let opts = {};
 
@@ -27,7 +30,7 @@ router.get('/connections', keycloak.protect('admin'), async (req, res) => {
   }
 });
 
-router.get('/connection-log/:sessionId', keycloak.protect('admin'), async (req, res) => {
+router.get('/connection-log/:sessionId', async (req, res) => {
   try {
     let resp = await pgClient.getConnectionLog(req.params.sessionId);
     res.json(resp.rows);
@@ -36,16 +39,30 @@ router.get('/connection-log/:sessionId', keycloak.protect('admin'), async (req, 
   }
 });
 
-router.get('/sleep-instances', keycloak.protect('admin'), async (req, res) => {
+router.get('/sleep-instances', async (req, res) => {
   try {
-    let resp = await admin.sleepInstances();
+    let resp = await admin.sleepInstances(req.context);
     res.json(resp);
   } catch(e) {
     handleError(res, e);
   }
 });
 
-router.put('/ucd-iam-profile/:username', keycloak.protect('admin'), async (req, res) => {
+router.get('/ucd-iam-profile/search/:username',
+  contextMiddleware,
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    let success = false;
+    let resp = await user.fetchUcdIamData(req.params.username);
+    if ( resp ) success = true;
+    res.json({success, resp});
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.put('/ucd-iam-profile/:username', async (req, res) => {
   try {
     let success = false;
     if ( ! await user.pgFarmUserExists(req.params.username) ) {

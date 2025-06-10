@@ -28,12 +28,13 @@ class UserService extends BaseService {
   async myDatabases(org){
     let ido = {org};
     let id = payload.getKey(ido);
+    let qs = org ? {org} : null;
 
     await this.checkRequesting(
       id, this.store.data.myDatabases,
       () => this.request({
         url: `${this.basePath}/me/db`,
-        qs: {org},
+        qs,
         fetchOptions: {
           headers: serviceUtils.authHeader()
         },
@@ -43,6 +44,21 @@ class UserService extends BaseService {
       })
     );
     return this.store.data.myDatabases.get(id);
+  }
+
+  async search(username, contextOptions = {}) {
+    await this.request({
+      url : `${serviceUtils.host}/api/admin/ucd-iam-profile/search/${username}`,
+      qs: contextOptions,
+      fetchOptions: {
+        headers: serviceUtils.authHeader()
+      },
+      onLoading: request => this.store.onSearchUpdate({request}),
+      onLoad: payload => this.store.onSearchUpdate({payload: payload.body}),
+      onError: error => this.store.onSearchUpdate({error})
+    });
+
+    return this.store.data.search.get('search');
   }
 
 }

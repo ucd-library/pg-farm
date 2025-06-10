@@ -40,8 +40,33 @@ if( typeof window === 'undefined' ) {
   config.host = '/';
   config.loginPath = config.loginPath || '/login';
   config.logoutPath = config.logoutPath || '/auth/logout';
-}
 
+  config.getUser = async function() {
+    if( window.electronAPI ) {
+      if( config?.user?.setFromIpc ) {
+        return config.user;
+      }
+
+      let {user, token} = await window.electronAPI.getUser();
+      user.setFromIpc = true;
+      user.token = token;
+      config.user = user;
+      config.token = token;
+      return config.user;
+    }
+
+    if( config.user ) {
+      return {
+        user: config.user,
+        token: config.token
+      };
+    }
+
+    console.warn('No user or token found, no electronAPI registered');
+  }
+
+  config.isNativeApp = window.electronAPI ? true : false;
+}
 
 export {
   save,

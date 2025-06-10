@@ -4,6 +4,7 @@ import utils from '../lib/utils.js';
 import logger from '../lib/logger.js';
 import pgClient from '../lib/pg-admin-client.js'
 import metrics from '../lib/metrics/index.js';
+import { createContext, getContext } from '../lib/context.js';
 import instance from './instance.js';
 import pgRest from './pg-rest.js';
 import {ValueType} from '@opentelemetry/api';
@@ -106,9 +107,17 @@ class HealthProbe {
    * 
    * @returns {Promise<Array>}
    **/
-  async allStatus() {
-    let instances = await this.models.instance.list();
-    let promises = instances.map((instance) => this.getStatus(instance.name, instance.organization_id));
+  async allStatus(ctx) {
+    let instances = await this.models.instance.list()
+    for( let i = 0; i < instances.length; i++ ) {
+      instances[i] = await createContext({
+        organization : instances[i].organization_id,
+        instance : instances[i].name,
+        requestor : ctx.requestor || 'pgfarm:health-probe'
+      });
+    }
+
+    let promises = instances.map((ctx) => this.getStatus(ctx));
     return Promise.all(promises);
   }
 
@@ -122,16 +131,22 @@ class HealthProbe {
    * @param {String} orgNameOrId organization name or id
    * @returns {Promise<Object>}
    */
-  async getStatus(nameOrId='', orgNameOrId=null) {
-    let instance = await this.models.instance.get(nameOrId, orgNameOrId);
-    let databases = await pgClient.getInstanceDatabases(instance.name, orgNameOrId);
-    if( databases.length === 0 ) {
+  async getStatus(ctx) {
+    ctx = getContext(ctx);
+
+    let instance = ctx.instance
+    if( !instance ) {
       throw new Error('Instance not found');
+    }
+
+    let databases = await pgClient.getInstanceDatabases(ctx);
+    if( databases.length === 0 ) {
+      throw new Error('Instance has no databases');
     }
 
     let dbStatus = {};
     databases.forEach((db) => {
-      dbStatus[db.database_name] = this.tcpStatus.rest[db.pgrest_hostname];
+      dbStatus[db.name] = this.tcpStatus.rest[db.pgrest_hostname];
     });
 
     return {
@@ -140,9 +155,9 @@ class HealthProbe {
       organizationId : instance.organization_id,
       timestamp : new Date().toISOString(),
       listServicesTimestamp : this.services.timestamp,
-      state : databases[0].instance_state,
+      state : instance.state,
       tcpStatus : {
-        instance : this.tcpStatus.inst[databases[0].instance_hostname],
+        instance : this.tcpStatus.inst[instance.hostname],
         pgRest : dbStatus
       }
     }
@@ -213,20 +228,27 @@ class HealthProbe {
       let instances = await instance.list({state: instance.STATES.RUN});
       for( let inst of instances ) {
 
+        let iCtx = await createContext({
+          organization : inst.organization_id,
+          instance : inst.name,
+          requestor : 'pgfarm:health-probe'
+        });
+
         // check the tcp status of the instance
         // start the instance if it is not running
         if( this.tcpStatus.inst[inst.hostname]?.isAlive !== true ) {
-          logger.info(`Instance ${inst.name} is not running but in a RUN state.  Starting...`);
-          await instance.start(inst.name, inst.organization_id);
-          continue;
+          logger.info(`Instance is not running but in a RUN state.  Starting...`, iCtx.logSignal);
+          await instance.start(iCtx);
+          continue; // this will start the pgrest as well
         }
 
-        let databases = await pgClient.getInstanceDatabases(inst.name, inst.organization_id);
+        let databases = await pgClient.getInstanceDatabases(iCtx);
         for( let db of databases ) {
           if( this.tcpStatus.rest[db.pgrest_hostname]?.isAlive !== true ) {
-            logger.info(`Instance ${inst.name} database ${db.database_name} pgrest is not running but instance in a RUN state.  Starting...`);
-            await pgRest.start(db.database_name, inst.organization_id);
-            break;
+            let dbCtx = iCtx.clone();
+            await dbCtx.update({database: db.name});
+            logger.info(`Instance database pgrest is not running but instance in a RUN state.  Starting...`, dbCtx.logSignal);
+            await pgRest.start(dbCtx);
           }
         }
 

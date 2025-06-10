@@ -3,8 +3,8 @@ import {config} from '../config.js';
 class ServiceUtils {
 
   authHeader(headers={}) {
-    if( config.tokenHash ) {
-      headers['Authorization'] = `Bearer ${config.tokenHash}`;
+    if( config.tokenHash || config.token ) {
+      headers['Authorization'] = `Bearer ${config.tokenHash || config.token}`;
     }
 
     return headers;

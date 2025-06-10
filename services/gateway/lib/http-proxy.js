@@ -5,6 +5,7 @@ import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import metrics from '../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
+import {createContext} from '../../lib/context.js';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 const swaggerUiRouteRegex = /^\/swagger-ui/;
@@ -59,21 +60,27 @@ async function middleware(req, res) {
       orgName = null;
     }
 
-    let db = await database.get(dbName, orgName);
-    host = 'http://'+db.pgrest_hostname+':'+config.pgRest.port;
+    let ctx = await createContext({
+      organization : orgName,
+      database : dbName,
+      corkTraceId : req.corkTraceId
+    });
+
+    // let db = await database.get(dbName, orgName);
+    host = 'http://'+ctx.database.pgrest_hostname+':'+config.pgRest.port;
 
     // if the instance is marked as RUN in the db but is actually down,
     // it's up the the health service to start it.
-    if( db.instance_state === 'ARCHIVE' ) {
+    if( ctx.instance.state === 'ARCHIVE' ) {
       res.status(503).send('Database is archived.  Please reachout to PG Farm support for assistance.');
-    } else if( db.instance_state !== 'RUN' ) {
-      let startResp = await admin.startInstance(db.instance_id, db.organization_id);
+    } else if( ctx.instance.state !== 'RUN' ) {
+      let startResp = await admin.startInstance(ctx);
       if( startResp.starting ) {
         await startResp.pgrest;
       }
     }
 
-    client.updateDatabaseLastEvent(db.database_id, 'PGREST_REQUEST')
+    client.updateDatabaseLastEvent(ctx.database.database_id, 'PGREST_REQUEST')
       .catch(e => logger.error('Error updating database last event: ', e));
 
     pgRestQueryCount++;

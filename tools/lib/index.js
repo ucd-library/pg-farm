@@ -13,6 +13,21 @@ import utils from './utils.js';
 
 Registry.ready();
 
+if( typeof window !== 'undefined' ) {
+  window.models = {
+    appStateModel,
+    contactModel,
+    databaseModel,
+    iconModel,
+    instanceModel,
+    organizationModel,
+    adminModel,
+    userModel,
+    utils,
+    config
+  };
+}
+
 export {
   appStateModel,
   contactModel,

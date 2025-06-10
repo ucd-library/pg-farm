@@ -71,7 +71,9 @@ For more examples on how to connect run '${colors.yellow('pgfarm connect --help'
       await sleep(1000);
 
       this.server.close();
-      process.exit();
+      if( opts.noQuit !== true ) {
+        process.exit();
+      }
     });
 
     this.server.listen(port, function() {
