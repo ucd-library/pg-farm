@@ -40,7 +40,9 @@ router.get('/me/db', keycloak.protect('logged-in'), async (req, res) => {
         organizationName: db.organization_name,
         organizationTitle: db.organization_title,
         username: db.username,
-        userType: db.user_type
+        userType: db.user_type,
+        shortDescription: db.short_description,
+        brandColor: db.brand_color,
       }
     });
 

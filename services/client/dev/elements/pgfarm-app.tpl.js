@@ -51,6 +51,7 @@ function _renderMainContent(){
       attr-for-selected='page-id'>
       <app-home page-id="home"></app-home>
       <app-native-home page-id="native-home"></app-native-home>
+      <app-native-databases page-id="native-databases"></app-native-databases>
       <app-features page-id="features"></app-features>
       <app-contact page-id="contact"></app-contact>
       <app-search page-id="search"></app-search>
@@ -116,11 +117,7 @@ function _renderElectronHeader(){
       </ucdlib-branding-bar>
       <ucd-theme-primary-nav>
         <a href="/native/home">My Info</a>
-        <ul link-text="My Databases">
-        ${this.userDatabases.map(db => html`
-          <li><a href="${db.link}/edit">${db.title}</a></li>
-        `)}
-        </ul>
+        <a href="/native/databases">My Databases</a>        
         <a @click=${this._nativeLogout} href='#logout'>Logout</a>
       </ucd-theme-primary-nav>
     </ucd-theme-header>
