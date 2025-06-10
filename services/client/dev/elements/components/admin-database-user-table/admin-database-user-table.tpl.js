@@ -101,6 +101,7 @@ function _renderDesktopView(){
             <div>
               <select .value=${this.tableCtl.getFilterValue('db-access')} @change=${e => this.tableCtl.setFilterValue('db-access', e.target.value)}>
                 <option value='' ?selected=${this.tableCtl.getFilterValue('db-access')}>Any Access</option>
+                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('db-access')}>Some Access</option>
                 ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
                   <option value=${value} ?selected=${this.tableCtl.getFilterValue('db-access') === value}>${label}</option>
                 `)}
@@ -112,6 +113,7 @@ function _renderDesktopView(){
             <div>
               <select .value=${this.tableCtl.getFilterValue('schema-access')} @change=${e => this.tableCtl.setFilterValue('schema-access', e.target.value)}>
                 <option value='' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Any Access</option>
+                <option value='SOME' ?selected=${this.tableCtl.getFilterValue('schema-access')}>Some Access</option>
                 ${Object.entries(grantDefinitions.roleLabels).map(([value, label]) => html`
                   <option value=${value} ?selected=${this.tableCtl.getFilterValue('schema-access') === value}>${label}</option>
                 `)}

@@ -149,7 +149,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
         {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
         {text: 'Delete User', value: 'db-delete-user', color: 'secondary'}
       ],
-      content: deleteUserConfirmation(user),
+      content: deleteUserConfirmation(user, true),
       data: {user}
     });
   }

@@ -43,7 +43,13 @@ export default class AdminDatabaseTablesTable extends Mixin(LitElement)
 
     const ctlOptions = {
       searchProps: ['table.tableName'],
-      filters: [{id: 'table-access', cb: this._onTableAccessFilterChange}]
+      filters: [
+        {id: 'table-access', cb: this._onTableAccessFilterChange},
+        {id: 'table-type', cb: (table, value) => {
+          if ( !value ) return true;
+          return table?.table?.tableType === value;
+        }}
+      ]
     }
     this.tableCtl = new TableController(this, 'tables', ctlOptions);
 

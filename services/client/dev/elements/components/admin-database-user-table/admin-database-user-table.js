@@ -79,14 +79,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _onDbAccessFilterChange(user, value) {
     if ( !value ) return true;
-    if ( value === 'ADMIN') {
-      return user?.user?.pgFarmUser?.type === 'ADMIN';
-    } else {
-      const roleLabel = grantDefinitions.getRoleLabel('DATABASE', user.user);
-      for ( const [role, label] of Object.entries(grantDefinitions.roleLabels) ) {
-        if ( roleLabel === label ) return role === value;
-      }
-    }
+    const userGrant = grantDefinitions.getGrant('DATABASE', user.user);
+    if ( value === 'SOME' ) return userGrant?.action !== 'NONE';
+    return userGrant?.action === value;
   }
 
   /**
@@ -97,8 +92,12 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _onSchemaAccessFilterChange(user, value) {
     if ( !value ) return true;
-    const isThisSchema = value === user?.schemaRole?.grant?.action;
-    const isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
+    let isThisSchema = value === user?.schemaRole?.grant?.action;
+    let isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action === value);
+    if ( value === 'SOME' ) {
+      isThisSchema = user?.schemaRole?.grant?.action !== 'VARIES' && user?.schemaRole?.grant?.action !== 'NONE';
+      isAnySchema = user?.schemaRoles?.some?.(role => role?.grant?.action !== 'NONE');
+    }
 
     return isThisSchema || isAnySchema;
   }
