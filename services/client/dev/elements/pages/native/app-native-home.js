@@ -12,7 +12,6 @@ export default class AppNativeHome extends Mixin(LitElement)
       pageId: { type: String, attribute: 'page-id' },
       isLoggedIn: { type: Boolean },
       username : { type: String },
-
     }
   }
 
