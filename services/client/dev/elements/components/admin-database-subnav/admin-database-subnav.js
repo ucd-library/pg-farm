@@ -66,9 +66,9 @@ export default class AdminDatabaseSubnav extends Mixin(LitElement)
       const parentNavItem = dbItems.find(item => item.href.split('?')[0] === `${adminUrl}/${this.dbSetting}`);
       if( parentNavItem ) {
         parentNavItem.children = [{
-          label: this.dbSettingFiltered,
-          icon: 'fa.solid.arrow-turn-up',
-          href: `${adminUrl}/${this.dbSetting}/${this.dbSettingFiltered}`,
+          label: this.dbSettingFiltered, 
+          icon: 'fa.solid.arrow-turn-up', 
+          href: `${adminUrl}/${this.dbSetting}/${this.dbSettingFiltered}${schema}`,
           transformDegrees: '90',
           indented: true
         }];
