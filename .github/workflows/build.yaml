@@ -44,7 +44,7 @@ jobs:
         working-directory: tools
         run: npm run dist-mac-intel
         env:
-          CSC_LINK: certificate.p12
+          CSC_LINK: ../certificate.p12
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
 
       - name: Build (macOS ARM)
@@ -52,7 +52,7 @@ jobs:
         working-directory: tools
         run: npm run dist-mac-arm
         env:
-          CSC_LINK: certificate.p12
+          CSC_LINK: ../certificate.p12
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
 
       - name: Build (Linux)
