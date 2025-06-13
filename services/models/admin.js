@@ -348,8 +348,10 @@ class AdminModel {
       }
 
       let iCtx = ctx.clone();
-      iCtx.instance = instance;
-      await iCtx.update({organization: instance.organization_id});
+      await iCtx.update({
+        instance: instance.instance_id,
+        organization: instance.organization_id
+      });
 
       let resources = await getInstanceResources(iCtx);
 

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS pgfarm.connection (
     opened_at timestamp NOT NULL DEFAULT now(),
     closed_at timestamp
 );
+CREATE INDEX IF NOT EXISTS connection_session_id_idx ON pgfarm.connection(session_id);
 CREATE INDEX IF NOT EXISTS connection_database_id_idx ON pgfarm.connection(database_id);
 CREATE INDEX IF NOT EXISTS connection_user_id_idx ON pgfarm.connection(user_id);
 CREATE INDEX IF NOT EXISTS connection_opened_at_idx ON pgfarm.connection(opened_at);
