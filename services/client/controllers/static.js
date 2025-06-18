@@ -5,14 +5,18 @@ import logger from '../../lib/logger.js';
 import pgInstClient from '../../lib/pg-instance-client.js';
 import loaderHtml from '../html/loader.html.mjs';
 import path from 'path';
+import fs from 'fs';
 import clone from 'clone';
+import crypto from 'node:crypto';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 let assetsDir = path.join(__dirname, '..', config.client.assets);
 logger.info('CLIENT_ENV='+config.client.env+', Serving static assets from '+assetsDir);
 
+let jsBundleHash = '';
 let src = path.join('/', 'js', 'bundle.js');
+loadJsBundleHash(assetsDir);
 
 async function setup(app) {
 
@@ -60,7 +64,7 @@ async function setup(app) {
       let jsonld = '';
 
       return next({
-        jsonld, src,
+        jsonld, src, jsBundleHash,
         title : config.client.title,
         loader: loaderHtml,
         description : '',
@@ -77,5 +81,21 @@ async function setup(app) {
     maxAge: '1y'
   }));
 }
+
+function loadJsBundleHash(assetsDir) {
+  let hashFile = path.join(assetsDir, 'js', 'bundle.js');
+  if( fs.existsSync(hashFile) ) {
+    const fileBuffer = fs.readFileSync(hashFile);
+    const hashSum = crypto.createHash('sha256');
+    hashSum.update(fileBuffer);
+    jsBundleHash = hashSum.digest('hex').toString().substring(0, 8);
+    logger.info('Loaded js bundle hash: '+jsBundleHash);
+  } else {
+    setTimeout(() => {
+      loadJsBundleHash(assetsDir);
+    }, 5000);
+  }
+}
+
 
 export default setup;

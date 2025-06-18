@@ -41,9 +41,10 @@
     "appId": "edu.ucdavis.library.pgfarm",
     "productName": "PG Farm",
     "files": [
+      "./cli/**/*",
       "./application/preload.js",
       "./application/main.js",
-      "/application/main/*"
+      "./application/main/*"
     ],
     "directories": {
       "buildResources": "./build-resources"
@@ -59,7 +60,7 @@
     "win": {},
     "linux": {
       "category": "Development",
-      "executableName": "pgdm-ui",
+      "executableName": "pgfarm",
       "artifactName": "${productName}-${version}.${ext}"
     }
   }
