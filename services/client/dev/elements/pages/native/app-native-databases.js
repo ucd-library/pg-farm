@@ -78,18 +78,11 @@ export default class AppNativeDatabases extends Mixin(LitElement)
         title: db.organizationTitle || db.organizationName || '',
       }
       db.name = db.databaseName + '/edit';
+      db.defaultIcon = db.icon;
     });
 
-    // this.results = [];
-    // hack for testing pagination
-    // for( let i = 0; i < 50; i++ ) {
-    //   results[0].title = `${results[0].databaseTitle || results[0].databaseName} ${i}`;
-    //   this.results.push(JSON.parse(JSON.stringify(results[0])));
-    // }
-
     this.total = results.length;
-    let currentIndex = (this.queryCtl.getCurrentPage() - 1) * this.queryCtl.limit.value;
-    this.results = results.slice(currentIndex, currentIndex + this.queryCtl.limit.value);
+    this.results = results;
   }
 
 }
