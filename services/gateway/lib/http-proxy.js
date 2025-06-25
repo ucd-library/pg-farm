@@ -26,7 +26,16 @@ function init() {
     ignorePath : true
   });
   proxy.on('error', (err, req, res) => {
-    logger.error('HTTP proxy error: ', err);
+    logger.error('HTTP proxy error: ', {
+      message: err.message,
+      stack: err.stack,
+      url: req.originalUrl,
+      method: req.method,
+      headers: req.headers,
+      remoteIp : req.socket.remoteAddress,
+      ipAddress : req.ip,
+      forwarded : req.ips
+    });
     res.status(500).send('Internal server error');
   });
 
@@ -73,6 +82,7 @@ async function middleware(req, res) {
     // it's up the the health service to start it.
     if( ctx.instance.state === 'ARCHIVE' ) {
       res.status(503).send('Database is archived.  Please reachout to PG Farm support for assistance.');
+      return;
     } else if( ctx.instance.state !== 'RUN' ) {
       let startResp = await admin.startInstance(ctx);
       if( startResp.starting ) {
