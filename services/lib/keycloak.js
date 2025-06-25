@@ -392,16 +392,18 @@ class KeycloakUtils {
       return next();
     }
 
-    let nameOrId = req.context.instance.name;
-    let organization = req.context.organization.name;
+    let nameOrId = req.context.instance?.name;
+    let organization = req.context.organization?.name;
 
-    try {
-      let instUser = await adminClient.getInstanceUser(nameOrId, organization, req.user.username);
-      if( types.includes(instUser?.user_type))  {
-        return next();
+    if( nameOrId ) {
+      try {
+        let instUser = await adminClient.getInstanceUser(nameOrId, organization, req.user.username);
+        if( types.includes(instUser?.user_type))  {
+          return next();
+        }
+      } catch(e) {
+        // todo; silence is golden?
       }
-    } catch(e) {
-      // todo; silence is golden?
     }
 
     return res.status(403).send('Unauthorized');
