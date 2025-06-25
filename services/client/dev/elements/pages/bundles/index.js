@@ -12,7 +12,8 @@ const defs = {
     'admin-db-overview', 'admin-db-users', 'admin-db-user-single', 'admin-db-schemas', 'admin-db-tables', 'me', 'admin-db-table-single'
   ],
   native: [
-    'native-home'
+    'native-home',
+    'native-databases'
   ]
 };
 

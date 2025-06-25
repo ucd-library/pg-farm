@@ -83,9 +83,6 @@ export default class PgfarmApp extends Mixin(LitElement)
         document.querySelector('#site-loader').style.display = 'none';
         this.style.display = 'block';
 
-        if( config.isNativeApp ){
-          this._loadUserDatabases();
-        }
       }, 500);
     }
     this.AppStateModel.showLoading();
@@ -132,31 +129,6 @@ export default class PgfarmApp extends Mixin(LitElement)
       }
     }
     return '';
-  }
-
-  async _loadUserDatabases() {
-    let user = await config.getUser();
-    if( user.loggedIn !== true ) {
-      return;
-    }
-
-    let result = await this.UserModel.myDatabases();
-    let dbs = result.payload;
-    
-    dbs.sort((a, b) => {
-      if (a.organization === b.organization) {
-        return a.title.localeCompare(b.title);
-      }
-      return a.organization.localeCompare(b.organization);
-    });
-
-    dbs.forEach(db => {
-      db.link = `/db/${db.organizationName || '_'}/${db.databaseName}`;
-      db.title = (db.organizationTitle || db.organizationName ? (db.organizationTitle || db.organizationName) + ' - ' : '') + 
-        (db.databaseTitle || db.databaseName);
-    });
-
-    this.userDatabases = dbs;
   }
 
   _onSearch(e){

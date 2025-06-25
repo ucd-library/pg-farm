@@ -109,7 +109,9 @@ CREATE OR REPLACE VIEW pgfarm.instance_database_user AS
     iu.instance_user_id,
     u.username,
     iu.password,
-    iu.type as user_type
+    iu.type as user_type,
+    db.short_description,
+    db.brand_color
   FROM pgfarm.instance i
   LEFT JOIN pgfarm.organization o ON o.organization_id = i.organization_id
   LEFT JOIN pgfarm.instance_user iu ON iu.instance_id = i.instance_id
