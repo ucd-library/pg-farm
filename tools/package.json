@@ -60,7 +60,11 @@
     "win": {},
     "linux": {
       "category": "Development",
+<<<<<<< HEAD
       "executableName": "pgfarm",
+=======
+      "executableName": "pgdm-ui",
+>>>>>>> dev
       "artifactName": "${productName}-${version}.${ext}"
     }
   }
