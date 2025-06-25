@@ -35,14 +35,6 @@ return html`
       <database-teaser .data=${result}></database-teaser>
     `)}
   </div>
-  <div ?hidden=${!this.total}>
-    <ucd-theme-pagination
-      current-page=${this.queryCtl.getCurrentPage()}
-      max-pages=${this.queryCtl.getMaxPage(this.total)}
-      @page-change=${e => this.queryCtl.setPage(e.detail.page)}
-      xs-screen>
-    </ucd-theme-pagination>
-  </div>
   <app-no-results ?hidden=${this.total} text="You have no databases." hide-subtext></app-no-results>
 </div>
 

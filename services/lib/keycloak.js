@@ -392,8 +392,8 @@ class KeycloakUtils {
       return next();
     }
 
-    let nameOrId = req.context.instance?.name;
-    let organization = req.context.organization?.name;
+    let nameOrId = req.context?.instance?.name;
+    let organization = req.context?.organization?.name;
 
     if( nameOrId ) {
       try {
