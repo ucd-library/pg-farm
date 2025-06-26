@@ -62,10 +62,10 @@ export default class AppNativeDatabases extends Mixin(LitElement)
   _onSearchSuccess(e) {    
     let results = e.payload || [];
     results.sort((a, b) => {
-      if (a.organization === b.organization) {
-        return a.title.localeCompare(b.title);
+      if (a.organizationId === b.organizationId) {
+        return a.databaseTitle.localeCompare(b.databaseTitle);
       }
-      return a.organization.localeCompare(b.organization);
+      return a.organizationId.localeCompare(b.organizationId);
     });
 
     results.forEach(db => {
