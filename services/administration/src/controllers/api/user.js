@@ -43,6 +43,7 @@ router.get('/me/db', keycloak.protect('logged-in'), async (req, res) => {
         userType: db.user_type,
         shortDescription: db.short_description,
         brandColor: db.brand_color,
+        icon: db.database_icon
       }
     });
 

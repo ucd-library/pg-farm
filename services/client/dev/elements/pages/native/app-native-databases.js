@@ -62,10 +62,10 @@ export default class AppNativeDatabases extends Mixin(LitElement)
   _onSearchSuccess(e) {    
     let results = e.payload || [];
     results.sort((a, b) => {
-      if (a.organization === b.organization) {
-        return a.title.localeCompare(b.title);
+      if (a.organizationId === b.organizationId) {
+        return a.databaseTitle.localeCompare(b.databaseTitle);
       }
-      return a.organization.localeCompare(b.organization);
+      return a.organizationId.localeCompare(b.organizationId);
     });
 
     results.forEach(db => {
@@ -78,18 +78,11 @@ export default class AppNativeDatabases extends Mixin(LitElement)
         title: db.organizationTitle || db.organizationName || '',
       }
       db.name = db.databaseName + '/edit';
+      db.defaultIcon = db.icon;
     });
 
-    // this.results = [];
-    // hack for testing pagination
-    // for( let i = 0; i < 50; i++ ) {
-    //   results[0].title = `${results[0].databaseTitle || results[0].databaseName} ${i}`;
-    //   this.results.push(JSON.parse(JSON.stringify(results[0])));
-    // }
-
     this.total = results.length;
-    let currentIndex = (this.queryCtl.getCurrentPage() - 1) * this.queryCtl.limit.value;
-    this.results = results.slice(currentIndex, currentIndex + this.queryCtl.limit.value);
+    this.results = results;
   }
 
 }
