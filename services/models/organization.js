@@ -143,7 +143,7 @@ class OrganizationModel {
 
     logger.info('Updating organization', ctx.logSignal);
 
-    await client.setOrganizationMetadata(org.organization_id, update);
+    await client.updateOrganization(ctx.organization.organization_id, update);
   }
 
   _convertLogoToBytes(metadata) {
