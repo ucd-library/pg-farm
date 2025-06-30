@@ -1,5 +1,6 @@
 import { html, css } from 'lit';
 import '@ucd-lib/pgfarm-client/elements/components/app-file-input/app-file-input.js';
+import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 
 export function styles() {
   const elementStyles = css`
@@ -69,7 +70,7 @@ return html`
         @file-change=${e => this._onInput('logo', e.detail.dataUrl)}
         label-subtext='JPG or PNG, 400px+ square recommended (max 10mb)'
         .fileSizeLimit=${10 * 1024 * 1024}
-        .imageUrl=${this.payload.logo}>
+        .imageUrl=${blobUtils.toDataUrl(this.payload.logo, this.payload.logo_file_type)}>
       </app-file-input>
     </div>
   </form>

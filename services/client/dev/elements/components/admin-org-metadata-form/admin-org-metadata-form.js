@@ -4,6 +4,7 @@ import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
 import IdGenerator from '../../../utils/IdGenerator.js';
+import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 
 export default class AdminOrgMetadataForm extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
@@ -40,7 +41,8 @@ export default class AdminOrgMetadataForm extends Mixin(LitElement)
         url: this.org?.url || '',
         logo: this.org?.logo || '',
         email: this.org?.email || '',
-        phone: this.org?.phone || ''
+        phone: this.org?.phone || '',
+        logo_file_type: this.org?.logo_file_type || '',
       };
     }
   }
@@ -52,6 +54,12 @@ export default class AdminOrgMetadataForm extends Mixin(LitElement)
 
   async submit(){
     this._loading = true;
+
+    // convert logo to base64 data URL if it's a Buffer
+    if (this.payload.logo && this.payload.logo.type === 'Buffer' ) {
+      this.payload.logo = blobUtils.toDataUrl(this.payload.logo, this.payload.logo_file_type);
+    } 
+
     const update = await this.OrganizationModel.update(this.org.name, this.payload);
     if ( update.state === 'error' ){
       this._loading = false;
