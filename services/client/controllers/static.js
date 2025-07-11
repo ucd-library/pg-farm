@@ -46,6 +46,7 @@ async function setup(app) {
         grants : pgInstClient.GRANTS,
         logger : config.client.logger,
         buildInfo: config.client.buildInfo,
+        gcsBucketAssets: config.client.gcsBucketAssets,
         publicUser : {
           username: config.pgInstance.publicRole.username, 
           password: config.pgInstance.publicRole.password

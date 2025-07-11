@@ -152,6 +152,8 @@ export default class PgfarmApp extends Mixin(LitElement)
       return import(/* webpackChunkName: "admin" */ "./pages/bundles/admin.js");
     } else if( bundle == 'native' ) {
       return import(/* webpackChunkName: "native" */ "./pages/bundles/native.js");
+    } else if( bundle == 'docs' ) {
+      return import(/* webpackChunkName: "docs" */ "./pages/bundles/docs.js");
     }
     this.logger.warn(`AppMain: bundle ${bundle} not found for page ${page}. Check pages/bundles/index.js`);
     return false;
