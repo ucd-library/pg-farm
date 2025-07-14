@@ -16,6 +16,7 @@
     "clone": "^2.1.2",
     "lit": "^3.1.4",
     "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0",
     "prismjs": "^1.29.0"
   }
 }

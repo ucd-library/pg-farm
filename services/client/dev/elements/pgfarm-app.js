@@ -112,8 +112,13 @@ export default class PgfarmApp extends Mixin(LitElement)
 
     // timeout to allow page element to render
     setTimeout(() => {
-      this.page = page;
-      window.scroll(0,0);
+      if( this.page !== page ) {
+        this.page = page;
+        if( !e.location.hash ) {
+          console.log('scrolling to top');
+          window.scroll(0,0);
+        }
+      }
     }, 200);
   }
 

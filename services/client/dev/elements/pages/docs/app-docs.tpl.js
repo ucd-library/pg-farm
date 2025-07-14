@@ -6,6 +6,9 @@ export function styles() {
     :host {
       display: block;
     }
+    .docs-content {
+      padding: 1rem 2rem;
+    }
   `;
 
   return [elementStyles];

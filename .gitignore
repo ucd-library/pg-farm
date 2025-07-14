@@ -4,6 +4,7 @@ test.yaml
 devops/k8s
 services/client/dev/js
 services/client/dist
+services/client/static-assets/application/download
 secrets
 service-account.json
 tests/connections/package-lock.json
