@@ -2,11 +2,7 @@ import { LitElement } from 'lit';
 import {render, styles} from "./app-docs.tpl.js";
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
-import markdownit from 'markdown-it'
-import markdownitAnchor from 'markdown-it-anchor';
 
-const md = markdownit();
-md.use(markdownitAnchor, {});
 const cache = {};
 
 export default class AppDocs extends Mixin(LitElement)
@@ -34,7 +30,7 @@ export default class AppDocs extends Mixin(LitElement)
     this._injectModel('AppStateModel');
   }
 
-  _onAppStateUpdate(e) {
+  async _onAppStateUpdate(e) {
     if( e.page !== 'docs' ) {
       return;
     }
@@ -48,7 +44,11 @@ export default class AppDocs extends Mixin(LitElement)
       return;
     }
 
-    this.getDocs(e.location.pathname);
+    await this.getDocs(e.location.pathname);
+
+    requestAnimationFrame(() => {
+      this._appendTextCopyButtons();
+    });
   }
 
   async scrollToHash() {
@@ -59,7 +59,7 @@ export default class AppDocs extends Mixin(LitElement)
     const el = this.querySelector("#"+this.hash);
     if (el) {
       window.scrollTo({
-        top: el.getBoundingClientRect().top + window.scrollY - 60,
+        top: el.getBoundingClientRect().top + window.scrollY - 100,
         behavior: 'smooth'
       });
     }
@@ -80,7 +80,7 @@ export default class AppDocs extends Mixin(LitElement)
 
     text = text.replaceAll(this.ASSETS_BASE_URL_TEMPLATE, this.ASSETS_BASE_URL);
 
-    this.content = md.render(text);
+    this.content = text;
     cache[path] = this.content;
 
     this.AppStateModel.hideLoading();
@@ -92,6 +92,47 @@ export default class AppDocs extends Mixin(LitElement)
     });
 
     return this.content;
+  }
+
+  /**
+   * @description Append copy buttons to code blocks in the documentation markdown
+   */
+  _appendTextCopyButtons() {
+    if( this.copyIconsAdded ) return;
+
+    this.querySelectorAll('#md pre > code').forEach((codeBlock) => {
+      const pre = codeBlock.parentNode;
+      const appIcon = document.createElement('app-icon-button');
+      appIcon.icon = 'fa.solid.copy';
+      appIcon.basic = true;
+      appIcon.style.padding = '0 0 1rem .5rem';
+
+      // copy text action
+      appIcon.addEventListener('click', () => {
+        navigator.clipboard.writeText(codeBlock.innerText)
+          .then(() => {
+            appIcon.icon = 'fa.solid.check';
+            setTimeout(() => (appIcon.icon = 'fa.solid.copy'), 2000
+
+            );
+          })
+          .catch(() => {
+            appIcon.icon = 'fa.solid.xmark';
+          });
+        appIcon.blur();
+      });
+
+      // wrapper for styles
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'relative';
+      wrapper.style.display = 'flex';
+      wrapper.style.alignItems = 'center';  
+
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+      wrapper.appendChild(appIcon);
+    });
+    this.copyIconsAdded = true;
   }
 
 }

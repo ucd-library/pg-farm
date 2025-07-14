@@ -26,8 +26,8 @@ To log in using the desktop application, follow these steps:
     - Linux: [Linux](__BASE__/application/download/Linux-Build.zip)
 2. Extract the downloaded file. And run the installer for your platform.
 3. Open the PG Farm application on your computer.
-2. Click on the "Login" button.
-3. Enter your UC Davis CAS credentials or the supplied username and password when prompted.
+4. Click on the "Login" button.
+5. Enter your UC Davis CAS credentials or the supplied username and password when prompted.
 
 Once logged in, you will receive a token that you can use to access the database.
 
@@ -47,15 +47,15 @@ npm install -g @ucd-lib/pg-farm
 
 1. Open your terminal.
 2. Run the following command to log in:
-```bash
-pgfarm auth login
-```
+    ```bash
+    pgfarm auth login
+    ```
 3. Follow the prompts to enter your UC Davis CAS credentials or the supplied username and password.
 4. Once logged in, you will receive a token that you can use to access the database which you can access via the following command:
-```bash
-pgfarm auth token
-```
+   ```bash
+    pgfarm auth token
+    ```
 5. You can get your login status by running:
-```bash
-pgfarm config show
-```
+    ```bash
+    pgfarm config show
+    ```

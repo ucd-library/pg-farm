@@ -1,13 +1,10 @@
 import { html, css } from 'lit';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import '@ucd-lib/theme-elements/ucdlib/ucdlib-md/ucdlib-md.js';
 
 export function styles() {
   const elementStyles = css`
     :host {
       display: block;
-    }
-    .docs-content {
-      padding: 1rem 2rem;
     }
   `;
 
@@ -16,9 +13,8 @@ export function styles() {
 
 export function render() { 
 return html`
-
-  <div class="docs-content">
-    ${unsafeHTML(this.content)}
+  <div class="l-container l-container--flush-with-page-header u-space-mt--large">
+    <ucdlib-md id="md" .data=${this.content}>
+    </ucdlib-md>
   </div>
-
 `;}

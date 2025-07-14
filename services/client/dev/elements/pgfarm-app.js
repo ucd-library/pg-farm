@@ -85,9 +85,11 @@ export default class PgfarmApp extends Mixin(LitElement)
 
       }, 500);
     }
-    this.AppStateModel.showLoading();
     this.closeNav();
     const { page, location } = e;
+    if( page === this.page && page !== 'home' ) return;
+
+    this.AppStateModel.showLoading();
     this.pathInfo = location.pathname;
 
     const bundle = this._getBundleName(page);
