@@ -11,6 +11,14 @@ export function styles() {
     li > ul.list--bordered {
       padding: 0.5rem 0 1rem 0;
     }
+
+    pre {
+      background-color: var(--ucd-black-10, #e5e5e5);
+      border-radius: 0.5rem;
+      padding: .8rem;
+      overflow-x: auto;
+      opacity: 0.9;
+    }
   `;
 
   return [elementStyles];

@@ -21,9 +21,9 @@ Either method will provide you with a token that you can use to access the datab
 To log in using the desktop application, follow these steps:
 
 1. Download the PG Farm desktop application.
-    - Mac: [Mac Silicon](__BASE__/application/download/macOS-arm64-Build.zip), [Mac Intel](__BASE__/application/download/macos-x64-build.zip)
-    - Windows: [Windows](__BASE__/application/download/Windows-Build.zip)
-    - Linux: [Linux](__BASE__/application/download/Linux-Build.zip)
+    - [Mac Silicon](__BASE__/application/download/macOS-arm64-Build.zip), [Mac Intel](__BASE__/application/download/macos-x64-build.zip)
+    - [Windows](__BASE__/application/download/Windows-Build.zip)
+    - [Linux](__BASE__/application/download/Linux-Build.zip)
 2. Extract the downloaded file. And run the installer for your platform.
 3. Open the PG Farm application on your computer.
 4. Click on the "Login" button.
