@@ -10,7 +10,7 @@ This documentation provides guidance on how to log in so you can access a Postgr
 
 # Overview
 
-PG Farm uses either a UC Davis CAS login or a supplied username and password for external users.  You can login on your computer via the desktop application or CLI (command linge interface).
+PG Farm uses either a UC Davis CAS login or a supplied username and password for external users.  You can login on your computer via the desktop application or CLI (command line interface).
 
 Once you are logged in you will be provided with a token (think of it as a temporary password) that you can use to access the database.  This token is valid for 7 days, after which you will need to log in again.
 
