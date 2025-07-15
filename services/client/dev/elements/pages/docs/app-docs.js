@@ -112,9 +112,7 @@ export default class AppDocs extends Mixin(LitElement)
         navigator.clipboard.writeText(codeBlock.innerText)
           .then(() => {
             appIcon.icon = 'fa.solid.check';
-            setTimeout(() => (appIcon.icon = 'fa.solid.copy'), 2000
-
-            );
+            setTimeout(() => (appIcon.icon = 'fa.solid.copy'), 2000);
           })
           .catch(() => {
             appIcon.icon = 'fa.solid.xmark';

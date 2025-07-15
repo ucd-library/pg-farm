@@ -117,7 +117,6 @@ export default class PgfarmApp extends Mixin(LitElement)
       if( this.page !== page ) {
         this.page = page;
         if( !e.location.hash ) {
-          console.log('scrolling to top');
           window.scroll(0,0);
         }
       }
