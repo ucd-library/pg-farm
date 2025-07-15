@@ -35,13 +35,11 @@ Once logged in, you will receive a token that you can use to access the database
 
 ## Prerequisites
 
-- Ensure you have [Node.js](https://nodejs.org/en/download) installed on your machine.
-
-- Install the PG Farm CLI by running the following command in your terminal:
-
-```bash
-npm install -g @ucd-lib/pg-farm
-```
+1. Ensure you have [Node.js](https://nodejs.org/en/download) installed on your machine.
+2. Install the PG Farm CLI by running the following command in your terminal:
+    ```bash
+    npm install -g @ucd-lib/pg-farm
+    ```
 
 ## Login Steps
 
