@@ -13,6 +13,5 @@ mkdir dist
 cp dev/index.html dist/
 cp dev/jwt.html dist/
 cp dev/manifest.json dist/
-cp -r dev/docs dist/docs
 
 webpack --config webpack-dist.config.cjs
