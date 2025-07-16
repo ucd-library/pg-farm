@@ -14,6 +14,9 @@ const defs = {
   native: [
     'native-home',
     'native-databases'
+  ],
+  docs : [
+    'docs'
   ]
 };
 

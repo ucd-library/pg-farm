@@ -85,9 +85,11 @@ export default class PgfarmApp extends Mixin(LitElement)
 
       }, 500);
     }
-    this.AppStateModel.showLoading();
     this.closeNav();
     const { page, location } = e;
+    if( page === this.page && page !== 'home' ) return;
+
+    this.AppStateModel.showLoading();
     this.pathInfo = location.pathname;
 
     const bundle = this._getBundleName(page);
@@ -112,8 +114,12 @@ export default class PgfarmApp extends Mixin(LitElement)
 
     // timeout to allow page element to render
     setTimeout(() => {
-      this.page = page;
-      window.scroll(0,0);
+      if( this.page !== page ) {
+        this.page = page;
+        if( !e.location.hash ) {
+          window.scroll(0,0);
+        }
+      }
     }, 200);
   }
 
@@ -152,6 +158,8 @@ export default class PgfarmApp extends Mixin(LitElement)
       return import(/* webpackChunkName: "admin" */ "./pages/bundles/admin.js");
     } else if( bundle == 'native' ) {
       return import(/* webpackChunkName: "native" */ "./pages/bundles/native.js");
+    } else if( bundle == 'docs' ) {
+      return import(/* webpackChunkName: "docs" */ "./pages/bundles/docs.js");
     }
     this.logger.warn(`AppMain: bundle ${bundle} not found for page ${page}. Check pages/bundles/index.js`);
     return false;

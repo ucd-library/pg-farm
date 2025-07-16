@@ -12,7 +12,9 @@ import crypto from 'node:crypto';
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 let assetsDir = path.join(__dirname, '..', config.client.assets);
+let staticAssetsDir = path.join(__dirname, '..', 'static-assets');
 logger.info('CLIENT_ENV='+config.client.env+', Serving static assets from '+assetsDir);
+logger.info('CLIENT_ASSETS_BASE_URL='+config.client.assetsBaseUrl+', Serving assets from '+staticAssetsDir);
 
 let jsBundleHash = '';
 let src = path.join('/', 'js', 'bundle.js');
@@ -46,6 +48,7 @@ async function setup(app) {
         grants : pgInstClient.GRANTS,
         logger : config.client.logger,
         buildInfo: config.client.buildInfo,
+        assetsBaseUrl: config.client.assetsBaseUrl,
         publicUser : {
           username: config.pgInstance.publicRole.username, 
           password: config.pgInstance.publicRole.password
@@ -72,6 +75,13 @@ async function setup(app) {
       });
     }
   });
+
+  /**
+   * Docs for development
+   */
+  app.use('/static-assets', express.static(staticAssetsDir, {
+    immutable: true
+  }));
 
   /**
    * Setup static asset dir
