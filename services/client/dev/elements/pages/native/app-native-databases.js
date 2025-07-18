@@ -77,7 +77,9 @@ export default class AppNativeDatabases extends Mixin(LitElement)
         name: db.organizationName || '',
         title: db.organizationTitle || db.organizationName || '',
       }
-      db.name = db.databaseName + '/edit';
+
+      // user could be non-admin, so they would get an error going to the edit page directly
+      db.name = db.databaseName; // + '/edit';
       db.defaultIcon = db.icon;
     });
 
