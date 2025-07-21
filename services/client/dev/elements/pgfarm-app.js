@@ -33,7 +33,9 @@ import './components/app-toast/app-toast.js';
 
 import bundles from './pages/bundles/index.js';
 
-// import './pages/app-database.js';
+// electron seems to need this
+import './pages/native/app-native-home.js';
+import './pages/native/app-native-databases.js';
 
 export default class PgfarmApp extends Mixin(LitElement)
   .with(MainDomElement, LitCorkUtils) {
