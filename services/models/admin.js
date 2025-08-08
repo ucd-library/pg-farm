@@ -356,7 +356,7 @@ class AdminModel {
       let resources = await getInstanceResources(iCtx);
 
       if( resources.sleep ) {
-        logger.info('Instance has been idle for too long, shutting down', iCtx.logSignal);
+        logger.info('Instance has been idle for too long, shutting down', {podPriority: 0}, iCtx.logSignal);
         changed.push({instance, newState: 'SLEEP'});
         await this.stopInstance(iCtx);
         continue;
@@ -364,7 +364,7 @@ class AdminModel {
 
       let newPriority = parseInt(resources.name.split('-')[1]);
       if( newPriority !== instance.priority_state ) {
-        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, iCtx.logSignal);
+        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, {podPriority: newPriority}, iCtx.logSignal);
         await client.updateInstancePriority(iCtx, newPriority);
         await this.models.instance.apply(iCtx);
 
@@ -377,6 +377,8 @@ class AdminModel {
             timestamp : query?.timestamp
           }
         });
+      } else if( newPriority ) {
+        logger.info(`Instance priority is still ${newPriority}, no change`, {podPriority: newPriority}, iCtx.logSignal);
       }
     }
 
