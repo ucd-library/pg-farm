@@ -86,7 +86,8 @@ class KeycloakUtils {
     }
   }
 
-  async verifyActiveToken(token='') {
+  async verifyActiveToken(token='', context={}) {
+    logger.debug('Verifying active token', context.logSignal);
     token = token.replace(/^Bearer /i, '');
     
     // check if we have a token hash
@@ -96,14 +97,17 @@ class KeycloakUtils {
     // 30 second caching
     if( this.tokenCache.has(token) ) {
       let result = this.tokenCache.get(token);
+      logger.debug('Token found in cache', context.logSignal);
       return clone(result);
     }
 
     return new Promise((resolve) => {
       jwt.verify(token, this.getkeyFromJwks, {}, (error, decoded) => {
         if( error ) {
+          logger.debug('Failed to verify jwt from keycloak, invalid token', error, context.logSignal);
           resolve({active : false, error, user : null});
         } else {
+          logger.debug('Token verified', context.logSignal);
           let resp = {active : true, user : decoded, jwt : token};
           this.tokenCache.set(token, resp);
           resolve(resp);
@@ -114,7 +118,11 @@ class KeycloakUtils {
 
   getkeyFromJwks(header, callback) {
     this.jwksClient.getSigningKey(header.kid, function(err, key) {
-      if( err ) return callback(err);
+      if( err ) {
+        logger.debug('Failed to get signing key from JWKS', err, context.logSignal);
+        return callback(err);
+      }
+      logger.debug('Signing key retrieved from JWKS', context.logSignal);
       var signingKey = key.publicKey || key.rsaPublicKey;
       callback(null, signingKey);
     });
@@ -254,6 +262,7 @@ class KeycloakUtils {
     // }
 
     if( req.user ) {
+      logger.debug('User already set on request', req.context.logSignal);
       if( req.context ) {
         await req.context.update({requestor: req.user.username});
       }
@@ -263,7 +272,7 @@ class KeycloakUtils {
     let token = this.getJwtFromRequest(req);
     if( !token ) return next();
 
-    let resp = await this.verifyActiveToken(token);
+    let resp = await this.verifyActiveToken(token, req.context);
 
     if( resp.active !== true ) return next();
     let user = resp.user;

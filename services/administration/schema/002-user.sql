@@ -108,6 +108,6 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION pgfarm.purge_old_user_tokens()
   RETURNS void AS $$
   BEGIN
-    DELETE FROM pgfarm.user_token WHERE (expires - INTERVAL '1 month') < now();
+    DELETE FROM pgfarm.user_token WHERE (expires + INTERVAL '6 month') < now();
   END;
 $$ LANGUAGE plpgsql;
