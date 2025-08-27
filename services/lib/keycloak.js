@@ -119,10 +119,10 @@ class KeycloakUtils {
   getkeyFromJwks(header, callback) {
     this.jwksClient.getSigningKey(header.kid, function(err, key) {
       if( err ) {
-        logger.debug('Failed to get signing key from JWKS', err, context.logSignal);
+        logger.debug('Failed to get signing key from JWKS', err);
         return callback(err);
       }
-      logger.debug('Signing key retrieved from JWKS', context.logSignal);
+      logger.debug('Signing key retrieved from JWKS');
       var signingKey = key.publicKey || key.rsaPublicKey;
       callback(null, signingKey);
     });
