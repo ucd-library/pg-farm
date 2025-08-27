@@ -262,7 +262,7 @@ class KeycloakUtils {
     // }
 
     if( req.user ) {
-      logger.debug('User already set on request', req.context.logSignal);
+      logger.debug('User already set on request', req?.context?.logSignal);
       if( req.context ) {
         await req.context.update({requestor: req.user.username});
       }
