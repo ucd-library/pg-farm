@@ -5,6 +5,7 @@ import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
 import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
 import {middleware as contextMiddleware} from '../../../../lib/context.js';
+import isInstanceAlive from '../middleware/instance-alive.js';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.get('/', async (req, res) => {
 router.get('/:organization/:instance',
   contextMiddleware,
   keycloak.protect('instance-user'),
+  isInstanceAlive({useAliveFlag: true}),
   async (req, res) => {
   try {
     let resp = req.context.instance;
@@ -53,6 +55,7 @@ router.post('/',
 router.put('/:organization/:instance/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -96,6 +99,7 @@ router.patch('/:organization/:instance/:user',
 router.delete('/:organization/:instance/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -158,6 +162,7 @@ router.post('/:organization/:instance/restart',
 router.post('/:organization/:instance/backup',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     let resp = await remoteExec(req.context.instance.hostname, '/backup');
@@ -171,6 +176,7 @@ router.post('/:organization/:instance/backup',
 router.post('/:organization/:instance/sync-users',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
 
@@ -196,6 +202,7 @@ router.post('/:organization/:instance/sync-users',
 router.post('/:organization/:instance/archive',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     let {instance, organization} = req.context;
