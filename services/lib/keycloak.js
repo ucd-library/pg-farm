@@ -107,7 +107,7 @@ class KeycloakUtils {
           logger.debug('Failed to verify jwt from keycloak, invalid token', error, context.logSignal);
           resolve({active : false, error, user : null});
         } else {
-          logger.debug('Token verified', context.logSignal);
+          logger.debug('Token verified', JSON.stringify(decoded), context.logSignal);
           let resp = {active : true, user : decoded, jwt : token};
           this.tokenCache.set(token, resp);
           resolve(resp);
@@ -263,6 +263,7 @@ class KeycloakUtils {
 
     if( req.user ) {
       logger.debug('User already set on request', req?.context?.logSignal);
+      try { throw new Error('stack'); } catch(e) { logger.debug(e.stack); }
       if( req.context ) {
         await req.context.update({requestor: req.user.username});
       }
