@@ -25,6 +25,8 @@ class ProxyMonitor {
       SEND_STARTUP_MESSAGE : 'send-startup-message',
       RESEND_STARTUP_MESSAGE : 'resend-startup-message',
       SERVER_CONNECTED : 'server-connected',
+      SERVER_END : 'server-end',
+      SERVER_ERROR : 'server-error',
       SERVER_CLOSE : 'server-close',
       SLEEP_MODE : 'sleep-mode',
       SEND_PENDING_MESSAGES : 'send-pending-messages',
@@ -119,7 +121,7 @@ class ProxyMonitor {
         new Date().toISOString()
       );
     } catch(e) {
-      logger.error('Error logging client disconnect to pg: ', e);
+      logger.error('Error logging client disconnect to pg-admin database:', e);
     }
 
     this.logProxyConnectionEvent(proxyConnection, this.PROXY_EVENTS.CLIENT_CLOSE, proxyConnection.pgFarmUser?.username);

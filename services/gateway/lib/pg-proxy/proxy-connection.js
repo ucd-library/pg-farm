@@ -78,7 +78,8 @@ class ProxyConnection {
     // if we are checking the pg instance status.  this is set before awaiting reconnect
     this.checkingPgInstStatus = false;
 
-
+    // track if client socket close handler has been called
+    this.clientSocketClosed = false;
 
     // should all connection sockets be closed when any connection is closed
     // set to false to keep client socket alive on server disconnect during reconnect
@@ -191,14 +192,27 @@ class ProxyConnection {
     // When the client sends data, forward it to the target server
     this.clientSocket.on('data', data => this.onClientSocketData(data));
 
-    // Handle client socket closure
+    // Handle client socket closure - multiple events for reliability
     this.clientSocket.on('close', () => this.onClientSocketClose());
+    this.clientSocket.on('end', () => this.onClientSocketClose());
+    this.clientSocket.on('error', (err) => {
+      logger.warn('Client socket error', this.getConnectionInfo(), err);
+      this.onClientSocketClose();
+    });
+
+    // Set socket keepalive to detect dead connections faster
+    this.clientSocket.setKeepAlive(true, 30000); // 30 second keepalive
   }
 
   /**
    * @method onClientSocketClose
    */
   onClientSocketClose() {
+    // Prevent multiple calls
+    if (this.clientSocketClosed) return;
+    this.clientSocketClosed = true;
+
+    logger.info('Client socket closed/disconnected', this.getConnectionInfo());
     monitor.onClientDisconnect(this);
   }
 
@@ -538,15 +552,23 @@ class ProxyConnection {
         this.closeSockets();
         return;
       }
-  
+
       // When the target server sends data, forward it to the client
       this.serverSocket.on('data',  data => this._onServerSocketData(data));
   
       // Handle target socket connection, this resolves the wrapper promise once completed
       this.serverSocket.on('connect', () => this._onServerSocketConnect(resolve));
   
-      // Handle target socket closure
-      this.serverSocket.on('close', () => this._onServerSocketClose());
+      // Handle target socket closure - multiple events for reliability
+      this.serverSocket.on('close', () => this._onServerSocketClose(monitor.PROXY_EVENTS.SERVER_CLOSE));
+      this.serverSocket.on('end', () => this._onServerSocketClose(monitor.PROXY_EVENTS.SERVER_END));
+      this.serverSocket.on('error', (err) => {
+        logger.warn('Server socket error', this.getConnectionInfo(), err);
+        this._onServerSocketClose(monitor.PROXY_EVENTS.SERVER_ERROR, err.message);
+      });
+
+      // Set server socket keepalive
+      this.serverSocket.setKeepAlive(true, 30000);
     });
   }
 
@@ -647,11 +669,13 @@ class ProxyConnection {
    * @description handle the server socket close event.  This checks if the client 
    * socket is still open and if so, attempts a reconnect to the server.
    **/
-  async _onServerSocketClose() {
+  async _onServerSocketClose(eventType, message) {
+    logger.info('Server socket closed', eventType, this.getConnectionInfo());
+
     if( this.serverSocket ) {
       this.serverSocket.destroySoon();
     }
-    monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.SERVER_CLOSE);
+    monitor.logProxyConnectionEvent(this, eventType, message);
 
     // if we still have a client socket, and the server is unavailable, attempt reconnect
     // which will start the instance

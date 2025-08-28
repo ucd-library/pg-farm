@@ -262,8 +262,7 @@ class KeycloakUtils {
     // }
 
     if( req.user ) {
-      logger.debug('User already set on request', req?.context?.logSignal);
-      try { throw new Error('stack'); } catch(e) { logger.debug(e.stack); }
+      logger.debug('User already set on request', req?.context?.logSignal);      
       if( req.context ) {
         await req.context.update({requestor: req.user.username});
       }
@@ -344,10 +343,10 @@ class KeycloakUtils {
 
         if( roles.includes('organization-admin') ) {
           return this._protectOrganization(req, res, next, ['ADMIN']);
-        }
+        } 
 
         if( roles.includes('admin') ) {
-          return this._protectInstance(req, res, next, reqRoles);
+          return this._protectAdmin(req, res, next);
         }
 
         // no user
@@ -396,6 +395,11 @@ class KeycloakUtils {
   }
 
  async  _protectInstance(req, res, next, types=['ADMIN']) {
+    if( !req.context.instance ) {
+      logger.error('No instance in context, cannot authorize via keycloak._protectInstance()', req.context.logSignal);
+      return res.status(500).send('no instance in context');
+    }
+
     if( !req.user ) return res.status(403).send('Unauthorized');
 
     if( req.user.roles.includes('admin') ) {
