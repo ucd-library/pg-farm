@@ -60,6 +60,7 @@ class InstanceDatabaseContext {
     this._database = null;
     this._instance = null;
     this._requestor = null;
+    this.requestorRoles = null;
 
     this.fullDatabaseName = null;
     this.logSignal = {};
@@ -183,6 +184,45 @@ class InstanceDatabaseContext {
       } else if( typeof obj.requestor === 'object' ) {
         this.requestor = obj.requestor.username;
       }
+    }
+
+    if( !this.requestorRoles ) {
+      this.requestorRoles = {};
+    }
+
+    if( this.instance && this.requestor ) {
+      try {
+        let instUser = await pgAdminClient.getInstanceUser(this, this.requestor);
+        this.requestorRoles.instance = instUser?.user_type || '';
+      } catch(e) {
+        this.requestorRoles.instance = '';
+      }
+    }
+
+    if( this.organization && this.requestor ) {
+      try {
+        let orgUser = await pgAdminClient.getOrganizationUser(this.requestor, this.organization.name);
+        this.requestorRoles.organization = orgUser?.user_type || '';
+      } catch(e) {
+        this.requestorRoles.organization = '';
+      }
+    }
+
+    // final cleanup of log signal
+    this.cleanLogSignal();
+  }
+
+  async populateRequestorRoles() {
+    if( !this.requestorRoles ) this.requestorRoles = {};
+
+    if( this.instance && this.requestor ) {
+      let instUser = await pgAdminClient.getInstanceUser(this, this.requestor);
+      this.requestorRoles.instance = instUser?.user_type || '';
+    }
+
+    if( this.organization && this.requestor ) {
+      let orgUser = await pgAdminClient.getOrganizationUser(this.requestor, this.organization.name);
+      this.requestorRoles.organization = orgUser?.user_type || '';
     }
 
     this.cleanLogSignal();

@@ -168,20 +168,21 @@ class AdminModel {
    * @description Stops a running instance.  This will also stop all pgRest
    * services associated with the instance.
    *
-   * @param {String} ctx
+   * @param {String} iCtx instance context
    * @param {Object} opts
    * @param {Boolean} opts.isArchived set to true if the instance has been archived.  will set state to ARCHIVE
    *
    * @returns {Promise}
    */
-  async stopInstance(ctx, opts={}) {
-    await this.models.instance.stop(ctx, opts);
-    let dbs = await client.getInstanceDatabases(ctx);
+  async stopInstance(iCtx, opts={}) {
+    await this.models.instance.stop(iCtx, opts);
+    let dbs = await client.getInstanceDatabases(iCtx);
+    
+    // stop pgRest services
     for( let db of dbs ) {
-      await this.models.pgRest.stop({
-        database : {name: db.name},
-        organization : ctx.organization
-      });
+      let dbCtx = iCtx.clone();
+      await dbCtx.update({database: db.name});
+      await this.models.pgRest.stop(dbCtx);
     }
   }
 
@@ -356,7 +357,7 @@ class AdminModel {
       let resources = await getInstanceResources(iCtx);
 
       if( resources.sleep ) {
-        logger.info('Instance has been idle for too long, shutting down', {podPriority: 0}, iCtx.logSignal);
+        logger.info('Instance has been idle for too long, shutting down', {podPriority: "0"}, iCtx.logSignal);
         changed.push({instance, newState: 'SLEEP'});
         await this.stopInstance(iCtx);
         continue;
@@ -364,7 +365,7 @@ class AdminModel {
 
       let newPriority = parseInt(resources.name.split('-')[1]);
       if( newPriority !== instance.priority_state ) {
-        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, {podPriority: newPriority}, iCtx.logSignal);
+        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, {podPriority: String(newPriority)}, iCtx.logSignal);
         await client.updateInstancePriority(iCtx, newPriority);
         await this.models.instance.apply(iCtx);
 
@@ -378,7 +379,7 @@ class AdminModel {
           }
         });
       } else if( newPriority ) {
-        logger.info(`Instance priority is still ${newPriority}, no change`, {podPriority: newPriority}, iCtx.logSignal);
+        logger.info(`Instance priority is still ${newPriority}, no change`, {podPriority: String(newPriority)}, iCtx.logSignal);
       }
     }
 

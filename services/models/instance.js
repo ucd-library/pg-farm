@@ -266,7 +266,7 @@ class Instance {
 
     // JM - perhaps we just add a now shutdown delay time after start.
     let maxPriority = await getMaxPriority(instance.availability);
-    logger.info('Database startup called, setting max pod priority', {podPriority: maxPriority}, ctx.logSignal);
+    logger.info('Database startup called, setting max pod priority', {podPriority: String(maxPriority)}, ctx.logSignal);
     await client.updateInstancePriority(ctx, maxPriority);
 
     let applyResp = await this.apply(ctx);
@@ -588,6 +588,12 @@ class Instance {
       stdin: true,
       isJson: true
     });
+  }
+
+  getPodStatus(ctx) {
+    ctx = getContext(ctx);
+    let podName = (ctx?.instance?.hostname)+'-0';
+    return kubectl.getPodStatus(podName);
   }
 
 }

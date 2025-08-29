@@ -3,6 +3,7 @@ import {database, pgRest, instance, user, organization, admin} from '../../../..
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import {middleware as contextMiddleware} from '../../../../lib/context.js';
+import isInstanceAlive from '../middleware/instance-alive.js';
 
 const router = Router();
 
@@ -162,6 +163,7 @@ async function getFeatured(res){
 /** Get **/
 router.get('/:organization/:database',
   contextMiddleware,
+  isInstanceAlive({useAliveFlag: true}),
   async (req, res) => {
   try {
     let {organization, database, instance} = req.context;
@@ -242,6 +244,7 @@ router.post('/:organization/:database/api/restart',
 router.post('/:organization/:database/api/updated',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     await pgRest.updateApiSchemaCache(req.context);
@@ -254,6 +257,7 @@ router.post('/:organization/:database/api/updated',
 router.post('/:organization/:database/api/expose/:table',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     await pgRest.exposeTable(req.context, req.params.table);
@@ -268,6 +272,7 @@ router.post('/:organization/:database/api/expose/:table',
 router.post('/:organization/:database/init',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     await instance.initInstanceDb(req.context);
@@ -305,6 +310,7 @@ router.get('/:organization/:database/users',
 router.get('/:organization/:database/schemas',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.listSchema(req.context));
@@ -316,6 +322,7 @@ router.get('/:organization/:database/schemas',
 router.get('/:organization/:database/users-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.getUserAccessOverview(req.context));
@@ -328,6 +335,7 @@ router.get('/:organization/:database/users-overview',
 router.get('/:organization/:database/tables-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessOverview(req.context));
@@ -339,6 +347,7 @@ router.get('/:organization/:database/tables-overview',
 router.get('/:organization/:database/schema/:schema/tables',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.listTables(
@@ -353,6 +362,7 @@ router.get('/:organization/:database/schema/:schema/tables',
 router.get('/:organization/:database/schema/:schema/tables-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessOverview(
@@ -368,6 +378,7 @@ router.get('/:organization/:database/schema/:schema/tables-overview',
 router.get('/:organization/:database/schema/:schema/table/:tableName/access',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccess(
@@ -383,6 +394,7 @@ router.get('/:organization/:database/schema/:schema/table/:tableName/access',
 router.get('/:organization/:database/schemas-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     let result = await database.getSchemasOverview(
@@ -398,6 +410,7 @@ router.get('/:organization/:database/schemas-overview',
 router.get('/:organization/:database/schema/:schema/access/:username',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessByUser(
@@ -414,6 +427,7 @@ router.get('/:organization/:database/schema/:schema/access/:username',
 router.put('/:organization/:database/grant/:schema/:user/:permission',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -442,6 +456,7 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
 router.post('/:organization/:database/grant',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -474,6 +489,7 @@ router.post('/:organization/:database/grant',
 router.delete('/:organization/:database/revoke/:schema/:user/:permission',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -502,6 +518,7 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
 router.post('/:organization/:database/revoke',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -533,6 +550,7 @@ router.post('/:organization/:database/revoke',
 /** Create foreign data table to PG Farm db **/
 router.post('/:organization/:database/link/:remoteOrg/:remoteDb',
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {

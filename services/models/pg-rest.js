@@ -232,9 +232,6 @@ server-port = ${config.pgRest.port}`
 
     let database = ctx.database;
     let hostname = database.pgrest_hostname;
-
-    logger.info('Stopping PostgREST: '+hostname);
-
     let pgrestResult, pgrestServiceResult;
 
     try {
@@ -243,7 +240,7 @@ server-port = ${config.pgRest.port}`
       logger.warn('Error deleting statefulset', e.message);
       pgrestResult = {
         message : e.message,
-        stack : e.stacks
+        stack : e.stack
       }
     }
 
@@ -253,7 +250,7 @@ server-port = ${config.pgRest.port}`
       logger.warn('Error deleting service', e.message);
       pgrestServiceResult = {
         message : e.message,
-        stack : e.stacks
+        stack : e.stack
       }
     }
 

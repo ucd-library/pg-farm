@@ -127,7 +127,7 @@ class PgFarmAdminClient {
 
   /**
    * @method getOrganizationUser
-   * @description get all users for an organization
+   * @description get a user for an organization
    *
    * @param {String} nameOrId organization name or ID
    * @returns {Promise<Array>}

@@ -5,6 +5,7 @@ import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
 import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
 import {middleware as contextMiddleware} from '../../../../lib/context.js';
+import isInstanceAlive from '../middleware/instance-alive.js';
 
 const router = Router();
 
@@ -20,9 +21,30 @@ router.get('/', async (req, res) => {
 router.get('/:organization/:instance',
   contextMiddleware,
   keycloak.protect('instance-user'),
+  isInstanceAlive({useAliveFlag: true}),
   async (req, res) => {
   try {
     let resp = req.context.instance;
+
+    delete resp.organization_id;
+    resp.organization = req.context.organization;
+
+    resp.databases = (await client.getInstanceDatabases(req.context) || [])
+      .map(d => ({
+        database_id: d.database_id,
+        name: d.name,
+        title: d.title,
+        short_description: d.short_description,
+        icon: d.icon,
+        brand_color: d.brand_color,
+        description: d.description,
+        url: d.url,
+        tags: d.tags,
+        discoverable: d.discoverable,
+        created_at: d.created_at,
+        updated_at: d.updated_at
+      }));
+
     let lastEvent = await client.getLastDatabaseEvent(resp.instance_id);
     if( lastEvent ) {
       resp.lastDatabaseEvent = {
@@ -32,6 +54,11 @@ router.get('/:organization/:instance',
         database_id : lastEvent.database_id
       }
     }
+
+    if( req.context.requestorRoles?.instance === 'ADMIN' || req.context.requestorRoles?.organization === 'ADMIN' ) {
+      resp.podStatus = await instanceModel.getPodStatus(req.context);
+    }
+
     res.json(resp);
   } catch(e) {
     handleError(res, e);
@@ -53,6 +80,7 @@ router.post('/',
 router.put('/:organization/:instance/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -96,6 +124,7 @@ router.patch('/:organization/:instance/:user',
 router.delete('/:organization/:instance/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
 
   try {
@@ -158,6 +187,7 @@ router.post('/:organization/:instance/restart',
 router.post('/:organization/:instance/backup',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     let resp = await remoteExec(req.context.instance.hostname, '/backup');
@@ -171,6 +201,7 @@ router.post('/:organization/:instance/backup',
 router.post('/:organization/:instance/sync-users',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
 
@@ -196,6 +227,7 @@ router.post('/:organization/:instance/sync-users',
 router.post('/:organization/:instance/archive',
   contextMiddleware,
   keycloak.protect('admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     let {instance, organization} = req.context;
