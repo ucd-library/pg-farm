@@ -156,6 +156,47 @@ class KubectlWrapper {
   }
 
   /**
+   * @method getPodStatus
+   * @description Get detailed pod status including current state and recent events
+   * 
+   * @param {String} podName name of the pod
+   * @returns {Promise<Object>} pod status with events
+   */
+  async getPodStatus(podName) {
+    await this.init();
+    
+    try {
+      // Get pod details
+      let podDetails = await this.get('pod', podName);
+      
+      // Get recent events for the pod
+      let eventsOutput = await this.exec(`kubectl get events --field-selector involvedObject.name=${podName} --sort-by='.lastTimestamp' -o json`);
+      let events = JSON.parse(eventsOutput);
+      
+      // Extract relevant status information
+      let status = {
+        name: podName,
+        phase: podDetails.status?.phase || 'Unknown',
+        conditions: podDetails.status?.conditions || [],
+        containerStatuses: podDetails.status?.containerStatuses || [],
+        startTime: podDetails.status?.startTime,
+        events: events.items?.slice(-10) || [], // Last 10 events
+        timestamp: new Date().toISOString()
+      };
+      
+      return status;
+    } catch(error) {
+      // If pod doesn't exist or other error, return basic error info
+      return {
+        name: podName,
+        phase: 'NotFound',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  /**
    * @method renderKustomizeTemplate
    * @description Get the kustomize template as a json object.  The template
    * can be in the base or overlay directory.
