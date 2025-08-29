@@ -297,6 +297,7 @@ router.get('/:organization/:database/is-admin',
 router.get('/:organization/:database/users',
   contextMiddleware,
   keycloak.protect('instance-admin'),
+  isInstanceAlive(),
   async (req, res) => {
   try {
     let dbUsers = await database.getDatabaseUsers(req.context)

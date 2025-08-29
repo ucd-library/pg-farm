@@ -24,19 +24,25 @@ function createMiddleware(opts={}) {
 
     let instance = req.context.instance;
 
+    let isAlive = false;
     try {
-      await utils.isAlive(instance.host, instance.port, 2000);
-      return next();
+      isAlive = await utils.isAlive(instance.hostname, instance.port, 2000);
     } catch(e) {
+      logger.error('Error checking instance health', e.message, req.context?.logSignal);
+    }
+
+    if( !isAlive ) {
+      let ctx = req.context;
       return res.status(503).json({
         error: 'Instance is not responsive', 
-        details: e.message,
         organization: ctx.organization.name,
         name: ctx.instance.name,
         state: ctx.instance.state,
         podStatus: await instanceModel.getPodStatus(req.context)
       });
     }
+
+    next();
   }
 
   return isInstanceAlive;
