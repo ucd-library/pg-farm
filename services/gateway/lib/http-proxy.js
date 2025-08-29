@@ -6,6 +6,7 @@ import logger from '../../lib/logger.js';
 import metrics from '../../lib/metrics/index.js';
 import {ValueType} from '@opentelemetry/api';
 import {createContext} from '../../lib/context.js';
+import kubectl from '../../lib/kubectl.js';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 const swaggerUiRouteRegex = /^\/swagger-ui/;
@@ -25,7 +26,7 @@ function init() {
   proxy = httpProxy.createProxyServer({
     ignorePath : true
   });
-  proxy.on('error', (err, req, res) => {
+  proxy.on('error', async (err, req, res) => {
     logger.error('HTTP proxy error: ', {
       message: err.message,
       stack: err.stack,
@@ -36,6 +37,52 @@ function init() {
       ipAddress : req.ip,
       forwarded : req.ips
     });
+
+    // Check if this is a connection error to a database instance
+    let dbRouteMatch = req.originalUrl.match(dbRouteRegex);
+    let isConnectionError = err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT';
+    
+    if (dbRouteMatch && isConnectionError) {
+      try {
+        let orgName = dbRouteMatch[1];
+        let dbName = dbRouteMatch[2];
+        if( orgName === '_' ) {
+          orgName = null;
+        }
+
+        let ctx = await createContext({
+          organization : orgName,
+          database : dbName,
+          corkTraceId : req.corkTraceId
+        });
+
+        // Only provide pod status for instances in RUN state
+        if (ctx.instance.state === 'RUN') {
+          // Get pod status for the instance
+          let podName = ctx.instance.hostname;
+          let podStatus = await kubectl.getPodStatus(podName);
+          
+          // Return 503 with pod status information
+          res.status(503).json({
+            error: 'Database instance is starting or being moved',
+            message: 'The database instance is in RUN state but TCP connection failed. Please try again in a moment.',
+            instance: {
+              name: ctx.instance.name,
+              hostname: ctx.instance.hostname,
+              state: ctx.instance.state,
+              organization: ctx.instance.organization_id
+            },
+            podStatus: podStatus,
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+      } catch (contextError) {
+        logger.error('Error getting context for pod status:', contextError);
+      }
+    }
+
+    // Default error response for all other cases
     res.status(500).send('Internal server error');
   });
 
