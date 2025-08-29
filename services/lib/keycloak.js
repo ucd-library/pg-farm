@@ -371,15 +371,8 @@ class KeycloakUtils {
       return next();
     }
 
-    let organization = req.params.organization;
-
-    try {
-      let orgUser = await adminClient.getOrganizationUser(req.user.username, organization);
-      if( types.includes(orgUser?.user_type))  {
-        return next();
-      }
-    } catch(e) {
-      // todo; silence is golden?
+    if( types.includes(req.context?.requestorRoles?.organization) ) {
+      return next();
     }
 
     return res.status(403).send('Unauthorized');
@@ -392,14 +385,8 @@ class KeycloakUtils {
       return next();
     }
 
-    try {
-      let instUser = await adminClient.getInstanceUser(req.context, req.user.username);
-
-      if( types.includes(instUser?.user_type))  {
-        return next();
-      }
-    } catch(e) {
-      // todo; silence is golden?
+    if( types.includes(req.context?.requestorRoles?.instance) ) {
+      return next();
     }
 
     return res.status(403).send('Unauthorized');

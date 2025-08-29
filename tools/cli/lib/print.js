@@ -173,8 +173,12 @@ class Print {
 
   instance(i) {
     console.log(`${i.name}:`);
-    console.log(`  - Organization: ${i.organization_name}`);
-    console.log(`  - Databases: ${(i.databases || []).join(', ')}`);
+    if( i.organization ) {
+      console.log(`  - Organization: ${i.organization.name}`);
+    }
+    if( i.databases ) {
+      console.log(`  - Database(s): ${(i.databases || []).map(d => d.name).join(', ')}`);
+    }
     console.log(`  - State: ${i.state}`);
   }
 

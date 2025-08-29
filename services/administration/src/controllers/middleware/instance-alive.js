@@ -1,5 +1,6 @@
 import utils from '../../../../lib/utils.js';
 import logger from '../../../../lib/logger.js';
+import instanceModel from '../../../../models/instance.js'
 
 /**
  * Middleware that checks if a given instance is alive by attempting to connect to its host and port.
@@ -27,7 +28,14 @@ function createMiddleware(opts={}) {
       await utils.isAlive(instance.host, instance.port, 2000);
       return next();
     } catch(e) {
-      return res.status(503).json({error: 'Instance is not alive', details: e.message});
+      return res.status(503).json({
+        error: 'Instance is not responsive', 
+        details: e.message,
+        organization: ctx.organization.name,
+        name: ctx.instance.name,
+        state: ctx.instance.state,
+        podStatus: await instanceModel.getPodStatus(req.context)
+      });
     }
   }
 
