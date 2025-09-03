@@ -241,7 +241,7 @@ class ProxyConnection {
 
       // check for SSL and special auth messages
       if (!this.startupMessageHandled && data.length == 8 ) { 
-        this.handlePreStartupMessage(data);
+        await this.handlePreStartupMessage(data);
         return;
       }
 
@@ -254,8 +254,10 @@ class ProxyConnection {
       // intercept the password message and handle it
       if (data.length && 
           data[0] === this.MESSAGE_CODES.PASSWORD &&
-          this.pgFarmUser?.user_type !== 'PUBLIC') {
-        await this.handleJwt(data);
+          this.pgFarmUser?.user_type !== 'PUBLIC' &&
+          this.pgFarmUser?.isAuthenticated !== true
+        ) {
+        this.pgFarmUser.isAuthenticated = await this.handleJwt(data);
         return;
       }
 
@@ -265,7 +267,7 @@ class ProxyConnection {
       }
 
       // else, just proxy message
-      this.serverSocket.write(data);
+      await this.writeAndWait(this.serverSocket, data);
     } catch(e) {
       logger.warn('Error handling client data', this.getConnectionInfo(), e);
       this.closeSockets();
@@ -280,7 +282,7 @@ class ProxyConnection {
   async handleStartupMessage(data) {
     if( config.proxy.tls.enabled && !this.isSecureSocket ) {
       logger.info('client attempting clear text connection with tls enabled, closing connection', this.getConnectionInfo());
-      this.sendNotice(
+      await this.sendNotice(
         this.NOTICE_SEVERITY.FATAL,
         this.ERROR_CODES.SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION,
         'Plain text connection attempted but SSL is required.  Ensure your client is connecting with SSL enabled.',
@@ -329,7 +331,7 @@ class ProxyConnection {
 
     // if not public user, request 'password' ie jwt token
     // start jwt/auth intercept routine
-    this.requestPassword(this.clientSocket);
+    await this.requestPassword(this.clientSocket);
   }
 
   /**
@@ -343,12 +345,12 @@ class ProxyConnection {
    * 
    * @param {Buffer} data binary data from the tcp client socket
    **/
-  handlePreStartupMessage(data) {
+  async handlePreStartupMessage(data) {
     let code = data.readInt32BE(4);
 
     // check for ssl request code
     if( !this.sslHandled && code === this.SSL_REQUEST ) {
-      this.handleSSLRequest();
+      await this.handleSSLRequest();
       return;
     }
     
@@ -357,7 +359,7 @@ class ProxyConnection {
     // was reverse engineered by inspecting the pg wire protocol between an active server
     if (code === this.GSSAPI_REQUEST) {
       logger.info('responding to gssapi request', this.getConnectionInfo());
-      this.clientSocket.write(this.GSSAPI_RESPONSE);
+      await this.writeAndWait(this.clientSocket, this.GSSAPI_RESPONSE);
       return;
     }
 
@@ -377,16 +379,16 @@ class ProxyConnection {
    * message. If TLS is enabled, the client socket is upgraded to a secure socket,
    * the secure socket is registered, the clientSocket is replaced with the secure socket.
    **/
-  handleSSLRequest() {
+  async handleSSLRequest() {
     logger.info('client handling ssl request', this.getConnectionInfo());
     this.sslHandled = true;
 
     if (!config.proxy.tls.enabled) {
       // if tls is not enabled, respond with 'N' to indicate no ssl available
-      this.clientSocket.write(Buffer.from('N', 'utf8'));
+      await this.writeAndWait(this.clientSocket, Buffer.from('N', 'utf8'));
     } else {
       // if tls is enabled, respond with 'S' to indicate ssl is available
-      this.clientSocket.write(Buffer.from('S', 'utf8'));
+      await this.writeAndWait(this.clientSocket, Buffer.from('S', 'utf8'));
 
       // upgrade the client socket to a secure socket
       const secureContext = tls.createSecureContext(tlsOptions);
@@ -480,7 +482,7 @@ class ProxyConnection {
     // TODO: split db error from user error
     let orgText = this.dbOrganization ? this.dbOrganization + '/' : '';
     if ( userError ) {
-      this.sendNotice(
+      await this.sendNotice(
         this.NOTICE_SEVERITY.FATAL,
         this.ERROR_CODES.INVALID_PASSWORD,
         `The username provided (${this.startupProperties.user}) is not registered with the database (${orgText}${this.startupProperties.database}) or database does not exist.`,
@@ -492,7 +494,7 @@ class ProxyConnection {
     }
 
     if( !this.ALLOWED_INSTANCE_STATES.includes(this.pgFarmUser.instance_state) ) {
-      this.sendNotice(
+      await this.sendNotice(
         this.NOTICE_SEVERITY.ERROR,
         '57P01',
         'Instance Not Running',
@@ -523,7 +525,7 @@ class ProxyConnection {
       // Leaving as a TODO.  but this might not be possible.
       // if( this.instance.state !== 'RUNNING' || true ) {
       //   let orgText = this.dbOrganization ? this.dbOrganization + '/' : '';
-      //   this.sendNotice(
+      //   await this.sendNotice(
       //     'NOTICE',
       //     '',
       //     'Database Not Running',
@@ -578,7 +580,7 @@ class ProxyConnection {
    * 
    * @param {Buffer} data binary data from the tcp server socket
    **/
-  _onServerSocketData(data) {
+  async _onServerSocketData(data) {
     this.debug('server', data);
 
     // check for shutdown message can capture
@@ -590,7 +592,7 @@ class ProxyConnection {
       // if we have an error message and we are handinling jwt auth, send the error to the client
       if (this.handlingJwtAuth) {
         logger.error('PG Farm JWT connection error', {jsonPayload: error}, this.getConnectionInfo());
-        this.sendNotice(
+        await this.sendNotice(
           this.NOTICE_SEVERITY.FATAL,
           this.ERROR_CODES.CONNECTION_FAILURE,
           `PG Farm JWT connection error`,
@@ -612,7 +614,7 @@ class ProxyConnection {
 
     // default login flow
     if( this.handlingJwtAuth ) {
-      let completed = this.interceptServerAuth(data);
+      let completed = await this.interceptServerAuth(data);
       if( completed ) {
         this.handlingJwtAuth = false;
       } else {
@@ -623,7 +625,7 @@ class ProxyConnection {
     // hijack the authentication ok message and send password to quietly 
     // reestablish connection
     if (this.awaitingReconnect) {
-      let completed = this.interceptServerAuth(data);
+      let completed = await this.interceptServerAuth(data);
       if( completed ) {
         this.awaitingReconnect = null;
         this.sleepMode = null;
@@ -634,7 +636,7 @@ class ProxyConnection {
     }
 
     // if not reconnect, just proxy server message to client
-    this.clientSocket.write(data);
+    await this.writeAndWait(this.clientSocket, data);
   }
 
   /**
@@ -644,21 +646,21 @@ class ProxyConnection {
    * 
    * @param {Function} resolve resolve function for the promise passed from createServerSocket
    */
-  _onServerSocketConnect(resolve) {
+  async _onServerSocketConnect(resolve) {
     logger.info('Server socket connected', this.getConnectionInfo());
     monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.SERVER_CONNECTED);
 
     if( !this.startUpMsgSent && this.startUpMsg  ) {
       logger.info('Sending startup message', this.getConnectionInfo());
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.SEND_STARTUP_MESSAGE, this.startupProperties);
-      this.serverSocket.write(this.startUpMsg);
+      await this.writeAndWait(this.serverSocket, this.startUpMsg);
       this.startUpMsgSent = true;
     }
 
     if (this.awaitingReconnect && this.startUpMsg) {
       logger.info('Resending startup message', this.getConnectionInfo());
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.RESEND_STARTUP_MESSAGE, this.startupProperties);
-      this.serverSocket.write(this.startUpMsg);
+      await this.writeAndWait(this.serverSocket, this.startUpMsg);
     }
 
     resolve();
@@ -739,7 +741,7 @@ class ProxyConnection {
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.RECONNECT_FAILED);
 
       if (this.shutdownMsg && this.clientSocket) {
-        this.clientSocket.write(this.shutdownMsg);
+        await this.writeAndWait(this.clientSocket, this.shutdownMsg);
       }
       await utils.sleep(100);
 
@@ -763,7 +765,7 @@ class ProxyConnection {
    * 
    * @returns {Boolean} true if the authentication is complete
    */
-  interceptServerAuth(data) {
+  async interceptServerAuth(data) {
     // after the reconnect startup message is resent, pg will send the password message
     if (data.length && data[0] === this.MESSAGE_CODES.SEND_PASSWORD) {
 
@@ -788,20 +790,20 @@ class ProxyConnection {
           monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.SEND_PENDING_MESSAGES, {pendingMessages: this.pendingMessages.length});
 
           for (let msg of this.pendingMessages) {
-            this.serverSocket.write(msg);
+            await this.writeAndWait(this.serverSocket, msg);
           }
           this.pendingMessages = [];
         }
 
         // if we have received any messages from the client while disconnected, send them now
-        logger.info('Reconnected', this.getConnectionInfo());
+        // logger.info('Reconnected', this.getConnectionInfo());
         return true;
       }
     }
 
     // possibly a bad login.  But this state needs research
     logger.info('Proxying server message during connect dance', data[0], this.getConnectionInfo());
-    this.serverSocket.write(data);
+    await this.writeAndWait(this.serverSocket, data);
 
     return false;
   }
@@ -938,7 +940,7 @@ class ProxyConnection {
       this.parsedJwt = await keycloak.verifyActiveToken(jwt);
     } catch (e) {
       // badness accessing keycloak
-      this.sendNotice(
+      await this.sendNotice(
         this.NOTICE_SEVERITY.FATAL,
         this.ERROR_CODES.CONNECTION_FAILURE,
         e.message,
@@ -955,7 +957,7 @@ class ProxyConnection {
         tokenResponse: this.parsedJwt,
         jwt
       })
-      this.sendNotice(
+      await this.sendNotice(
         this.NOTICE_SEVERITY.FATAL,
         this.ERROR_CODES.INVALID_PASSWORD,
         'The JWT token provided is not valid or has expired.',
@@ -983,7 +985,7 @@ class ProxyConnection {
 
     // provide pg username does not match jwt username
     if (!isAdminAndPGuser && this.jwtUsername !== this.startupProperties.user) {
-      this.sendNotice(
+      await this.sendNotice(
         this.NOTICE_SEVERITY.ERROR,
         this.ERROR_CODES.INVALID_PASSWORD,
         `The token username provided does not match the postgres username provided (${jwtUsername} ${this.startupProperties.user}).`,
@@ -996,6 +998,8 @@ class ProxyConnection {
 
     // now that we have authenticated the user, open real connection to the server
     await this.createServerSocket();
+
+    return true;
   }
 
   async startInstance() {
@@ -1032,7 +1036,7 @@ class ProxyConnection {
       password = this.pgFarmUser.password;
     }
 
-    this.sendPassword(password, this.serverSocket);
+    await this.sendPassword(password, this.serverSocket);
   }
 
   /**
@@ -1051,7 +1055,7 @@ class ProxyConnection {
     passBuffer.writeInt32BE(4 + pLen + 1, 1);
     passBuffer.write(password, 5);
 
-    socket.write(passBuffer);
+    return this.writeAndWait(socket, passBuffer);
   }
 
   /**
@@ -1065,13 +1069,13 @@ class ProxyConnection {
     passBuffer[0] = this.MESSAGE_CODES.SEND_PASSWORD;
     passBuffer.writeInt32BE(4+4, 1);
     passBuffer.writeInt32BE(this.AUTHENTICATION_CODE.CLEARTEXT_PASSWORD, 5);
-    socket.write(passBuffer);
+    return this.writeAndWait(socket, passBuffer);
   }
 
   async onShutdown() {
     logger.info('Proxy connection shutting down', this.getConnectionInfo());
 
-    this.sendNotice(
+    await this.sendNotice(
       this.NOTICE_SEVERITY.FATAL,
       this.ERROR_CODES.ADMIN_SHUTDOWN,
       'Connection closing.',
@@ -1096,6 +1100,8 @@ class ProxyConnection {
    * @param {String} detail 
    * @param {String} hint 
    * @param {Socket} socket 
+   * 
+   * @returns {Promise}
    */
   sendNotice(severity, code, message = '', detail = '', hint = '', socket) {
     if( typeof severity === 'object' ) {
@@ -1175,7 +1181,69 @@ class ProxyConnection {
       offset += Buffer.byteLength(hint) + 1;
     }
 
-    socket.write(eBuffer);
+    return this.writeAndWait(socket, eBuffer);
+  }
+
+  /**
+   * @method writeAndWait
+   * @description write data to a socket and wait for it to drain
+   * if required, pause the 'other' socket if we encounter backpressure.
+   *
+   * @param {Socket} socket socket to write to
+   * @param {Buffer} data data to write
+   * @returns {Promise}
+   */
+  writeAndWait(socket, data) {
+
+    // determine which socket is being used
+    // only required for debug logging
+    let socketLabel;
+    if( config.logLevel === 'debug' ) {
+      socketLabel = 'clientSocket';
+      if( this.serverSocket === socket ) {
+        socketLabel = 'serverSocket';
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      const canWrite = socket.write(data, err => {
+        if (err) return reject(err); // handle write errors
+      });
+
+      if (canWrite) {
+        resolve(); // buffer still has space
+      } else {
+
+        // checking log level so we don't lookup connection info if not needed
+        if( config.logLevel === 'debug' ) {
+          logger.debug('Socket buffer full, waiting for drain, socketLabel=', socketLabel, this.getConnectionInfo());
+        }
+
+        // find alternate socket, the one not being written to so we can pause
+        if( this.serverSocket === socket ) {
+          this.altSocket = this.clientSocket;
+        } else if( this.clientSocket === socket ) {
+          this.altSocket = this.serverSocket;
+        }
+
+        // pause the alternate socket to prevent it from sending data while
+        // we wait for the backpressure to clear 'drain event'
+        this.altSocket.pause();
+
+        // now wait for the drain event
+        socket.once('drain', () => {
+          if( config.logLevel === 'debug' ) {
+            logger.debug('Socket buffer drained, resuming, socketLabel=', socketLabel, this.getConnectionInfo());
+          }
+
+          // resume the alternate socket
+          this.altSocket.resume();
+
+          // ok to write again
+          resolve();
+        });
+      }
+    });
   }
 
   /**

@@ -70,6 +70,8 @@ const config = {
 
   caChainPem : env.CA_CHAIN_PEM || '',
 
+  logLevel : env.LOG_LEVEL || 'info',
+
   metrics : {
     enabled : env.METRICS_ENABLED === 'true',
   },

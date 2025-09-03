@@ -152,6 +152,8 @@ class ProxyMonitor {
       let lt = 'info';
       if( event.toLowerCase().match(/(error|timeout|failed)/) ) {
         lt = 'error';
+      } else if( event.toLowerCase() === 'drain' ) {
+        lt = 'debug';
       }
 
       let eventProps = {
