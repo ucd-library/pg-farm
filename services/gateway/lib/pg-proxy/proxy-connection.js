@@ -1220,15 +1220,16 @@ class ProxyConnection {
         }
 
         // find alternate socket, the one not being written to so we can pause
+        let altSocket;
         if( this.serverSocket === socket ) {
-          this.altSocket = this.clientSocket;
+          altSocket = this.clientSocket;
         } else if( this.clientSocket === socket ) {
-          this.altSocket = this.serverSocket;
+          altSocket = this.serverSocket;
         }
 
         // pause the alternate socket to prevent it from sending data while
         // we wait for the backpressure to clear 'drain event'
-        this.altSocket.pause();
+        altSocket.pause();
 
         // now wait for the drain event
         socket.once('drain', () => {
@@ -1237,7 +1238,7 @@ class ProxyConnection {
           }
 
           // resume the alternate socket
-          this.altSocket.resume();
+          altSocket.resume();
 
           // ok to write again
           resolve();
