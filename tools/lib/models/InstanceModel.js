@@ -79,6 +79,11 @@ class InstanceModel extends BaseModel {
     return this.service.restart(org, instance);
   }
 
+  updatePriority(org, instance, priority, apply=false) {
+    instance = this.formatName(instance);
+    return this.service.updatePriority(org, instance, priority, apply);
+  }
+
   backup(org, instance) {
     instance = this.formatName(instance);
     return this.service.backup(org, instance);

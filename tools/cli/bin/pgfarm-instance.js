@@ -96,6 +96,12 @@ program.command('resize <org/instance> <size>')
     instance.resize(instanceName, size);
   });
 
+program.command('priority <org/instance> <priority>')
+  .description('Increase priority of postgres instance '+print.pgFarmAdminOnlyMsg())
+  .option('-a, --apply', 'Apply the priority change to k8s (recommended)')
+  .action((instanceName, priority, opts) => {
+    instance.updatePriority(instanceName, priority, opts);
+  });
 
 program.command('sync-users <org/instance>')
   .description('Sync postgres instance users '+print.pgFarmAdminOnlyMsg())

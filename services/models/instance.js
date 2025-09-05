@@ -281,6 +281,43 @@ class Instance {
   }
 
   /**
+   * @method updatePriority
+   * @description Update the priority of the instance
+   * 
+   * @param {String|Object} ctx context object or id
+   * @param {Number} priority new priority value
+   * @param {Boolean} apply whether to apply the changes to k8s
+   * 
+   * @returns {Promise}
+   */
+  async updatePriority(ctx, priority, apply=false) {
+    ctx = getContext(ctx);
+    priority = Number(priority);
+    if( isNaN(priority) || priority < 0 || priority > 10) {
+      throw new Error('Invalid priority value: '+priority);
+    }
+
+    if( ctx.instance.priority_state === priority ) {
+      logger.info('Instance priority is already set to '+priority, {podPriority: String(priority)}, ctx.logSignal);
+      return {updated: false, priority};
+    }
+
+    logger.info(`Updating instance priority from ${ctx.instance.priority_state} to ${priority}`, {podPriority: String(priority)}, ctx.logSignal);
+    await client.updateInstancePriority(ctx, priority);
+
+    if( apply ) {
+      await this.apply(ctx);
+    }
+
+    return {
+      updated: true,
+      oldPriority: ctx.instance.priority_state,
+      newPriority: priority,
+      applied: apply
+    };
+  }
+
+  /**
    * @method apply
    * @description Apply the k8s config for the instance from the current
    * instance state.

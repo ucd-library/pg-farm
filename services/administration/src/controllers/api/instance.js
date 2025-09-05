@@ -77,7 +77,7 @@ router.post('/',
   }
 });
 
-router.put('/:organization/:instance/:user',
+router.put('/:organization/:instance/user/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
   isInstanceAlive(),
@@ -100,7 +100,7 @@ router.put('/:organization/:instance/:user',
   }
 });
 
-router.patch('/:organization/:instance/:user',
+router.patch('/:organization/:instance/user/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
   async (req, res) => {
@@ -121,7 +121,7 @@ router.patch('/:organization/:instance/:user',
   }
 });
 
-router.delete('/:organization/:instance/:user',
+router.delete('/:organization/:instance/user/:user',
   contextMiddleware,
   keycloak.protect('instance-admin'),
   isInstanceAlive(),
@@ -178,6 +178,18 @@ router.post('/:organization/:instance/restart',
   async (req, res) => {
   try {
     let resp = await instanceModel.restart(req.context);
+    res.status(200).json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.patch('/:organization/:instance/priority/:priority',
+  contextMiddleware,
+  keycloak.protect('admin'),
+  async (req, res) => {
+  try {
+    let resp = await instanceModel.updatePriority(req.context, req.params.priority, req.query.apply === 'true');
     res.status(200).json(resp);
   } catch(e) {
     handleError(res, e);
