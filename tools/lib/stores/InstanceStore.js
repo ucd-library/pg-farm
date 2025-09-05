@@ -14,6 +14,7 @@ class InstanceStore extends BaseStore {
       start : new LruStore({name: 'instance.start'}),
       stop : new LruStore({name: 'instance.stop'}),
       restart : new LruStore({name: 'instance.restart'}),
+      priority : new LruStore({name: 'instance.priority'}),
       backup : new LruStore({name: 'instance.backup'}),
       archive : new LruStore({name: 'instance.archive'}),
       restore : new LruStore({name: 'instance.restore'}),
@@ -36,6 +37,7 @@ class InstanceStore extends BaseStore {
       INSTANCE_ARCHIVE_UPDATE : 'instance-archive-update',
       INSTANCE_RESTORE_UPDATE : 'instance-restore-update',
       INSTANCE_RESIZE_UPDATE : 'instance-resize-update',
+      INSTANCE_PRIORITY_UPDATE : 'instance-priority-update',
       INSTANCE_SYNC_USERS_UPDATE : 'instance-sync-users-update',
     };
   }
@@ -109,6 +111,14 @@ class InstanceStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.restart,
       this.events.INSTANCE_RESTART_UPDATE
+    );
+  }
+
+  onPriorityUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.priority,
+      this.events.INSTANCE_PRIORITY_UPDATE
     );
   }
 

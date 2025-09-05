@@ -108,6 +108,13 @@ class Instances {
     process.exit(0);
   }
 
+  async updatePriority(name, priority, opts) {
+    let { organization, instance } = this.parseOrg(name);
+    let resp = await instanceModel.updatePriority(organization, instance, priority, opts.apply);
+
+    print.display(resp, opts.output);
+    process.exit(0);
+  }
 
   async backup(instance) {
     instance = formatInstName(instance);

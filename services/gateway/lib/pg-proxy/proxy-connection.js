@@ -81,6 +81,11 @@ class ProxyConnection {
     // track if client socket close handler has been called
     this.clientSocketClosed = false;
 
+    // track if client socket is active in the last isClientSocketActiveTime 
+    this.isClientSocketActive = false;
+    this.isClientSocketActiveTime = 5; // second
+    this.isClientSocketActiveTimeout = null;
+
     // should all connection sockets be closed when any connection is closed
     // set to false to keep client socket alive on server disconnect during reconnect
     this.autoCloseSockets = true;
@@ -150,6 +155,7 @@ class ProxyConnection {
     if( this.debugEnabled ) {
       logger.warn('Proxy debug enabled');
     }
+    this.isDebugLogLevel = (config.logLevel === 'debug');
 
     this.init();
   }
@@ -217,6 +223,24 @@ class ProxyConnection {
   }
 
   /**
+   * @method resetClientActive
+   * @description reset the client socket active flag.  Used to know if we need to kill
+   * the client connection on drop of server connection.  If the client is active, we
+   * can't keep the connection alive because we don't know what state the two connections are in.
+   */
+  resetClientActive() {
+    this.isClientSocketActive = true;
+    if( this.isClientSocketActiveTimeout ) {
+      clearTimeout(this.isClientSocketActiveTimeout);
+    }
+
+    this.isClientSocketActiveTimeout = setTimeout(() => {
+      this.isClientSocketActive = false;
+      this.isClientSocketActiveTimeout = null;
+    }, this.isClientSocketActiveTime * 1000);
+  }
+
+  /**
    * @method onClientSocketData
    * @description handle the data from the client socket.
    * 
@@ -238,6 +262,8 @@ class ProxyConnection {
         this.pendingMessages.push(data);
         return;
       }
+
+      this.resetClientActive();
 
       // check for SSL and special auth messages
       if (!this.startupMessageHandled && data.length == 8 ) { 
@@ -263,8 +289,13 @@ class ProxyConnection {
 
       // check for query message, if so, emit stats
       if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
+        // console.log('Query message start, len=', data.readInt32BE(1), ' Buffer length=', data.length);
         monitor.onQuery(this.pgFarmUser.database_id);
-      }
+      } 
+      // else {
+      //   let c = String.fromCharCode(data[0])
+      //   console.log('Other message type, code="'+c+'" len=', data.readInt32BE(1), ' Buffer length=', data.length);
+      // }
 
       // else, just proxy message
       await this.writeAndWait(this.serverSocket, data);
@@ -565,7 +596,7 @@ class ProxyConnection {
       this.serverSocket.on('close', () => this._onServerSocketClose(monitor.PROXY_EVENTS.SERVER_CLOSE));
       this.serverSocket.on('end', () => this._onServerSocketClose(monitor.PROXY_EVENTS.SERVER_END));
       this.serverSocket.on('error', (err) => {
-        logger.warn('Server socket error', this.getConnectionInfo(), err);
+        // logger.warn('Server socket error', this.getConnectionInfo(), err);
         this._onServerSocketClose(monitor.PROXY_EVENTS.SERVER_ERROR, err.message);
       });
 
@@ -605,7 +636,7 @@ class ProxyConnection {
       }
 
       // if we have a shutdown message, capture it possible use later
-      if (error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN) {
+      if ( error.CODE === this.ERROR_CODES.ADMIN_SHUTDOWN && this.isClientSocketActive !== true ) {
         this.shutdownMsg = data;
         logger.info('Shutdown message received ignoring for now', this.getConnectionInfo());
         return;
@@ -634,6 +665,8 @@ class ProxyConnection {
       // always return, we don't want to send password ok message during reconnect
       return;
     }
+
+    this.resetClientActive();
 
     // if not reconnect, just proxy server message to client
     await this.writeAndWait(this.clientSocket, data);
@@ -669,21 +702,42 @@ class ProxyConnection {
   /**
    * @method _onServerSocketClose
    * @description handle the server socket close event.  This checks if the client 
-   * socket is still open and if so, attempts a reconnect to the server.
+   * socket is still open and if so places connection in sleep mode.  it's important
+   * we don't try to wake up the server here as it may just have a client connection
+   * but no communication happening.  The reconnect will be called when the client
+   * socket sends messages again.
    **/
-  async _onServerSocketClose(eventType, message) {
-    logger.info('Server socket closed', eventType, this.getConnectionInfo());
-
-    if( this.serverSocket ) {
-      this.serverSocket.destroySoon();
-    }
+  async _onServerSocketClose(eventType, message='no message') {
+    logger.info('Server socket event', eventType, message, this.getConnectionInfo());
     monitor.logProxyConnectionEvent(this, eventType, message);
+
+    if( this.handlingServerSocketClose || this.sleepMode ) {
+      return;
+    }
+    this.handlingServerSocketClose = true;
+
+    logger.info('Handling server socket close', this.getConnectionInfo());
+
+    // if( this.serverSocket ) {
+    //   this.serverSocket.destroySoon();
+    // }
+
+    // no open client socket, we are done
+    if ( this.clientSocket?.readyState !== 'open' ) {
+      this.handlingServerSocketClose = false;
+      return;
+    }
 
     // if we still have a client socket, and the server is unavailable, attempt reconnect
     // which will start the instance
-    if ( this.clientSocket?.readyState !== 'open' ) return;
-
     logger.info('Server socket closed with open client', this.getConnectionInfo());
+
+    if( this.isClientSocketActive ) {
+      logger.info('Client socket is active and server socket died, killing client socket', this.getConnectionInfo());
+      this.closeSockets();
+      return;
+    }
+
     this.autoCloseSockets = false;
 
     // grab the current instance status from the pg farm admin database
@@ -697,6 +751,8 @@ class ProxyConnection {
       monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.SLEEP_MODE);
       this.sleepMode = new Date();
     }
+
+    this.handlingServerSocketClose = false;
   }
 
   async getInstanceStatus() {
@@ -723,8 +779,11 @@ class ProxyConnection {
       return;
     }
 
-    monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.RECONNECT);
+    // temporarily pause the client socket
+    this.clientSocket.pause();
+
     this.awaitingReconnect = Date.now();
+    monitor.logProxyConnectionEvent(this, monitor.PROXY_EVENTS.RECONNECT);
 
     logger.info('Attempting reconnect', this.getConnectionInfo());
 
@@ -753,6 +812,9 @@ class ProxyConnection {
 
     // the instance is back online, attempt to standard connection
     await this.createServerSocket(true);
+
+    // client can send messages again
+    this.clientSocket.resume();
   }
 
   /**
@@ -1194,20 +1256,27 @@ class ProxyConnection {
    * @returns {Promise}
    */
   writeAndWait(socket, data) {
+    let isServerSocket = (socket === this.serverSocket);
 
     // determine which socket is being used
     // only required for debug logging
     let socketLabel;
-    if( config.logLevel === 'debug' ) {
-      socketLabel = 'clientSocket';
-      if( this.serverSocket === socket ) {
-        socketLabel = 'serverSocket';
-      }
+    if( this.isDebugLogLevel ) {
+      socketLabel = isServerSocket ? 'serverSocket' : 'clientSocket';
+    }
+
+    if( isServerSocket ) {
+      this.pendingMessages.push(data);
     }
 
     return new Promise((resolve, reject) => {
       const canWrite = socket.write(data, err => {
-        if (err) return reject(err); // handle write errors
+        if ( !err && isServerSocket ) {
+          let index = this.pendingMessages.indexOf(data);
+          if (index !== -1) {
+            this.pendingMessages.splice(index, 1);
+          }
+        }
       });
 
       if (canWrite) {
@@ -1215,7 +1284,7 @@ class ProxyConnection {
       } else {
 
         // checking log level so we don't lookup connection info if not needed
-        if( config.logLevel === 'debug' ) {
+        if( this.isDebugLogLevel ) {
           logger.debug('Socket buffer full, waiting for drain, socketLabel=', socketLabel, this.getConnectionInfo());
         }
 
@@ -1233,7 +1302,7 @@ class ProxyConnection {
 
         // now wait for the drain event
         socket.once('drain', () => {
-          if( config.logLevel === 'debug' ) {
+          if( this.isDebugLogLevel ) {
             logger.debug('Socket buffer drained, resuming, socketLabel=', socketLabel, this.getConnectionInfo());
           }
 

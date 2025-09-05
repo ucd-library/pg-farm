@@ -82,7 +82,7 @@ class InstanceService extends BaseService {
     if( opts.parent ) flags.parent = opts.parent;
 
     await this.request({
-      url: `${this.basePath}/${org}/${instance}/${user}`,
+      url: `${this.basePath}/${org}/${instance}/user/${user}`,
       qs: flags,
       fetchOptions: {
         method : 'PUT',
@@ -105,7 +105,7 @@ class InstanceService extends BaseService {
     };
 
     await this.request({
-      url: `${this.basePath}/${org}/${instance}/${user}`,
+      url: `${this.basePath}/${org}/${instance}/user/${user}`,
       qs: flags,
       fetchOptions: {
         method : 'PATCH',
@@ -125,7 +125,7 @@ class InstanceService extends BaseService {
     let id = payload.getKey(ido);
 
     await this.request({
-      url: `${this.basePath}/${org}/${instance}/${user}`,
+      url: `${this.basePath}/${org}/${instance}/user/${user}`,
       fetchOptions: {
         method : 'DELETE',
         headers: serviceUtils.authHeader()
@@ -196,6 +196,28 @@ class InstanceService extends BaseService {
     });
 
     return this.store.data.restart.get(id);
+  }
+
+  async updatePriority(org, instance, priority, apply=false) {
+    let id = payload.getKey({org, instance});
+
+    let opts = {};
+    if( apply ) opts.apply = true;
+
+    await this.request({
+      url: `${this.basePath}/${org}/${instance}/priority/${priority}`,
+      fetchOptions: {
+        method : 'PATCH',
+        headers: serviceUtils.authHeader()
+      },
+      qs: opts,
+      json: true,
+      onLoading: request => this.store.onPriorityUpdate({org, instance}, {request}),
+      onLoad: payload => this.store.onPriorityUpdate({org, instance}, {payload: payload.body}),
+      onError: error => this.store.onPriorityUpdate({org, instance}, {error})
+    });
+
+    return this.store.data.priority.get(id);
   }
 
   async backup(org, instance) {
