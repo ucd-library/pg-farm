@@ -86,7 +86,7 @@ function createRetryMiddleware(opts={}) {
 
     let ctx = req.context;
     return res.status(503).json({
-      error: 'Instance is not responsive after 10 attempts',
+      error: `Instance is not responsive after ${retries} attempts`,
       organization: ctx.organization.name,
       name: ctx.instance.name,
       state: ctx.instance.state,
