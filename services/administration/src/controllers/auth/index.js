@@ -15,7 +15,8 @@ function register(app) {
 
   // always set long hashes as secret:
   // openssl rand -base64 512 | tr -d '\n'
-  // add policy to expire secret after one year.
+  // has keycloak auth policy to expire secret after one year. (see keycloak - realm (configure) - authentication - policies)
+  // Make sure to remove any required actions in user detail page. Make sure to check Email Verified too.
   app.post('/auth/service-account/login', async (req, res) => {
     let loginResp = await keycloak.loginServiceAccount(
       req.body.username, req.body.secret
@@ -23,7 +24,19 @@ function register(app) {
 
     // strip id_token, don't have 3rd party users bother with this.
     if( loginResp.status === 200 ) {
+      if( loginResp.body.error ) {
+        return res
+          .status(500)
+          .json(loginResp.body);
+      }
+
       delete loginResp.body.id_token;
+    }
+
+    if( !loginResp.body.access_token ) {
+      return res
+        .status(400)
+        .json({ error: 'No access_token received from auth server' });
     }
 
     await pgAdminClient.setUserToken(loginResp.body.access_token);

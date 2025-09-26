@@ -60,6 +60,11 @@ class Auth {
       process.exit(1);
     }
 
+    console.log({
+        username: name,
+        secret: opts.secret
+      });
+
     let resp = await fetch(`${config.host}/auth/service-account/login`, {
       method: 'POST',
       headers: {
