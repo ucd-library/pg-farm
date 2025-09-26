@@ -1037,6 +1037,22 @@ class ProxyConnection {
     (this.parsedJwt.roles || []).forEach(role => roles.add(role));
     (this.parsedJwt.realmRoles || []).forEach(role => roles.add(role));
 
+    // at this point we need to recheck the user type now that we have verified the userid
+    let orgUser = this.pgFarmUser;
+    try {
+      this.pgFarmUser = await userModel.get(this.ctx, this.jwtUsername);
+    } catch (e) {
+      await this.sendNotice(
+        this.NOTICE_SEVERITY.FATAL,
+        this.ERROR_CODES.INVALID_PASSWORD,
+        e.message,
+        null,
+        'Try logging in again and using the new token. Or check with the PG Farm administrator that your user is registered with the database.',
+        this.clientSocket
+      );
+      return;
+    }
+
     let userType = this.pgFarmUser.user_type;
 
     // if the user is an admin and the request login user is postgres, allow the connection if so below
@@ -1057,6 +1073,12 @@ class ProxyConnection {
       );
       return;
     }
+
+    // set the postgres password for login if this is the admin
+    if( this.startupProperties.user === 'postgres' ) {
+      this.pgFarmUser.password  = orgUser.password;
+    }
+
 
     // now that we have authenticated the user, open real connection to the server
     await this.createServerSocket();
