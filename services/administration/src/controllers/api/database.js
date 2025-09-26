@@ -3,7 +3,7 @@ import {database, pgRest, instance, user, organization, admin} from '../../../..
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import {middleware as contextMiddleware} from '../../../../lib/context.js';
-import isInstanceAlive from '../middleware/instance-alive.js';
+import { isInstanceAlive, isInstanceAliveWithRetry } from '../middleware/instance-alive.js';
 
 const router = Router();
 
@@ -163,7 +163,7 @@ async function getFeatured(res){
 /** Get **/
 router.get('/:organization/:database',
   contextMiddleware,
-  isInstanceAlive({useAliveFlag: true}),
+  isInstanceAliveWithRetry({useAliveFlag: true}),
   async (req, res) => {
   try {
     let {organization, database, instance} = req.context;
@@ -297,7 +297,7 @@ router.get('/:organization/:database/is-admin',
 router.get('/:organization/:database/users',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     let dbUsers = await database.getDatabaseUsers(req.context)
@@ -311,7 +311,7 @@ router.get('/:organization/:database/users',
 router.get('/:organization/:database/schemas',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.listSchema(req.context));
@@ -323,7 +323,7 @@ router.get('/:organization/:database/schemas',
 router.get('/:organization/:database/users-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.getUserAccessOverview(req.context));
@@ -336,7 +336,7 @@ router.get('/:organization/:database/users-overview',
 router.get('/:organization/:database/tables-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessOverview(req.context));
@@ -348,7 +348,7 @@ router.get('/:organization/:database/tables-overview',
 router.get('/:organization/:database/schema/:schema/tables',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.listTables(
@@ -363,7 +363,7 @@ router.get('/:organization/:database/schema/:schema/tables',
 router.get('/:organization/:database/schema/:schema/tables-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessOverview(
@@ -379,7 +379,7 @@ router.get('/:organization/:database/schema/:schema/tables-overview',
 router.get('/:organization/:database/schema/:schema/table/:tableName/access',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccess(
@@ -395,7 +395,7 @@ router.get('/:organization/:database/schema/:schema/table/:tableName/access',
 router.get('/:organization/:database/schemas-overview',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     let result = await database.getSchemasOverview(
@@ -411,7 +411,7 @@ router.get('/:organization/:database/schemas-overview',
 router.get('/:organization/:database/schema/:schema/access/:username',
   contextMiddleware,
   keycloak.protect('instance-admin'),
-  isInstanceAlive(),
+  isInstanceAliveWithRetry(),
   async (req, res) => {
   try {
     res.json(await database.getTableAccessByUser(
