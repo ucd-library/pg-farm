@@ -7,10 +7,19 @@ import path from 'path';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
 
+// On Windows, default to %APPDATA%\postgresql\pg_service.conf
+let rootPgService = null;
+if( process.env.APPDATA && process.platform === 'win32' ) {
+  rootPgService = path.join(process.env.APPDATA, 'postgresql');
+  if( !fs.existsSync(rootPgService) ) fs.mkdirSync(rootPgService, {recursive: true});
+} else {
+  rootPgService = path.join(os.homedir(), '.pg_service.conf');
+}
+
 class Auth {
 
   constructor() {
-    this.PG_SERVICE_FILE = path.join(os.homedir(), '.pg_service.conf');
+    this.PG_SERVICE_FILE = path.join(rootPgService, '.pg_service.conf');
     this.PG_FARM_PEM = path.join(os.homedir(), '.pgfarm.pem');
     this.PG_SERVICE_NAME = 'pgfarm'
 
