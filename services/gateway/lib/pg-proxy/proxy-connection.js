@@ -72,6 +72,10 @@ class ProxyConnection {
     // pending messages while reconnecting
     this.pendingMessages = [];
 
+    // tcp stream buffers for postgres wire protocol message framing
+    this.clientStartupBuffer = Buffer.alloc(0);
+    this.clientMessageBuffer = Buffer.alloc(0);
+
     // if we are waiting for a reconnect.  This is the time of the reconnect
     this.awaitingReconnect = null;
 
@@ -265,44 +269,111 @@ class ProxyConnection {
 
       this.resetClientActive();
 
-      // check for SSL and special auth messages
-      if (!this.startupMessageHandled && data.length == 8 ) { 
-        await this.handlePreStartupMessage(data);
+      if (!this.startupMessageHandled) {
+        await this.processClientStartupData(data);
         return;
       }
 
-      // check first message, provides the connection properties
-      if ( !this.startupMessageHandled && data.length ) {
-        await this.handleStartupMessage(data);
-        return;
-      }
-
-      // intercept the password message and handle it
-      if (data.length && 
-          data[0] === this.MESSAGE_CODES.PASSWORD &&
-          this.pgFarmUser?.user_type !== 'PUBLIC' &&
-          this.pgFarmUser?.isAuthenticated !== true
-        ) {
-        this.pgFarmUser.isAuthenticated = await this.handleJwt(data);
-        return;
-      }
-
-      // check for query message, if so, emit stats
-      if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
-        // console.log('Query message start, len=', data.readInt32BE(1), ' Buffer length=', data.length);
-        monitor.onQuery(this.pgFarmUser.database_id);
-      } 
-      // else {
-      //   let c = String.fromCharCode(data[0])
-      //   console.log('Other message type, code="'+c+'" len=', data.readInt32BE(1), ' Buffer length=', data.length);
-      // }
-
-      // else, just proxy message
-      await this.writeAndWait(this.serverSocket, data);
+      await this.processClientMessageData(data);
     } catch(e) {
       logger.warn('Error handling client data', this.getConnectionInfo(), e);
       this.closeSockets();
     }
+  }
+
+  /**
+   * @method processClientStartupData
+   * @description frame startup-phase messages from the client tcp stream.
+   * Startup messages do not have a leading type byte, so we have to rely
+   * on the 4-byte length field at the beginning of each message.
+   *
+   * @param {Buffer} data
+   */
+  async processClientStartupData(data) {
+    this.clientStartupBuffer = Buffer.concat([this.clientStartupBuffer, data]);
+
+    while (this.clientStartupBuffer.length >= 4 && !this.handlingJwtAuth) {
+      let messageLength = this.clientStartupBuffer.readInt32BE(0);
+      if (messageLength < 8) {
+        throw new Error(`Invalid startup message length (${messageLength}).`);
+      }
+
+      if (this.clientStartupBuffer.length < messageLength) {
+        return;
+      }
+
+      let message = this.clientStartupBuffer.subarray(0, messageLength);
+      this.clientStartupBuffer = this.clientStartupBuffer.subarray(messageLength);
+
+      if (!this.startupMessageHandled && messageLength === 8) {
+        await this.handlePreStartupMessage(message);
+        continue;
+      }
+
+      if (!this.startupMessageHandled) {
+        await this.handleStartupMessage(message);
+      }
+
+      if (this.startupMessageHandled && this.clientStartupBuffer.length) {
+        let buffered = this.clientStartupBuffer;
+        this.clientStartupBuffer = Buffer.alloc(0);
+        await this.processClientMessageData(buffered);
+      }
+    }
+  }
+
+  /**
+   * @method processClientMessageData
+   * @description frame regular postgres protocol messages from the client tcp stream.
+   * These messages have a one-byte type followed by a 4-byte message length.
+   *
+   * @param {Buffer} data
+   */
+  async processClientMessageData(data) {
+    this.clientMessageBuffer = Buffer.concat([this.clientMessageBuffer, data]);
+
+    while (this.clientMessageBuffer.length >= 5 && !this.handlingJwtAuth) {
+      let messageLength = this.clientMessageBuffer.readInt32BE(1);
+      if (messageLength < 4) {
+        throw new Error(`Invalid client message length (${messageLength}).`);
+      }
+
+      let frameLength = 1 + messageLength;
+      if (this.clientMessageBuffer.length < frameLength) {
+        return;
+      }
+
+      let message = this.clientMessageBuffer.subarray(0, frameLength);
+      this.clientMessageBuffer = this.clientMessageBuffer.subarray(frameLength);
+
+      await this.handleClientMessage(message);
+    }
+  }
+
+  /**
+   * @method handleClientMessage
+   * @description handle a single framed postgres wire-protocol message from the client.
+   *
+   * @param {Buffer} data
+   */
+  async handleClientMessage(data) {
+    // intercept the password message and handle it
+    if (data.length &&
+        data[0] === this.MESSAGE_CODES.PASSWORD &&
+        this.pgFarmUser?.user_type !== 'PUBLIC' &&
+        this.pgFarmUser?.isAuthenticated !== true
+      ) {
+      this.pgFarmUser.isAuthenticated = await this.handleJwt(data);
+      return;
+    }
+
+    // check for query message, if so, emit stats
+    if (data.length && data[0] === this.MESSAGE_CODES.QUERY) {
+      monitor.onQuery(this.pgFarmUser.database_id);
+    }
+
+    // else, just proxy message
+    await this.writeAndWait(this.serverSocket, data);
   }
 
   /**
@@ -1010,6 +1081,8 @@ class ProxyConnection {
         '',
         this.clientSocket
       );
+      this.handlingJwtAuth = false;
+      await this.closeSockets();
       return;
     }
 
@@ -1027,6 +1100,8 @@ class ProxyConnection {
         'Try logging in again and using the new token.',
         this.clientSocket
       );
+      this.handlingJwtAuth = false;
+      await this.closeSockets();
       return;
     }
 
@@ -1050,6 +1125,8 @@ class ProxyConnection {
         'Try logging in again and using the new token. Or check with the PG Farm administrator that your user is registered with the database.',
         this.clientSocket
       );
+      this.handlingJwtAuth = false;
+      await this.closeSockets();
       return;
     }
 
@@ -1071,6 +1148,8 @@ class ProxyConnection {
         null,
         this.clientSocket
       );
+      this.handlingJwtAuth = false;
+      await this.closeSockets();
       return;
     }
 

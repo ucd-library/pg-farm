@@ -13,7 +13,7 @@ if( process.env.APPDATA && process.platform === 'win32' ) {
   rootPgService = path.join(process.env.APPDATA, 'postgresql');
   if( !fs.existsSync(rootPgService) ) fs.mkdirSync(rootPgService, {recursive: true});
 } else {
-  rootPgService = path.join(os.homedir(), '.pg_service.conf');
+  rootPgService = os.homedir();
 }
 
 class Auth {

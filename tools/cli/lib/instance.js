@@ -133,7 +133,7 @@ class Instances {
 
   async archive(instance) {
     instance = formatInstName(instance);
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/archive`, {
+    let resp = await fetch(`${config.host}/api/instance/${instance}/archive`, {
       method: 'POST',
       headers: headers()
     });
@@ -148,7 +148,7 @@ class Instances {
 
   async restore(instance) {
     instance = formatInstName(instance);
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/restore`, {
+    let resp = await fetch(`${config.host}/api/instance/${instance}/restore`, {
       method: 'POST',
       headers: headers()
     });
@@ -166,7 +166,7 @@ class Instances {
 
     let params = new URLSearchParams({size});
 
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/resize?${params}`, {
+    let resp = await fetch(`${config.host}/api/instance/${instance}/resize?${params}`, {
       method: 'POST',
       headers: headers()
     });
