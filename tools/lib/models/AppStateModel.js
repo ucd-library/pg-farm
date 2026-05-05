@@ -11,6 +11,9 @@ class AppStateModelImpl extends AppStateModel {
 
     this.init(config.appRoutes);
 
+    this._loaderVisible = false;
+    this._loaderDelayTimer = null;
+
     if( typeof window !== 'undefined' && config.isNativeApp) {
       this.registerExternalOpener();
     }
@@ -81,10 +84,20 @@ class AppStateModelImpl extends AppStateModel {
   }
 
   showLoading(){
-    this.store.emit(this.store.events.APP_LOADING_UPDATE, {show: true});
+    if (!this._loaderVisible && !this._loaderDelayTimer) {
+      this._loaderDelayTimer = setTimeout(() => {
+        this._loaderDelayTimer = null;
+        this.store.emit(this.store.events.APP_LOADING_UPDATE, {show: true});
+      }, 750);
+    }
   }
 
   hideLoading(){
+    this._loaderVisible = false;
+    if ( this._loaderDelayTimer ) {
+      clearTimeout(this._loaderDelayTimer);
+      this._loaderDelayTimer = null;
+    }
     this.store.emit(this.store.events.APP_LOADING_UPDATE, {show: false});
     if ( this.toastOnPageLoad ) {
       this.showToast(this.toastOnPageLoad);

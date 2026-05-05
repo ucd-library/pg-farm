@@ -53,7 +53,6 @@ return html`
         <h1>Find a Database</h1>
       </div>
       <div class='page-header__description'>
-        <div>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque pharetra tincidunt velit et hendrerit curabitur eu odio eleifend, dictum dui sit amet, tristique erat. Aenean sed nisi vehicula, cursus nunc nec, congue metus.</div>
         <div class='search-form-wrapper'>
           <app-search-input query-param="text" placeholder='Keyword or database name'></app-search-input>
           <div class='dd-wrapper'>

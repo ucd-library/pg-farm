@@ -84,7 +84,7 @@ function _renderHeader(){
         slogan="via UC Davis Library">
       </ucdlib-branding-bar>
       <ucd-theme-primary-nav>
-        <a href="/features">Features</a>
+        <!--<a href="/features">Features</a>-->
         <a href="/search">Find a Database</a>
         <a href="/org">Organizations</a>
         <a href="/contact">Contact</a>
@@ -165,7 +165,7 @@ function _renderFooter(){
             <h2>PG Farm</h2>
             <div class="footer-nav">
               <ul class="menu">
-                <li><a href='/features'>Features</a></li>
+                <!--<li><a href='/features'>Features</a></li>-->
                 <li><a href='#'>Documentation</a></li>
                 <li><a href='#'>Support</a></li>
               </ul>
