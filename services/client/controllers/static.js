@@ -49,6 +49,7 @@ async function setup(app) {
         logger : config.client.logger,
         buildInfo: config.client.buildInfo,
         assetsBaseUrl: config.client.assetsBaseUrl,
+        googleContactFormUrl: config.gc.contactFormUrl,
         publicUser : {
           username: config.pgInstance.publicRole.username, 
           password: config.pgInstance.publicRole.password

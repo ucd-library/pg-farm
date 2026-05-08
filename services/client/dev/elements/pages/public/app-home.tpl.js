@@ -33,9 +33,9 @@ return html`
       <div class="alignable-promo__text">24/7 access to a full PostgreSQL database environment with easy management of who can access your data.</div>
       <div class="alignable-promo__buttons">
         <a href="/contact" class="btn btn--primary">Get Started</a>
-        <a href="/features" class="btn btn--invert">Learn More</a>
+        <a href="/search" class="btn btn--invert">Find a Database</a>
       </div>
-      <div class="alignable-promo__text u-space-mt--small">or <a href='/search'>find a database</a></div>
+      <!-- <div class="alignable-promo__text u-space-mt--small">or <a href='/search'>find a database</a></div> -->
     </div>
   </div>
 </div>
@@ -82,7 +82,7 @@ return html`
       <h2 class='black u-space-mb--large'>To get started, tell us about your project</h2>
       <div class="alignable-promo__buttons">
         <a href="/contact" class="btn btn--primary">Get Started</a>
-        <a href="/features" class="btn btn--invert">Learn More</a>
+        <a href="/search" class="btn btn--invert">Find a Database</a>
       </div>
     </div>
   </div>

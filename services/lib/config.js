@@ -183,7 +183,8 @@ const config = {
       zone : env.GKE_ZONE || 'us-central1-c',
     },
     keyFilename : env.GOOGLE_APPLICATION_CREDENTIALS || '/etc/google/service-account.json',
-    serviceAccountExists
+    serviceAccountExists,
+    contactFormUrl : env.GOOGLE_FORM_URL
   },
 
   k8s : {

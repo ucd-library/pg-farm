@@ -111,11 +111,6 @@ function _renderForm(){
         </div>
       </div>
       <button type='submit' class="btn btn--primary btn--lg u-space-mt">Submit Form</button>
-      <div class='recaptcha-disclaimer' ?hidden=${this._recaptchaDisabled}>
-          This site is protected by reCAPTCHA and the Google
-        <a href="https://policies.google.com/privacy">Privacy Policy</a> and
-        <a href="https://policies.google.com/terms">Terms of Service</a> apply.
-      </div>
     </form>
   `;
 }
@@ -130,7 +125,6 @@ function _renderSuccess(){
       <div class='l-container--narrow-desktop u-space-pt--medium-2x u-align--center'>
         <h1 class='u-space-my--medium'>Thank you!</h1>
         <div>Thanks for your interest in PG-Farm. We'll be in touch with you soon!</div>
-        <div>The form data didn't actually go anywhere. TODO: wire it up.</div>
       </div>
     </div>
   `;
