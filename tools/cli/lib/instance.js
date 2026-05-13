@@ -118,7 +118,7 @@ class Instances {
 
   async backup(instance) {
     instance = formatInstName(instance);
-    let resp = await fetch(`${config.host}/api/admin/instance/${instance}/backup`, {
+    let resp = await fetch(`${config.host}/api/instance/${instance}/backup`, {
       method: 'POST',
       headers: headers()
     });

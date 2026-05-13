@@ -139,7 +139,16 @@ class KubectlWrapper {
   async exec(command, args={}, options) {
     let {stdout, stderr} = await exec(command, args, options);
     if( stderr ) {
-      throw new Error(stderr);
+      let lines = stderr.split('\n').filter(l => l.trim());
+      let warnings = lines.filter(l => l.startsWith('Warning:'));
+      let errors = lines.filter(l => !l.startsWith('Warning:'));
+
+      if( warnings.length ) {
+        logger.warn('kubectl warning', warnings.join('\n'));
+      }
+      if( errors.length ) {
+        throw new Error(errors.join('\n'));
+      }
     }
     return stdout;
   }

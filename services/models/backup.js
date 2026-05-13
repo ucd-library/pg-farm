@@ -6,6 +6,7 @@ import logger from '../lib/logger.js';
 import config from '../lib/config.js';
 import utils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
+import {createContext} from '../lib/context.js';
 
 class BackupModel {
 
@@ -106,9 +107,10 @@ class BackupModel {
    */
   async backup(instNameOrId, orgNameOrId) {
     logger.info(`Backing up databases for instance ${instNameOrId} in org ${orgNameOrId}`);
-    let databases = await client.getInstanceDatabases(instNameOrId, orgNameOrId);
-    let hostname = databases[0].instance_hostname;
-    databases = databases.map(db => db.database_name);
+    let ctx = await createContext({instance: instNameOrId, organization: orgNameOrId});
+    let databases = await client.getInstanceDatabases(ctx);
+    let hostname = ctx.instance.hostname;
+    databases = databases.map(db => db.name);
 
     if( !databases.includes('postgres') ) {
       databases.push('postgres');
@@ -139,17 +141,17 @@ class BackupModel {
     logger.info(`Restoring databases for instance ${instNameOrId} in org ${orgNameOrId}`);
 
     // TODO: Check if instance is in ARCHIVE state however, we need to turn on the instance
-    
-    let instance = await client.getInstance(instNameOrId, orgNameOrId);
-    if( instance.state !== 'RESTORING' ) {
-      throw new Error('Instance must be RESTORING state to restore databases', instance);
+
+    let ctx = await createContext({instance: instNameOrId, organization: orgNameOrId});
+    if( ctx.instance.state !== 'RESTORING' ) {
+      throw new Error('Instance must be RESTORING state to restore databases', ctx.instance);
     }
 
     await this.models.instance.start(instNameOrId, orgNameOrId, {isRestoring: true});
 
-    let databases = await client.getInstanceDatabases(instNameOrId, orgNameOrId);
-    let hostname = databases[0].instance_hostname;
-    databases = databases.map(db => db.database_name);
+    let databases = await client.getInstanceDatabases(ctx);
+    let hostname = ctx.instance.hostname;
+    databases = databases.map(db => db.name);
 
     logger.info(`Restoring up databases from host ${hostname}:`, databases);
 
@@ -178,16 +180,16 @@ class BackupModel {
   async archive(instNameOrId, orgNameOrId) {
     logger.info(`Archiving databases for instance ${instNameOrId} in org ${orgNameOrId}`);
 
-    let instance = await client.getInstance(instNameOrId, orgNameOrId);
-    if( instance.state !== 'RUN' ) {
-      throw new Error('Instance must be in RUN state to archive databases', instance);
+    let ctx = await createContext({instance: instNameOrId, organization: orgNameOrId});
+    if( ctx.instance.state !== 'RUN' ) {
+      throw new Error('Instance must be in RUN state to archive databases', ctx.instance);
     }
 
     let STATES = this.models.instance.STATES;
     await this.models.instance.setInstanceState(instNameOrId, orgNameOrId, STATES.ARCHIVING);
 
     // first kill the pg rest services
-    let dbs = await client.getInstanceDatabases(instNameOrId, orgNameOrId)
+    let dbs = await client.getInstanceDatabases(ctx)
     for( let db of dbs ) {
       await this.models.pgRest.stop(db.database_id, orgNameOrId);
     }
