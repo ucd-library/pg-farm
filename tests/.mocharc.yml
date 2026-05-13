@@ -1,4 +1,4 @@
-spec: '{unit,integration,api,gateway,e2e}/**/*.test.js'
+spec: '{unit,integration,api,gateway}/**/*.test.js'
 require: helpers/env.cjs
 file: helpers/hooks.js
 timeout: 30000

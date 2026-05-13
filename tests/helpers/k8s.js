@@ -84,7 +84,9 @@ export async function teardownNamespace(opts = {}) {
 
   if (deleteNs) {
     try {
-      await exec(`kubectl delete namespace ${E2E_NAMESPACE} --ignore-not-found=true`);
+      // --wait=false returns immediately; resources continue terminating in the background.
+      // Waiting for full namespace deletion can block indefinitely if a resource gets stuck.
+      await exec(`kubectl delete namespace ${E2E_NAMESPACE} --ignore-not-found=true --wait=false`);
     } catch(e) {
       // ignore — namespace may already be gone
     }
@@ -107,23 +109,25 @@ export async function teardownNamespace(opts = {}) {
  * @param {Object} opts
  * @param {number} opts.timeoutMs - polling timeout in milliseconds (default 120000)
  * @param {number} opts.intervalMs - polling interval in milliseconds (default 3000)
+ * @param {number} opts.execTimeoutMs - per-kubectl-call timeout (default 8000)
  * @returns {Promise<Object>} the pod JSON object when ready
  */
 export async function waitForPodReady(hostname, opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 120000;
   const intervalMs = opts.intervalMs ?? 3000;
+  const execTimeoutMs = opts.execTimeoutMs ?? 8000;
   const podName = `${hostname}-0`;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
     try {
-      const raw = await exec(`kubectl get pod ${podName} -n ${E2E_NAMESPACE} -o json`);
+      const raw = await exec(`kubectl get pod ${podName} -n ${E2E_NAMESPACE} -o json`, { timeout: execTimeoutMs });
       const pod = JSON.parse(raw.stdout);
       const conditions = pod.status?.conditions ?? [];
       const ready = conditions.find(c => c.type === 'Ready' && c.status === 'True');
       if (ready) return pod;
     } catch (_) {
-      // pod may not exist yet — keep polling
+      // pod may not exist yet, or kubectl timed out — keep polling
     }
     await new Promise(r => setTimeout(r, intervalMs));
   }
@@ -158,6 +162,9 @@ export function portForward(podName, localPort, remotePort, opts = {}) {
       reject(new Error(`kubectl port-forward to ${podName}:${remotePort} did not open within ${readyTimeout}ms`));
     }, readyTimeout);
 
+    // Detach from Node's event loop — we manage the lifecycle explicitly via close().
+    proc.unref();
+
     const onData = (chunk) => {
       if (chunk.toString().includes('Forwarding from')) {
         clearTimeout(timer);
@@ -165,9 +172,13 @@ export function portForward(podName, localPort, remotePort, opts = {}) {
           proc,
           /**
            * @method close
-           * @description Kill the port-forward process.
+           * @description Kill the port-forward process and release stdio handles.
            */
-          close() { proc.kill(); }
+          close() {
+            proc.stdout.destroy();
+            proc.stderr.destroy();
+            proc.kill();
+          }
         });
       }
     };
