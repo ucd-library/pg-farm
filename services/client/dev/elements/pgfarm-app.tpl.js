@@ -40,35 +40,37 @@ return html`
 
 function _renderMainContent(){
   return html`
-  <app-loader></app-loader>
-  <app-error></app-error>
-  <app-dialog-modal></app-dialog-modal>
-  <app-toast></app-toast>
-  <div class="main-content">
-    <ucdlib-pages
-      id='app-pages'
-      selected=${this.page}
-      attr-for-selected='page-id'>
-      <app-home page-id="home"></app-home>
-      <app-native-home page-id="native-home"></app-native-home>
-      <app-native-databases page-id="native-databases"></app-native-databases>
-      <app-features page-id="features"></app-features>
-      <app-contact page-id="contact"></app-contact>
-      <app-search page-id="search"></app-search>
-      <app-organizations page-id="org"></app-organizations>
-      <app-organization page-id="org-single"></app-organization>
-      <app-database page-id="db"></app-database>
-      <app-docs page-id="docs"></app-docs>
+  <main>
+    <app-loader></app-loader>
+    <app-error></app-error>
+    <app-dialog-modal></app-dialog-modal>
+    <app-toast></app-toast>
+    <div class="main-content">
+      <ucdlib-pages
+        id='app-pages'
+        selected=${this.page}
+        attr-for-selected='page-id'>
+        <app-home page-id="home"></app-home>
+        <app-native-home page-id="native-home"></app-native-home>
+        <app-native-databases page-id="native-databases"></app-native-databases>
+        <app-features page-id="features"></app-features>
+        <app-contact page-id="contact"></app-contact>
+        <app-search page-id="search"></app-search>
+        <app-organizations page-id="org"></app-organizations>
+        <app-organization page-id="org-single"></app-organization>
+        <app-database page-id="db"></app-database>
+        <app-docs page-id="docs"></app-docs>
 
-      <app-admin-database-overview page-id="admin-db-overview"></app-admin-database-overview>
-      <app-admin-database-users page-id="admin-db-users"></app-admin-database-users>
-      <app-admin-database-user-single page-id="admin-db-user-single"></app-admin-database-user-single>
-      <app-admin-database-schemas page-id="admin-db-schemas"></app-admin-database-schemas>
-      <app-admin-database-tables page-id="admin-db-tables"></app-admin-database-tables>
-      <app-admin-database-table-single page-id="admin-db-table-single"></app-admin-database-table-single>
-      <app-admin-user-profile page-id="me"></app-admin-user-profile>
-    </ucdlib-pages>
-  </div>
+        <app-admin-database-overview page-id="admin-db-overview"></app-admin-database-overview>
+        <app-admin-database-users page-id="admin-db-users"></app-admin-database-users>
+        <app-admin-database-user-single page-id="admin-db-user-single"></app-admin-database-user-single>
+        <app-admin-database-schemas page-id="admin-db-schemas"></app-admin-database-schemas>
+        <app-admin-database-tables page-id="admin-db-tables"></app-admin-database-tables>
+        <app-admin-database-table-single page-id="admin-db-table-single"></app-admin-database-table-single>
+        <app-admin-user-profile page-id="me"></app-admin-user-profile>
+      </ucdlib-pages>
+    </div>
+  </main>
   `;
 }
 
@@ -174,7 +176,7 @@ function _renderFooter(){
         </div>
         <div class="footer-spacer">
           <div class='footer-spacer__logo'>
-            <a href='https://ucdavis.edu'>
+            <a href='https://ucdavis.edu' aria-label='University of California, Davis homepage'>
               <app-icon slug='aggie-logo' auto-height></app-icon>
             </a>
           </div>

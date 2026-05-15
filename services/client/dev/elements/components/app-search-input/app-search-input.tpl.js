@@ -76,7 +76,7 @@ return html`
         ?disabled=${this.disabled}
         autocomplete="off"
         @input="${this._onInput}">
-      <button type="submit">
+      <button type="submit" aria-label="Search">
         <app-icon slug='fa.solid.magnifying-glass' fetch-method='page-load'></app-icon>
       </button>
     </div>
