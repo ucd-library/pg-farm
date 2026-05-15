@@ -83,6 +83,7 @@ function _renderHeader(){
     <ucd-theme-header>
       <ucdlib-branding-bar
         site-name="PG Farm"
+        branding-figure-aria-label="PG Farm"
         slogan="via UC Davis Library">
       </ucdlib-branding-bar>
       <ucd-theme-primary-nav>
@@ -128,6 +129,7 @@ function _renderElectronHeader(){
     <ucd-theme-header>
       <ucdlib-branding-bar
         site-name="PG Farm"
+        branding-figure-aria-label="PG Farm"
         slogan="via UC Davis Library">
       </ucdlib-branding-bar>
       <ucd-theme-primary-nav>

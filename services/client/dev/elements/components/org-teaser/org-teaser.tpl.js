@@ -75,7 +75,7 @@ return html`
   <a class='container' href='/org/${this.data.name}'>
     <div class='logo-container'>
       ${this._logoSrc ? html`
-        <img src="${this._logoSrc}">
+        <img src="${this._logoSrc}" alt="">
         ` : html`
           <app-icon class='icon' slug="${this.icon || 'fa.solid.building'}" auto-height></app-icon>
         `}
