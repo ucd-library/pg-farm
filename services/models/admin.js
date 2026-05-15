@@ -110,7 +110,7 @@ class AdminModel {
     if( ctx.organization ) {
       organization = await this.models.organization.exists(ctx);
       if( !organization ) {
-        organization = await this.models.organization.create(ctx, ctx.organization);
+        organization = await this.models.organization.create(ctx);
       } else {
         logger.info('Organization already exists', ctx.logSignal);
       }
