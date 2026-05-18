@@ -1,0 +1,24 @@
+{
+  "name": "pg-farm-tests",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "test": "mocha",
+    "test:unit": "mocha 'unit/**/*.test.js'",
+    "test:integration": "mocha 'integration/**/*.test.js'",
+    "test:api": "mocha 'api/**/*.test.js'",
+    "test:gateway": "mocha 'gateway/**/*.test.js'",
+    "test:e2e": "mocha --config .mocharc.e2e.yml"
+  },
+  "devDependencies": {
+    "body-parser": "^1.20.2",
+    "chai": "^5.1.1",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mocha": "^10.4.0",
+    "pg": "^8.11.3",
+    "sinon": "^17.0.1",
+    "supertest": "^7.0.0"
+  }
+}

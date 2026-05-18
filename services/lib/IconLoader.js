@@ -7,9 +7,9 @@ import yaml from 'js-yaml';
  */
 export default class IconLoader {
   constructor(opts){
-    this.faNodeModulePath = opts?.faNodeModulePath || '/services/node_modules/@fortawesome/fontawesome-free';
+    this.faNodeModulePath = opts?.faNodeModulePath || process.env.FA_NODE_MODULE_PATH || '/services/node_modules/@fortawesome/fontawesome-free';
     this.faNodeModuleSvgsPath = path.join(this.faNodeModulePath, 'svgs');
-    this.customIconPath = opts?.customIconPath || '/services/administration/src/controllers/api/icon/svgs';
+    this.customIconPath = opts?.customIconPath || process.env.FA_CUSTOM_ICON_PATH || '/services/administration/src/controllers/api/icon/svgs';
     this.faPrefix = opts?.faPrefix || 'fa';
 
     let svgs = [];

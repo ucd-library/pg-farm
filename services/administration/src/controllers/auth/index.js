@@ -39,7 +39,7 @@ function register(app) {
         .json({ error: 'No access_token received from auth server' });
     }
 
-    await pgAdminClient.setUserToken(loginResp.body.access_token);
+    loginResp.body.token = await pgAdminClient.setUserToken(loginResp.body.access_token);
 
     res
       .status(loginResp.status)

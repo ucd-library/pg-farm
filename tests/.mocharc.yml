@@ -1,0 +1,5 @@
+spec: '{unit,integration,api,gateway}/**/*.test.js'
+require: helpers/env.cjs
+file: helpers/hooks.js
+timeout: 30000
+exit: true

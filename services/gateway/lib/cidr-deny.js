@@ -36,7 +36,7 @@ function reload(config={}) {
 }
 
 function cleanList(list) {
-  return list.split(/(\n|\s|,)/).map(l => l.trim()).filter(l => l.length > 0);
+  return list.split(/[\s,]+/).map(l => l.trim()).filter(l => l.length > 0);
 }
 
 const cidrDeny = (config) => {

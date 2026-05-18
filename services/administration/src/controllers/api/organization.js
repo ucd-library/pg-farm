@@ -31,8 +31,7 @@ router.post('/',
   keycloak.protect('admin'),
   async (req, res) => {
   try {
-    req.context.organization = req.body;
-    let org = await organization.create(req.context);
+    let org = await organization.create(req.context, req.body);
     res.status(201).json(org);
   } catch(e) {
     handleError(res, e);

@@ -8,6 +8,7 @@
     "lib": "lib"
   },
   "scripts": {
+    "test": "npm test --prefix ../tests",
     "administration": "node administration/src/index.js",
     "gateway": "node gateway/index.js",
     "pg-helper": "node pg-helpers/index.js",

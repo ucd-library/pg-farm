@@ -113,9 +113,11 @@ class Database {
   async create(ctx) {
     ctx = getContext(ctx);
 
+    ctx.database.name = utils.cleanInstDbName(ctx.database.name);
+
     let opts = {
-      title: ctx.database.title || utils.cleanInstDbName(ctx.database.name),
-      name: utils.cleanInstDbName(ctx.database.name),
+      title: ctx.database.title || ctx.database.name,
+      name: ctx.database.name,
       instance: ctx.instance.name,
       short_description: ctx.organization.short_description,
       description: ctx.organization.description,
@@ -129,7 +131,7 @@ class Database {
       pgRestOrgName = org.name+'-';
       opts.organization = org.name;
     }
-    opts.pgrest_hostname = `rest-${pgRestOrgName}${ctx.database.name}`;
+    opts.pgrest_hostname = `rest-${pgRestOrgName}${opts.name}`;
 
     try {
       logger.info('Creating database', ctx.logSignal);
