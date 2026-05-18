@@ -65,10 +65,21 @@ Add these to your server's environment (e.g. systemd unit file, `.env` loaded by
 
 ### File on disk
 
+Use the `--save` flag when rotating to write a credentials file:
+
 ```bash
-# Write once, restrict permissions
-echo "your-512-character-secret" > ~/.pgfarm_secret
-chmod 600 ~/.pgfarm_secret
+pgfarm auth service-account-rotate my-etl-pipeline-service-account \
+  --save ~/my-etl-pipeline-service-account.json
+chmod 600 ~/my-etl-pipeline-service-account.json
+```
+
+The file contains:
+
+```json
+{
+  "username": "my-etl-pipeline-service-account",
+  "secret": "your-512-character-secret"
+}
 ```
 
 ---
@@ -84,7 +95,7 @@ The secret is only used to request a token. A token, once issued, is valid for *
 1. **Generate a fresh token** for your running service using the current secret:
    ```bash
    pgfarm auth service-account-login my-etl-pipeline-service-account \
-     --file ~/.pgfarm_secret
+     --file ~/my-etl-pipeline-service-account.json
    ```
    Your service now holds a token valid for up to 7 days.
 
@@ -192,15 +203,18 @@ conn = psycopg2.connect(
 )
 ```
 
-To read the secret from a file instead of an environment variable:
+To read credentials from a JSON file instead of environment variables:
 
 ```python
-def read_secret(path=os.path.expanduser("~/.pgfarm_secret")):
-    """Read a secret from a restricted file."""
-    with open(path) as f:
-        return f.read().strip()
+import json
 
-SECRET = read_secret()
+def read_credentials(path=os.path.expanduser("~/my-etl-pipeline-service-account.json")):
+    """Read username and secret from a JSON credentials file."""
+    with open(path) as f:
+        data = json.load(f)
+    return data["username"], data["secret"]
+
+USERNAME, SECRET = read_credentials()
 ```
 
 ---
@@ -327,9 +341,11 @@ finally:
 ### Using a file-stored secret
 
 ```python
+username, secret = read_credentials("~/my-etl-pipeline-service-account.json")
+
 db = PgFarmConnection(
-    username="your-service-account-username",
-    secret=read_secret("~/.pgfarm_secret"),
+    username=username,
+    secret=secret,
     dbname="your-org/your-database",
 )
 ```
