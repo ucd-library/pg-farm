@@ -77,7 +77,7 @@ CREATE OR REPLACE FUNCTION add_instance_user(inst_name_or_id text, org_name_or_i
     SELECT pgfarm.ensure_user(username_in) INTO uid;
     
     IF parent_in IS NOT NULL THEN
-      SELECT pgfarm.get_user_id(username_in) INTO puid;
+      SELECT pgfarm.get_user_id(parent_in) INTO puid;
     ELSE
       puid := NULL;
     END IF;

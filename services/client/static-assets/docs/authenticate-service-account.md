@@ -5,6 +5,7 @@ This page explains how to use a **service account** to connect your application 
 - [What is a Service Account?](#what-is-a-service-account)
 - [Requesting a Service Account](#requesting-a-service-account)
 - [Keeping Your Secret Safe](#keeping-your-secret-safe)
+- [Rotating a Password](#rotating-a-password)
 - [How It Works](#how-it-works)
 - [Getting a Token](#getting-a-token)
 - [Connecting with psycopg2](#connecting-with-psycopg2)
@@ -16,7 +17,7 @@ This page explains how to use a **service account** to connect your application 
 
 A service account is a machine account created specifically for programmatic access — for example, a web application or data pipeline that needs to query PG Farm without a human logging in each time.
 
-Each service account is issued a 256-character **secret**. This secret never expires on its own, but it should be rotated periodically and kept out of your source code.
+Each service account is issued a 512-character **secret**. This secret never expires on its own, but it should be rotated periodically and kept out of your source code.
 
 You use the secret to request a short-lived **token** (valid for 7 days). Your application uses that token as the PostgreSQL password when connecting through PG Farm.
 
@@ -24,13 +25,23 @@ You use the secret to request a short-lived **token** (valid for 7 days). Your a
 
 ## Requesting a Service Account
 
-Email **pgfarm@ucdavis.edu** with:
+Contact a **PG Farm administrator** and provide:
 
-- Your name and UC Davis affiliation
-- The name of the PG Farm organization and database(s) you need access to
-- A brief description of how the account will be used (e.g., "nightly ETL script on our departmental server")
+- Your PG Farm username (the account that will own the service account)
+- A short name for the service account (e.g., `my-etl-pipeline`)
+- A description of what the account will be used for
 
-You will receive a **username** and a **secret** via secure channel. Store them carefully — the secret cannot be recovered if lost.
+The administrator will create the account using the CLI:
+
+```bash
+pgfarm auth service-account-create my-etl-pipeline \
+  --parent your-username \
+  --description "Nightly ETL pipeline for the departmental reporting server"
+```
+
+Service account usernames always end in `-service-account` — the suffix is appended automatically if omitted, so the above example creates the user `my-etl-pipeline-service-account`.
+
+> **No secret is issued at creation.** PG Farm administrators never see or handle your secret. Once the administrator tells you your account username, you generate your own initial secret by running the rotate command yourself (see [Rotating a Password](#rotating-a-password)). This ensures the secret is known only to you.
 
 ---
 
@@ -41,13 +52,13 @@ The secret is equivalent to a password. Treat it accordingly:
 - **Never commit it to source code or a public repository.**
 - Store it in an environment variable or a restricted file, not in your application config.
 - Restrict file permissions if storing on disk: `chmod 600 ~/.pgfarm_secret`
-- Rotate it by contacting pgfarm@ucdavis.edu if you suspect it has been compromised.
+- Rotate it immediately if you suspect it has been compromised (see [Rotating a Password](#rotating-a-password) below).
 
 ### Environment variable (recommended)
 
 ```bash
 export PG_FARM_USERNAME="your-service-account-username"
-export PG_FARM_SECRET="your-256-character-secret"
+export PG_FARM_SECRET="your-512-character-secret"
 ```
 
 Add these to your server's environment (e.g. systemd unit file, `.env` loaded by your process manager, or a secrets manager). Do **not** check a `.env` file into version control.
@@ -56,9 +67,50 @@ Add these to your server's environment (e.g. systemd unit file, `.env` loaded by
 
 ```bash
 # Write once, restrict permissions
-echo "your-256-character-secret" > ~/.pgfarm_secret
+echo "your-512-character-secret" > ~/.pgfarm_secret
 chmod 600 ~/.pgfarm_secret
 ```
+
+---
+
+## Rotating a Password
+
+Use this command to obtain your **initial secret** after account creation, or any time you need to replace a lost or compromised secret. You must be logged in as the **parent user** of the account.
+
+### Zero-downtime rotation workflow
+
+The secret is only used to request a token. A token, once issued, is valid for **7 days** regardless of what happens to the secret afterward. You can use this to rotate without any service downtime:
+
+1. **Generate a fresh token** for your running service using the current secret:
+   ```bash
+   pgfarm auth service-account-login my-etl-pipeline-service-account \
+     --file ~/.pgfarm_secret
+   ```
+   Your service now holds a token valid for up to 7 days.
+
+2. **Rotate the secret** to generate a new one:
+   ```bash
+   pgfarm auth service-account-rotate my-etl-pipeline-service-account \
+     --save ~/my-etl-pipeline-service-account-new.json
+   chmod 600 ~/my-etl-pipeline-service-account-new.json
+   ```
+   The old secret is now invalid, but your running service is unaffected — its existing token still works.
+
+3. **Deploy the new secret** to your service within 7 days. Once deployed, the service uses the new secret to obtain future tokens and the transition is complete.
+
+You will be shown a warning and asked to confirm before anything changes.
+
+To save the credentials directly to a file instead of printing to the terminal (as shown above):
+
+```bash
+pgfarm auth service-account-rotate my-etl-pipeline-service-account \
+  --save ~/my-etl-pipeline-service-account.json
+chmod 600 ~/my-etl-pipeline-service-account.json
+```
+
+The file contains a JSON object with `username` and `secret` fields. Keep it out of version control.
+
+Administrators can rotate any service account regardless of ownership.
 
 ---
 
