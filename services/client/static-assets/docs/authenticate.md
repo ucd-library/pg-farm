@@ -57,3 +57,9 @@ Once logged in, you will receive a token that you can use to access the database
     ```bash
     pgfarm config show
     ```
+
+# Service Accounts
+
+If you need to connect to PG Farm from a server, script, or automated pipeline — without an interactive login — you can request a **service account**. A service account is issued a long-lived secret that your application uses to obtain short-lived tokens on demand, enabling fully automated and rotation-safe database access.
+
+See [Service Account Authentication](__BASE__/docs/authenticate-service-account) for details on requesting an account, storing your secret safely, and Python code examples for automatic token rotation with psycopg2.
