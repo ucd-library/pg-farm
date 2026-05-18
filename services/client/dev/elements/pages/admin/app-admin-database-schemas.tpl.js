@@ -39,6 +39,7 @@ export function render() {
           <div class='heading'>
             <h2>Schemas</h2>
           </div>
+          <p>To manage user access for each schema, click on the "Users" button below the schema name.</p>
           <div>
             ${(this.schemas || []).map(schema => html`
                 <section>

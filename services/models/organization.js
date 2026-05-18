@@ -95,29 +95,33 @@ class OrganizationModel {
    *
    * @returns {Promise<Object>}
    */
-  async create(ctx, organization) {
+  async create(ctx) {
     ctx = getContext(ctx);
 
-    if( !organization.name && organization.title ) {
-      organization.name = organization.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+    if ( !ctx.organization ) {
+      throw new Error('Context organization is required');
     }
-    if( !organization.title ) {
-      organization.title = organization.name;
-    }
-    organization.name = organization.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
 
-    let exists = await this.exists(organization);
-    if( exists ) {
-      throw new Error('Organization already exists: '+organization.name);
+    if( !ctx.organization.name && ctx.organization.title ) {
+      ctx.organization.name = ctx.organization.title.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
     }
-    this._convertLogoToBytes(organization);
+    if( !ctx.organization.title ) {
+      ctx.organization.title = ctx.organization.name;
+    }
+    ctx.organization.name = ctx.organization.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
+
+    let exists = await this.exists(ctx.organization);
+    if( exists ) {
+      throw new Error('Organization already exists: '+ctx.organization.name);
+    }
+    this._convertLogoToBytes(ctx.organization);
 
     logger.info('Creating organization', ctx.logSignal);
-    await client.createOrganization(organization);
+    await client.createOrganization(ctx.organization);
 
     // set a context
     await ctx.update({
-      organization: organization.name
+      organization: ctx.organization.name
     });
 
     return this.get(ctx);
