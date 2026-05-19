@@ -12,17 +12,25 @@ class UserService extends BaseService {
   }
 
   async getMe() {
-    await this.request({
-      url : `${this.basePath}/me`,
-      fetchOptions: {
-        headers: serviceUtils.authHeader()
-      },
-      onLoading: request => this.store.onMeUpdate({request}),
-      onLoad: payload => this.store.onMeUpdate({payload: payload.body}),
-      onError: error => this.store.onMeUpdate({error})
-    });
+    const store = this.store.data.me;
+    const id = 'me';
 
-    return this.store.data.me.get('me');
+    await this.checkRequesting(
+      id, store,
+      () => this.request({
+        url : `${this.basePath}/me`,
+        fetchOptions: {
+          headers: serviceUtils.authHeader()
+        },
+        onUpdate : resp => this.store.set(
+          {id, ...resp},
+          store
+        ),
+        checkCached: () => store.get(id)
+      })
+    );
+
+    return store.get(id);
   }
 
   async myDatabases(org){

@@ -43,7 +43,7 @@ export function render() {
           <div class='heading'>
             <div class='flex flex--align-center gap--small flex--wrap'>
               <h2>User: ${this.user?.data?.name}</h2>
-              <div class='admin-badge' ?hidden=${!this.user?.isAdmin}>Admin</div>
+              <div class='badge' ?hidden=${!this.user?.isAdmin}>Admin</div>
             </div>
             <div class='flex flex--align-center gap--small flex--wrap'>
               <app-icon-button icon='fa.solid.trash' @click=${() => this._showDeleteUserModal()}></app-icon-button>

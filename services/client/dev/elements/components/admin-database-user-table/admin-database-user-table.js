@@ -1,10 +1,9 @@
 import { LitElement } from 'lit';
-import {render, styles, renderRmAccessForm} from "./admin-database-user-table.tpl.js";
+import {render, styles, renderRmAccessForm, renderServiceAccountRotationConfirmation} from "./admin-database-user-table.tpl.js";
 
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
@@ -29,7 +28,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       bulkActions: {type: Array},
       selectedBulkAction: {type: String},
       rmFromObject: { type: Boolean },
-      instance: { type: String}
+      instance: { type: String},
+      hasServiceAccounts: {type: Boolean},
+      currentUser: {type: Object}
     }
   }
 
@@ -45,8 +46,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.selectedBulkAction = '';
     this.rmFromObject = 'schema';
     this.instance = '';
+    this.hasServiceAccounts = false;
+    this.currentUser = null;
 
-    this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
     this.queryCtl = new QueryParamsController(this, [
       {name: 'schema', defaultValue: ''}
@@ -57,7 +59,8 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
       filters: [
         {id: 'db-access', cb: this._onDbAccessFilterChange},
-        {id: 'schema-access', cb: this._onSchemaAccessFilterChange}
+        {id: 'schema-access', cb: this._onSchemaAccessFilterChange},
+        {id: 'service-account', cb: this._applySaFilterChange, defaultValue: null}
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
@@ -69,6 +72,39 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     if ( e.page !== this.compCtl.parentPageId ) return;
     await this.queryCtl.setFromLocation();
     this._setBulkActions();
+  }
+
+  /**
+   * @description Lit lifecycle method
+   * @param {*} props - The changed properties
+   */
+  willUpdate(props){
+    if ( props.has('users') ){
+      if ( this.users.find(user => user.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT') ){
+        this.hasServiceAccounts = true;
+      }
+    }
+  }
+
+  /**
+   * @description Callback for when the service account filter toggle button is clicked
+   */
+  _onSaFilterToggleClick() {
+    const value = this.tableCtl.getFilterValue('service-account');
+    const newValue = value === true ? null : true;
+    this.tableCtl.setFilterValue('service-account', newValue);
+  }
+
+  /**
+   * @description Callback for applying the service account filter with the table controller.
+   * @param {Object} user - The user object from this.users array
+   * @param {Boolean|null} value - The value of the filter
+   * @returns {Boolean} - True if the user should be shown, false otherwise
+   */
+  _applySaFilterChange(user, value) {
+    if ( value === null ) return true;
+    const isSa = user.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT';
+    return value ? isSa : !isSa;
   }
 
   /**
@@ -167,6 +203,19 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     });
   }
 
+  _showServiceAccountRotationConfirmation(user) {
+    this.AppStateModel.showDialogModal({
+        title: 'Rotate Service Account Password',
+        actions: [
+            {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+            {text: 'Confirm Rotation', value: 'user-table-rotate-service-account-password', color: 'secondary'}
+        ],
+        content: renderServiceAccountRotationConfirmation.call(this, user),
+        data: {user}
+    });
+
+  }
+
   /**
    * @description Shows the confirmation modal for deleting a user or users from the database
    * @param {Object|Array} user - The user object or array of user objects to delete
@@ -215,6 +264,10 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       const schema = this.queryCtl.schema.value;
       this.removeSchemaAccess(users, schema);
       return;
+    }
+    if ( e.action?.value === 'user-table-rotate-service-account-password' ) {
+      const user = e.data.user;
+      console.log('rotate password for user', user);
     }
   }
 

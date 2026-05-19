@@ -201,7 +201,7 @@ function _renderUserName(row){
         <div>
           <a href=${href}>${row.item?.user?.name}</a>
         </div>
-        <div class='admin-badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
+        <div class='badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
       </div>
       <div class='caption' ?hidden=${!name}>${name}</div>
     </div>

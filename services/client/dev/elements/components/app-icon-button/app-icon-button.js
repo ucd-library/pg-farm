@@ -16,7 +16,8 @@ export default class AppIconButton extends LitElement {
       basic: { type: Boolean },
       icon: { type: String },
       href: { type: String },
-      disabled: { type: Boolean }
+      disabled: { type: Boolean },
+      pressed: { type: Boolean }
     }
   }
 
@@ -32,6 +33,7 @@ export default class AppIconButton extends LitElement {
     this.icon = '';
     this.href = '';
     this.disabled = false;
+    this.pressed = false;
   }
 
   willUpdate(props){

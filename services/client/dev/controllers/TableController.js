@@ -49,7 +49,7 @@ export default class TableController {
 
     // reset search and filters
     this.opts.searchValue = '';
-    this.opts.filters.forEach( filter => filter.value = filter.defaultValue || '' );
+    this.opts.filters.forEach( filter => filter.value = Object.hasOwn(filter, 'defaultValue') ? filter.defaultValue : '' );
 
     this.data = (this.hostData || []).map( item => {
       const row = {

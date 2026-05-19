@@ -57,17 +57,17 @@ export function styles() {
       justify-content: center;
     }
     .basic app-icon {
-      --app-icon-size: 75%;
+      --app-icon-size: var(--app-icon-button-icon-size, 75%);
     }
     .round app-icon {
-      --app-icon-size: 55%;
+      --app-icon-size: var(--app-icon-button-icon-size, 55%);
     }
     .container.round.color--light {
       background-color: var(--ucd-blue-40, #DBEAF7);
       border-color: var(--ucd-blue-40, #DBEAF7);
       color: var(--ucd-blue, #022851);
     }
-    .container.round.color--light:hover {
+    .container.round.color--light:hover, .container.pressed.round.color--light {
       background-color: var(--ucd-blue-60, #B0D0ED);
       border-color: var(--ucd-blue-60, #B0D0ED);
     }
@@ -80,7 +80,7 @@ export function styles() {
       border-color: var(--ucd-blue, #022851);
       color: var(--white, #FFFFFF);
     }
-    .container.round.color--dark:hover {
+    .container.round.color--dark:hover, .container.pressed.round.color--dark {
       background-color: var(--ucd-gold, #FFBF00);
       border-color: var(--ucd-gold, #FFBF00);
       color: var(--ucd-blue, #022851);
@@ -93,7 +93,7 @@ export function styles() {
       border-color: var(--ucd-blue-80, #13639E);
       color: var(--white, #FFFFFF);
     }
-    .container.round.color--medium:hover {
+    .container.round.color--medium:hover, .container.pressed.round.color--medium {
       background-color: var(--ucd-blue, #022851);
       border-color: var(--ucd-blue, #022851);
     }
@@ -105,7 +105,7 @@ export function styles() {
       border-color: var(--white, #FFFFFF);
       color: var(--ucd-blue-80, #13639E);
     }
-    .container.round.color--white:hover {
+    .container.round.color--white:hover, .container.pressed.round.color--white {
       background-color: var(--ucd-blue-80, #13639E);
       border-color: var(--ucd-blue-80, #13639E);
       color: var(--ucd-gold, #FFBF00);
@@ -120,7 +120,7 @@ export function styles() {
 }
 
 export function render() {
-  const containerClass = `container color--${this.color} ${this.basic ? 'basic' : 'round'}`;
+  const containerClass = `container color--${this.color} ${this.basic ? 'basic' : 'round'} ${this.pressed ? 'pressed' : ''}`;
   if ( this.href && !this.disabled ) {
     return html`
       <a href='${this.href}' class='${containerClass}'>
@@ -129,7 +129,7 @@ export function render() {
     `;
   } else {
     return html`
-      <button class='${containerClass}' ?disabled=${this.disabled}>
+      <button class='${containerClass}' ?disabled=${this.disabled} aria-pressed=${this.pressed}>
         <app-icon slug=${this.icon}></app-icon>
       </button>
     `;
