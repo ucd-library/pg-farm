@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import colors from 'colors';
+import {isLoggedIn, isAdmin} from '../lib/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -53,10 +54,17 @@ Homepage: https://pgfarm.library.ucdavis.edu
   .command('auth', 'Log in/out of PG Farm.  Show login token')
   .command('config', 'Setup cli')
   .command('connect', 'Show various connection examples')
-  .command('database', 'View, find and manage databases')
-  .command('instance', 'View and manage postgres instances.  An instance is a running postgres server, can have multiple databases')
-  .command('organization', 'View and manage organizations')
-  .command('admin', 'PG Admin system commands')
+  .command('database', 'View, find and manage databases');
+
+if( isLoggedIn() ) {
+  program
+    .command('instance', 'View and manage postgres instances.  An instance is a running postgres server, can have multiple databases')
+    .command('organization', 'View and manage organizations');
+}
+
+if( isAdmin() ) {
+  program.command('admin', 'PG Farm system admin commands');
+}
 
   
 

@@ -2,6 +2,7 @@ import {Command} from 'commander';
 import organization from '../lib/organization.js';
 import print from '../lib/print.js';
 import {wrapAllCmds} from '../lib/global-opts.js';
+import {isAdmin} from '../lib/config.js';
 
 const program = new Command();
 
@@ -28,16 +29,17 @@ program.command('update <org>')
     organization.update(org, opts);
   });
 
-program.command('create')
-  .description('Create a new PG Farm organization '+print.pgFarmAdminOnlyMsg())
-  .requiredOption('-t, --title <title>', 'Required. Nice human readable title for the organization')
-  .option('-n, --name <name>', 'Organization name')
-  .option('-d, --description <description>', 'Description of the organization')
-  .option('-u, --url <url>', 'URL for the organization')
-  .action(options => {
-    organization.create(options);
-  });
-
+if( isAdmin() ) {
+  program.command('create')
+    .description('Create a new PG Farm organization')
+    .requiredOption('-t, --title <title>', 'Required. Nice human readable title for the organization')
+    .option('-n, --name <name>', 'Organization name')
+    .option('-d, --description <description>', 'Description of the organization')
+    .option('-u, --url <url>', 'URL for the organization')
+    .action(options => {
+      organization.create(options);
+    });
+}
 
 wrapAllCmds(program);
 program.parse(process.argv);

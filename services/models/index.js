@@ -5,6 +5,7 @@ import healthProbe from './health-probe.js';
 import instance from './instance.js';
 import organization from './organization.js';
 import pgRest from './pg-rest.js';
+import serviceAccount from './service-account.js';
 import user from './user.js';
 
 const models = {
@@ -15,6 +16,7 @@ const models = {
   instance,
   organization,
   pgRest,
+  serviceAccount,
   user
 };
 
@@ -30,5 +32,6 @@ export {
   instance,
   organization,
   pgRest,
+  serviceAccount,
   user
 }
