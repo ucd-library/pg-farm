@@ -158,6 +158,74 @@ class KubectlWrapper {
     return this.exec(`kubectl delete ${type} ${name}`);
   }
 
+  /**
+   * @method applyPdb
+   * @description Create or update a PodDisruptionBudget for an instance pod.
+   * minAvailable=1 blocks voluntary eviction (node drain, cluster upgrade).
+   * minAvailable=0 allows GKE to freely move the pod when idle.
+   *
+   * @param {string} name instance hostname (used as pod app label selector)
+   * @param {number} minAvailable 0 or 1
+   * @returns {Promise<Object>}
+   */
+  async applyPdb(name, minAvailable) {
+    await this.init();
+    const pdb = {
+      apiVersion : 'policy/v1',
+      kind       : 'PodDisruptionBudget',
+      metadata   : { name: `${name}-pdb` },
+      spec       : {
+        minAvailable,
+        selector : { matchLabels: { app: name } }
+      }
+    };
+    return this.apply(pdb, { stdin: true, isJson: true });
+  }
+
+  /**
+   * @method deletePdb
+   * @description Delete the PodDisruptionBudget for an instance. Silently ignores
+   * a missing PDB so stop() is safe to call on instances created before this feature.
+   *
+   * @param {string} name instance hostname
+   * @returns {Promise}
+   */
+  async deletePdb(name) {
+    await this.init();
+    try {
+      return await this.delete('poddisruptionbudget', `${name}-pdb`);
+    } catch(e) {
+      logger.warn('Could not delete PDB, may not exist yet', name, e.message);
+    }
+  }
+
+  /**
+   * @method patchPodResources
+   * @description Patch CPU/memory requests on a running pod in-place without restarting it.
+   * Requires GKE 1.29+ with InPlacePodVerticalScaling feature gate enabled and
+   * resizePolicy: NotRequired set on the target containers.
+   *
+   * Only patches requests — limits remain sticky and are never changed here.
+   *
+   * @param {string} podName full pod name (e.g. hostname-0 for a single-replica StatefulSet)
+   * @param {Array<{name: string, requests: {cpu: string, memory: string}}>} containers
+   * @returns {Promise<string>}
+   */
+  async patchPodResources(podName, containers) {
+    await this.init();
+    const patch = JSON.stringify({
+      spec: {
+        containers: containers.map(c => ({
+          name      : c.name,
+          resources : { requests: c.requests }
+        }))
+      }
+    });
+    return this.exec(
+      `kubectl patch pod ${podName} --subresource resize --type merge -p '${patch}'`
+    );
+  }
+
   async get(type, name) {
     await this.init();
     let config = await this.exec(`kubectl get ${type} ${name} -o json`);
