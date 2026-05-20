@@ -10,6 +10,7 @@ class UserStore extends BaseStore {
       me: new LruStore({name: 'user.me'}),
       myDatabases: new LruStore({name: 'user.myDatabases'}),
       search: new LruStore({name: 'user.search'}),
+      myServiceAccounts: new LruStore({name: 'user.myServiceAccounts'})
     };
     this.events = {
       USER_MY_DATABASES_UPDATE : 'user-my-databases-update',

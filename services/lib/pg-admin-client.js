@@ -675,6 +675,7 @@ class PgFarmAdminClient {
     let resp = await client.query(`
       select ${columns.join(', ')} from pgfarm.instance_user iu
       left join pgfarm.user u on iu.user_id = u.user_id
+      left join pgfarm.service_account sa on sa.user_id = iu.user_id
       where iu.instance_id = $1;
     `, [instId]);
 

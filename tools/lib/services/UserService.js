@@ -11,6 +11,28 @@ class UserService extends BaseService {
     this.basePath = `${serviceUtils.host}/api/user`;
   }
 
+  async myServiceAccounts() {
+    const store = this.store.data.myServiceAccounts;
+    const id = 'myServiceAccounts';
+
+    await this.checkRequesting(
+      id, store,
+      () => this.request({
+        url : `${this.basePath}/me/service-accounts`,
+        fetchOptions: {
+          headers: serviceUtils.authHeader()
+        },
+        onUpdate : resp => this.store.set(
+          {id, ...resp},
+          store
+        ),
+        checkCached: () => store.get(id)
+      })
+    );
+
+    return store.get(id);
+  }
+
   async getMe() {
     const store = this.store.data.me;
     const id = 'me';

@@ -58,6 +58,7 @@ export function styles() {
       font-size: var(--font-size--small, 0.875rem);
       color: var(--ucd-black-70, #4C4C4C);
       font-weight: 400;
+      margin-top: .5rem;
     }
     admin-database-user-table button.service-account-details {
       background: none;
@@ -183,7 +184,7 @@ function _renderDesktopView(){
               <app-icon-button 
                 icon='fa.solid.trash' 
                 basic 
-                ?disabled=${row.item?.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT'}
+                ?disabled=${row.item?.user?.pgFarmUser?.serviceAccountId}
                 @click=${() => this._onRemoveUserButtonClick(row.item?.user)}>
               </app-icon-button>
             </div>
@@ -237,7 +238,7 @@ function _renderMobileView(){
               <app-icon-button 
                 icon='fa.solid.trash' 
                 basic 
-                ?disabled=${row.item?.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT'}
+                ?disabled=${row.item?.user?.pgFarmUser?.serviceAccountId}
                 @click=${() => this._onRemoveUserButtonClick(row.item?.user)}>
               </app-icon-button>
             </div>
@@ -255,9 +256,9 @@ function _renderUserName(row){
     href += `?schema=${this.queryCtl.schema.value}`;
   }
   const name = `${row.item?.user?.pgFarmUser?.firstName || ''} ${row.item?.user?.pgFarmUser?.lastName || ''}`.trim();
-  let username = row.item?.user?.name || '';
+  let username = (row.item?.user?.name || '').replace(/-service-account$/, '');
 
-  const isServiceAccount = row.item?.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT';
+  const isServiceAccount = !!row.item?.user?.pgFarmUser?.serviceAccountId;
   const isOwnServiceAccount = isServiceAccount && row.item?.user?.pgFarmUser?.serviceAccountParentId == this.currentUser?.userId;
   let serviceAccountOwnerName = '';
   if ( isServiceAccount && !isOwnServiceAccount ){

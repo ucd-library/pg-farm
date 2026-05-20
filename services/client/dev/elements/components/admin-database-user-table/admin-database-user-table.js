@@ -103,7 +103,7 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
    */
   _applySaFilterChange(user, value) {
     if ( value === null ) return true;
-    const isSa = user.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT';
+    const isSa = !!user.user?.pgFarmUser?.serviceAccountId;
     return value ? isSa : !isSa;
   }
 
