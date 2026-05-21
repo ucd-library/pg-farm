@@ -1,5 +1,5 @@
 import { LitElement } from 'lit';
-import {render, styles, renderRmAccessForm, renderServiceAccountRotationConfirmation} from "./admin-database-user-table.tpl.js";
+import {render, styles, renderRmAccessForm} from "./admin-database-user-table.tpl.js";
 
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
@@ -10,7 +10,7 @@ import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParam
 import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
 
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
-import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
+import { deleteUserConfirmation, removeSchemaAccess, renderServiceAccountRotationConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 /**
  * @description Admin Database User Table
@@ -210,7 +210,7 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
             {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
             {text: 'Confirm Rotation', value: 'user-table-rotate-service-account-password', color: 'secondary'}
         ],
-        content: renderServiceAccountRotationConfirmation.call(this, user),
+        content: renderServiceAccountRotationConfirmation(user),
         data: {user}
     });
 

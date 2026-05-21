@@ -40,3 +40,18 @@ export function removeSchemaAccess(user, schema){
     </div>
   `
 }
+
+/**
+ * @description Dialog modal content for rotating a service account password
+ * @param {*} user - A user or service account object
+ * @returns {TemplateResult}
+ */
+export function renderServiceAccountRotationConfirmation(user){
+  const username = user?.name || user?.username;
+  return html`
+    <p>Are you sure you want to generate a new password for service account <strong>${username}</strong>?</p>
+    <p>To ensure there is no disruption to services, deploy your new secret before your access token expires.</p>
+    <p>See the <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a> for more information.</p>
+    <p><strong>This action cannot be undone.</strong></p>
+    `
+}
