@@ -1,6 +1,7 @@
 import {BaseModel} from '@ucd-lib/cork-app-utils';
 import ServiceAccountService from '../services/ServiceAccountService.js';
 import ServiceAccountStore from '../stores/ServiceAccountStore.js';
+import utils from '../utils.js';
 
 class ServiceAccountModel extends BaseModel {
 
@@ -33,8 +34,12 @@ class ServiceAccountModel extends BaseModel {
    * @param {string} name - service account name
    * @returns {Promise<Object>}
    */
-  rotatePassword(name) {
-    return this.service.rotatePassword(name);
+  async rotatePassword(name) {
+    const res = await this.service.rotatePassword(name);
+    if ( res.state === 'loaded') {
+      utils.clearCache({ target: [{ model: 'UserModel', store: 'user.myServiceAccounts' }] });
+    }
+    return res;
   }
 
 }

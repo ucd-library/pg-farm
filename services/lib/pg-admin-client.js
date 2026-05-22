@@ -956,11 +956,13 @@ class PgFarmAdminClient {
    * @returns {Promise<void>}
    */
   async updateServiceAccountRotatedAt(serviceAccountUsername) {
-    await client.query(`
+    const resp = await client.query(`
       UPDATE ${this.schema}.service_account
       SET last_rotated_at = now()
       WHERE user_id = ${this.schema}.get_user_id($1)
+      RETURNING last_rotated_at
     `, [serviceAccountUsername]);
+    return resp.rows[0]?.last_rotated_at;
   }
 
 }

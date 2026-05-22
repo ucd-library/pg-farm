@@ -8,6 +8,7 @@ import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
+import blobUtils from '../../../utils/blobUtils.js';
 
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 import { deleteUserConfirmation, removeSchemaAccess, renderServiceAccountRotationConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
@@ -65,7 +66,7 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
 
-    this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel');
+    this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel', 'ServiceAccountModel');
   }
 
   async _onAppStateUpdate(e){
@@ -267,8 +268,20 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     }
     if ( e.action?.value === 'user-table-rotate-service-account-password' ) {
       const user = e.data.user;
-      console.log('rotate password for user', user);
+      this.rotateServiceAccountPassword(user);
     }
+  }
+
+  async rotateServiceAccountPassword(user) {
+    const r = await this.ServiceAccountModel.rotatePassword(user.name);
+    if ( r?.state === 'error' ){
+      this.AppStateModel.showToast({text: 'Error rotating service account password', type: 'error'});
+      return;
+    }
+
+    blobUtils.downloadJsonAsFile(r.payload, 'service-account.json');
+
+    this.AppStateModel.showToast({text: 'Service account password rotated successfully', type: 'success'});
   }
 
   async removeInstanceAccess(username) {

@@ -98,9 +98,9 @@ class ServiceAccountModel {
     logger.info('Rotating password for service account', username);
 
     await keycloakAdmin.updateUserPassword(username, secret);
-    await client.updateServiceAccountRotatedAt(username);
+    const lastRotatedAt = await client.updateServiceAccountRotatedAt(username);
 
-    return { username, secret };
+    return { username, secret, lastRotatedAt };
   }
 
   /**
