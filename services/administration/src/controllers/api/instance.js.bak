@@ -70,7 +70,7 @@ router.post('/',
   keycloak.protect('admin'),
   async (req, res) => {
   try {
-    console.log("DEBUG CTX:", typeof req.context, req.context?.constructor?.name, JSON.stringify(req.context?.logSignal)); let result = await instanceModel.create(req.context, req.body);
+    let result = await instanceModel.create(req.context, req.body);
     res.status(201).json(result);
   } catch(e) {
     handleError(res, e);

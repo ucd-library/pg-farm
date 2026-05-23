@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PG from 'pg';
+import { getAdminDbConfig } from './e2e-setup.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -116,6 +117,45 @@ export async function stop() {
     pool = null;
   }
   execSync(`docker compose -f ${COMPOSE_FILE} down -v`, { stdio: 'pipe' });
+}
+
+/**
+ * @function resetE2EData
+ * @description Delete all e2e test records (names matching 'e2e-%') from the
+ * live pgfarm admin database.  Connects via the port configured in
+ * E2E_ADMIN_DB_PORT (default 30544 for local-dev).
+ *
+ * Deletion is ordered to respect foreign-key constraints:
+ *   databases → instances → organizations
+ *
+ * @returns {Promise<void>}
+ */
+export async function resetE2EData() {
+  const client = new PG.Client({ ...getAdminDbConfig(), connectionTimeoutMillis: 8000 });
+  await client.connect();
+
+  try {
+    await client.query(`
+      DELETE FROM pgfarm.database
+      WHERE instance_id IN (
+        SELECT instance_id FROM pgfarm.instance
+        WHERE organization_id IN (
+          SELECT organization_id FROM pgfarm.organization WHERE name LIKE 'e2e-%'
+        )
+      )
+    `);
+
+    await client.query(`
+      DELETE FROM pgfarm.instance
+      WHERE organization_id IN (
+        SELECT organization_id FROM pgfarm.organization WHERE name LIKE 'e2e-%'
+      )
+    `);
+
+    await client.query(`DELETE FROM pgfarm.organization WHERE name LIKE 'e2e-%'`);
+  } finally {
+    await client.end();
+  }
 }
 
 /**

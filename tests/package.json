@@ -8,7 +8,8 @@
     "test:integration": "mocha 'integration/**/*.test.js'",
     "test:api": "mocha 'api/**/*.test.js'",
     "test:gateway": "mocha 'gateway/**/*.test.js'",
-    "test:e2e": "mocha --config .mocharc.e2e.yml"
+    "test:e2e": "mocha --config .mocharc.e2e.local.yml",
+    "test:e2e:gke-dev": "mocha --config .mocharc.e2e.gke-dev.yml"
   },
   "devDependencies": {
     "body-parser": "^1.20.2",

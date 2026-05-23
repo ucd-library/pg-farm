@@ -31,7 +31,11 @@ router.post('/',
   keycloak.protect('admin'),
   async (req, res) => {
   try {
-    let org = await organization.create(req.context, req.body);
+    // contextMiddleware cannot look up an org that doesn't exist yet.
+    // Merge the request body into context.organization so the model has
+    // the full org data (name, title, description, etc.) to work with.
+    req.context.organization = Object.assign(req.context.organization || {}, req.body);
+    let org = await organization.create(req.context);
     res.status(201).json(org);
   } catch(e) {
     handleError(res, e);

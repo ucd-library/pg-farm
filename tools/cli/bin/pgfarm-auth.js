@@ -4,7 +4,18 @@ import colors from 'colors';
 import {config, getParsedToken} from '../lib/config.js';
 const program = new Command();
 
-let stdin = '';
+function readStdin() {
+  return new Promise((resolve, reject) => {
+    let stdin = '';
+
+    process.stdin.setEncoding('utf-8');
+    process.stdin.on('data', chunk => {
+      stdin += chunk;
+    });
+    process.stdin.on('end', () => resolve(stdin));
+    process.stdin.on('error', reject);
+  });
+}
 
 program.command('login')
   .description('Login using UCD CAS Authentication')
@@ -18,16 +29,16 @@ program.command('service-account-login <serviceAccountName>')
   .description('Login using PG Farm service account')
   .option('-f, --file <file>', 'File to read service account secret from')
   .option('-e, --env <envName>', 'Environment variable to read service account secret from')
-  .action((name, options) => {
-    if( !options.file && !options.env && !stdin ) {
-      console.error('You must specify a file or env option');
-      process.exit(1);
-    }
+  .action(async (name, options) => {
     if( !options.file && !options.env ) {
-      options.secret = stdin;
+      options.secret = await readStdin();
+      if( !options.secret ) {
+        console.error('You must specify a file or env option');
+        process.exit(1);
+      }
     }
 
-    auth.loginServiceAccount(name, options);
+    await auth.loginServiceAccount(name, options);
   });
 
 
@@ -88,16 +99,4 @@ program.command('whoami')
     console.log(token.username || token.preferred_username);
   });
 
-if( process.stdin.isTTY ) {
-  program.parse(process.argv);
-} else {
-  process.stdin.on('readable', () => {
-    let chunk = this.read();
-    if (chunk !== null) {
-        stdin += chunk;
-    }
-  });
-  process.stdin.on('end', () => {
-    program.parse(process.argv); 
-  });
-}
+program.parse(process.argv);

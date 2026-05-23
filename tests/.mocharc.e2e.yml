@@ -1,7 +1,0 @@
-spec: 'e2e/**/*.test.js'
-require:
-  - helpers/env.cjs
-  - helpers/e2e-env.cjs
-file: helpers/e2e-hooks.js
-timeout: 120000
-exit: true
