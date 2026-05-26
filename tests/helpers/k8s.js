@@ -19,14 +19,14 @@ const NO_PROMPT_ENV = { ...process.env, CLOUDSDK_CORE_DISABLE_PROMPTS: '1' };
  * @param {string} expectedCluster - GKE cluster name to match (e.g. 'pgfarm-dev')
  * @returns {Promise<void>}
  */
-export async function checkGkeContext(expectedCluster) {
+export async function checkGkeContext(expectedCluster, corkClusterName) {
 
   // Check kubectl is available
   try {
     await exec('kubectl version --client -o json', { timeout: 5000 });
   } catch(_) {
     console.error('\n  Error: kubectl not found or not executable.');
-    console.error('  Run:  cork-kube init dev');
+    console.error('  Run:  cork-kube init ' + corkClusterName);
     console.error('  then re-run the tests.\n');
     process.exit(1);
   }
@@ -40,7 +40,7 @@ export async function checkGkeContext(expectedCluster) {
 
   if( !clusterName.includes(expectedCluster) ) {
     console.error(`\n  Error: kubectl context points at '${clusterName || '(none)'}' — expected '${expectedCluster}'.`);
-    console.error('  Run:  cork-kube init dev');
+    console.error('  Run:  cork-kube init ' + corkClusterName);
     console.error('  then re-run the tests.\n');
     process.exit(1);
   }
@@ -164,7 +164,9 @@ export async function waitForPodReady(hostname, opts = {}) {
 
   while (Date.now() < deadline) {
     try {
+      console.log(`kubectl get pod ${podName} -n ${E2E_NAMESPACE} -o json`);
       const raw = await exec(`kubectl get pod ${podName} -n ${E2E_NAMESPACE} -o json`, { timeout: execTimeoutMs });
+      console.log('kubectl output:', raw);
       const pod = JSON.parse(raw.stdout);
       const conditions = pod.status?.conditions ?? [];
       const ready = conditions.find(c => c.type === 'Ready' && c.status === 'True');

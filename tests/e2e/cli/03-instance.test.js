@@ -33,17 +33,21 @@ describe('instance', function () {
     await resetE2EData();
 
     // Ensure org exists
-    await pgfarm([
-      'organization', 'create',
-      '--title', TEST_ORG_TITLE,
-      '--name', TEST_ORG,
-    ]);
+    try {
+      await pgfarm([
+        'organization', 'create',
+        '--title', TEST_ORG_TITLE,
+        '--name', TEST_ORG,
+      ]);
+    } catch (err) {}
 
-    await pgfarm([
-      'instance', 'create',
-      '--name', TEST_INST,
-      '--organization', TEST_ORG,
-    ]);
+    try {
+      await pgfarm([
+        'instance', 'create',
+        '--name', TEST_INST,
+        '--organization', TEST_ORG,
+      ]);
+    } catch (err) {}
   });
 
   // ── create ────────────────────────────────────────────────────────────────
@@ -51,13 +55,13 @@ describe('instance', function () {
   describe('create', function () {
 
     it('instance exists in the API after create', async function () {
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      const data = await pgfarmJson(['instance', 'get', INST_PATH]);
       assert.ok(data.instance_id, 'expected instance_id');
       assert.equal(data.name, INST_FULL_NAME);
     });
 
     it('instance has expected hostname', async function () {
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      const data = await pgfarmJson(['instance', 'get', INST_PATH]);
       assert.equal(data.hostname, HOSTNAME);
     });
 
@@ -69,14 +73,19 @@ describe('instance', function () {
 
     before(async function () {
       this.timeout(60000);
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      let data = await pgfarmJson(['instance', 'get', INST_PATH]);
       if (data.state !== 'RUN') {
         await pgfarm(['instance', 'start', INST_PATH], { timeout: 60000 });
-      }
+
+        while( data.state !== 'RUN' ) {
+          await new Promise(r => setTimeout(r, 3000));
+          data = await pgfarmJson(['instance', 'get', INST_PATH]);
+        }
+      }      
     });
 
     it('API reports state RUN', async function () {
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      const data = await pgfarmJson(['instance', 'get', INST_PATH]);
       assert.equal(data.state, 'RUN');
     });
 
@@ -87,7 +96,9 @@ describe('instance', function () {
     it('pod reaches Ready state', async function () {
       this.timeout(150000);
       const pod = await waitForPodReady(HOSTNAME, { timeoutMs: 120000 });
+      console.log('Pod status conditions:', pod.status?.conditions);
       const ready = pod.status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
+      console.log('Ready condition:', ready);
       assert.ok(ready, 'pod Ready condition should be True');
     });
 
@@ -104,7 +115,7 @@ describe('instance', function () {
     });
 
     it('instance has state field', async function () {
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      const data = await pgfarmJson(['instance', 'get', INST_PATH]);
       assert.ok(data.state, 'expected state field');
     });
 
@@ -131,7 +142,7 @@ describe('instance', function () {
     });
 
     it('API reports state SLEEP', async function () {
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      const data = await pgfarmJson(['instance', 'get', INST_PATH]);
       assert.equal(data.state, 'SLEEP');
     });
 
@@ -160,7 +171,7 @@ describe('instance', function () {
     it('restart completes and API reports state RUN', async function () {
       this.timeout(60000);
       await pgfarm(['instance', 'restart', INST_PATH], { timeout: 30000 });
-      const data = await apiGet(`/api/instance/${INST_PATH}`);
+      const data = await pgfarmJson(['instance', 'get', INST_PATH]);
       assert.equal(data.state, 'RUN');
     });
 
@@ -178,7 +189,7 @@ describe('instance', function () {
   after(async function () {
     this.timeout(30000);
     try {
-      const data = await apiGet(`/api/instance/${INST_PATH}`, { allowNotFound: true });
+      const data = await pgfarmJson(['instance', 'get', INST_PATH], { allowNotFound: true });
       if (data && data.instance_id && data.state === 'RUN') {
         await pgfarm(['instance', 'stop', INST_PATH], { timeout: 30000, allowFailure: true });
       }

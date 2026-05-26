@@ -14,7 +14,7 @@ import { checkAuth, checkAdminDb } from './e2e-setup.js';
 before(async function () {
   this.timeout(30000);
   console.log('\nSetting up CLI E2E test environment (GKE dev cluster)...\n');
-  await checkGkeContext('gke_pgfarm-419213_us-central1-c_pgfarm-dev');
+  await checkGkeContext('gke_pgfarm-419213_us-central1-c_pgfarm-dev', 'dev');
   console.log('  kubectl context: gke_pgfarm-419213_us-central1-c_pgfarm-dev\n');
   checkAuth();
   await checkAdminDb();

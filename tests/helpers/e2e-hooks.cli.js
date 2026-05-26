@@ -16,7 +16,7 @@ import { checkAuth, checkAdminDb } from './e2e-setup.js';
 before(async function () {
   this.timeout(30000);
   console.log('\nSetting up CLI E2E test environment (local docker-desktop)...\n');
-  await checkGkeContext('docker-desktop');
+  await checkGkeContext('docker-desktop', 'local-dev');
   console.log('  kubectl context: docker-desktop\n');
   checkAuth();
   await checkAdminDb();

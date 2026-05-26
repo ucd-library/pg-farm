@@ -152,8 +152,8 @@ class InstanceDatabaseContext {
       try {
         this.database = await pgAdminClient.getDatabase({
           database: {name: obj.database},
-          organization: {name: this.organization?.name
-        }});
+          organization: {name: this.organization?.name}
+        });
       } catch(e) {
         this.database = {name : obj.database};
       }
