@@ -174,7 +174,10 @@ const config = {
     scopes : env.OIDC_SCOPES || 'identityProvider roles openid profile email',
     roleIgnoreList : [],
     loginPath : env.PGFARM_LOGIN_PATH || '/login',
-    logoutPath : env.PGFARM_LOGOUT_PATH || '/auth/logout'
+    logoutPath : env.PGFARM_LOGOUT_PATH || '/auth/logout',
+    // Service account used for Keycloak admin API (manage-users role required)
+    adminClientId : env.KEYCLOAK_ADMIN_CLIENT_ID || '',
+    adminSecret : env.KEYCLOAK_ADMIN_SECRET || ''
   },
 
   gc : {
@@ -215,7 +218,8 @@ const config = {
       get DATABASE_FEATURED() { return config.adminDb.schema+'.database_featured' },
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_USER() { return config.adminDb.schema+'.instance_user' },
-      get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' }
+      get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' },
+      get SERVICE_ACCOUNT() { return config.adminDb.schema+'.service_account' }
     },
     views : {
       get INSTANCE() { return config.adminDb.schema+'.instance_view' },

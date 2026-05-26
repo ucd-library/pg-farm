@@ -2,234 +2,124 @@ import client from './pg-admin-client.js';
 import logger from './logger.js';
 
 const msPerHour = 1000 * 60 * 60;
-const msPerDay = msPerHour * 24;
+const msPerDay  = msPerHour * 24;
 
 const ALLOWED_LEVELS = ['ALWAYS', 'HIGH', 'MEDIUM', 'LOW'];
 
-const HIGH_RESOURCES = {
-  limits : {
-    cpu : '2',
-    memory : '4Gi'
+/**
+ * Resource definitions per availability type.
+ *
+ * limits        — sticky while the pod is ON; sized so postgres can always start cleanly.
+ * activeRequests — applied when the instance is receiving queries (scheduling guarantee + PDB=1).
+ * idleRequests   — applied when no queries have arrived for idleAfter ms (soft hint only, PDB=0).
+ *
+ * helperLimits / helperActiveRequests / helperIdleRequests — same semantics for the pg-helper sidecar.
+ *
+ * idleAfter  — ms of inactivity before switching to idle requests (null = never idle).
+ * sleepAfter — ms of inactivity before stopping the pod entirely (null = never sleep).
+ */
+const TYPES = {
+  ALWAYS: {
+    priorityClass        : 'priority-8',
+    priorityValue        : 8,
+    limits               : { cpu: '4',    memory: '8Gi'   },
+    activeRequests       : { cpu: '2',    memory: '6Gi'   },
+    idleRequests         : { cpu: '100m', memory: '512Mi' },
+    helperLimits         : { cpu: '500m', memory: '512Mi' },
+    helperActiveRequests : { cpu: '200m', memory: '256Mi' },
+    helperIdleRequests   : { cpu: '50m',  memory: '64Mi'  },
+    idleAfter            : null,
+    sleepAfter           : null,
   },
-  requests : {
-    cpu : '1',
-    memory : '2Gi'
-  }
-}
-
-const MEDIUM_RESOURCES = {
-  limits : {
-    cpu : '2',
-    memory : '3Gi'
+  HIGH: {
+    priorityClass        : 'priority-8',
+    priorityValue        : 8,
+    limits               : { cpu: '4',    memory: '8Gi'   },
+    activeRequests       : { cpu: '2',    memory: '6Gi'   },
+    idleRequests         : { cpu: '100m', memory: '512Mi' },
+    helperLimits         : { cpu: '500m', memory: '512Mi' },
+    helperActiveRequests : { cpu: '200m', memory: '256Mi' },
+    helperIdleRequests   : { cpu: '50m',  memory: '64Mi'  },
+    idleAfter            : msPerHour,       // 1 hour
+    sleepAfter           : msPerDay * 60,   // 60 days
   },
-  requests : {
-    cpu : '750m',
-    memory : '1Gi'
-  }
-}
-
-const LOW_RESOURCES = {
-  limits : {
-    cpu : '1',
-    memory : '2Gi'
+  MEDIUM: {
+    priorityClass        : 'priority-5',
+    priorityValue        : 5,
+    limits               : { cpu: '2',    memory: '4Gi'   },
+    activeRequests       : { cpu: '1',    memory: '3Gi'   },
+    idleRequests         : { cpu: '100m', memory: '256Mi' },
+    helperLimits         : { cpu: '500m', memory: '512Mi' },
+    helperActiveRequests : { cpu: '200m', memory: '256Mi' },
+    helperIdleRequests   : { cpu: '50m',  memory: '64Mi'  },
+    idleAfter            : msPerHour / 2,   // 30 minutes
+    sleepAfter           : msPerDay * 35,   // 35 days
   },
-  requests : {
-    cpu : '500m',
-    memory : '500Mi'
-  }
-}
-
-const XLOW_RESOURCES = {
-  limits : {
-    cpu : '1',
-    memory : '1Gi'
+  LOW: {
+    priorityClass        : 'priority-2',
+    priorityValue        : 2,
+    limits               : { cpu: '1',    memory: '2Gi'   },
+    activeRequests       : { cpu: '500m', memory: '1536Mi' },
+    idleRequests         : { cpu: '100m', memory: '128Mi' },
+    helperLimits         : { cpu: '500m', memory: '512Mi' },
+    helperActiveRequests : { cpu: '200m', memory: '256Mi' },
+    helperIdleRequests   : { cpu: '50m',  memory: '64Mi'  },
+    idleAfter            : msPerHour / 4,   // 15 minutes
+    sleepAfter           : msPerDay * 7,    // 7 days
   },
-  requests : {
-    cpu : '100m',
-    memory : '250Mi'
-  }
-}
-
-const GENERAL_RESOURCES = {
-  limits : {
-    cpu : '2',
-    memory : '2Gi'
-  },
-  requests : {
-    cpu : '250m',
-    memory : '500Mi'
-  }
-}
-
-const SLEEP_AT = {
-  'HIGH' : msPerDay*60, // 60 days
-  'MEDIUM' : msPerDay*35, // 35 days
-  'LOW' : msPerDay*7, // 7 days
-}
-
-const STATES = [{
-  name: 'priority-10',
-  resources: HIGH_RESOURCES,
-  availableStates : {
-    'ALWAYS' : -1,
-    'HIGH' : msPerDay, // 1 days
-    'MEDIUM' : (msPerHour * 8), // 8 hours
-  }
-},{
-  name: 'priority-9',
-  resources: HIGH_RESOURCES,
-  availableStates : {
-    'HIGH' : (msPerDay * 2), // 2 days
-    'MEDIUM' : msPerDay, // 1 day
-  }
-},{
-  name: 'priority-8',
-  resources: MEDIUM_RESOURCES,
-  availableStates : {
-    'HIGH' : (msPerDay * 3), // 3 days
-    'MEDIUM' : msPerDay, // 1 day,
-    'LOW' : msPerHour, // 1 hour
-  }
-},{
-  name: 'priority-7',
-  resources: MEDIUM_RESOURCES,
-  availableStates : {
-    'HIGH' : msPerDay*4, // 4 days
-    'MEDIUM' : msPerDay*2, // 2 day,
-    'LOW' : msPerHour*2, // 2 hours
-  }
-},{
-  name: 'priority-6',
-  resources: MEDIUM_RESOURCES,
-  availableStates : {
-    'HIGH' : msPerDay*5, // 5 days
-    'MEDIUM' : msPerDay*3, // 3 day,
-    'LOW' : msPerHour*4, // 4 hours
-  }
-},{
-  name: 'priority-5',
-  resources: LOW_RESOURCES,
-  availableStates : {
-    'HIGH' : (msPerDay*7), // 7 days
-    'MEDIUM' : msPerDay*4, // 4 day,
-    'LOW' : msPerHour*8, // 4 hours
-  }
-},
-{
-  name: 'priority-4',
-  resources: LOW_RESOURCES,
-  availableStates : {
-    'HIGH' : msPerDay*14, // 14 days
-    'MEDIUM' : msPerDay*7, // 7 day,
-    'LOW' : msPerHour*12, // 12 hours
-  }
-},
-{
-  name: 'priority-3',
-  resources: LOW_RESOURCES,
-  availableStates : {
-    'MEDIUM' : msPerDay*21, // 21 day,
-    'LOW' : msPerDay, // 1 day
-  }
-},
-{
-  name: 'priority-2',
-  resources: XLOW_RESOURCES,
-  availableStates : {
-    'MEDIUM' : msPerDay*28, // 28 day,
-    'LOW' : msPerDay*2, // 2 day
-  }
-},
-{
-  name: 'priority-1',
-  resources: XLOW_RESOURCES,
-  availableStates : {
-    'LOW' : msPerDay*3, // 3 day
-  }
-},
-{
-  name: 'priority-0',
-  resources: XLOW_RESOURCES,
-  availableStates : {
-    'LOW' : msPerDay*4, // 4 day
-  }
-}];
+};
 
 /**
- * @method getResources
- * @description This method returns the resources for the instance based on the availability level and 
- * last time the databases was queried.
- * 
- * @param {String} availability one of the allowed availability level: ALWAYS, HIGH, MEDIUM, LOW
- * @param {Number} lastQueryTime millisecond timestamp of the last time the database was queried 
- * @returns 
+ * @function getType
+ * @description Returns the resource type definition for a given availability level.
+ *
+ * @param {string} availability one of ALWAYS | HIGH | MEDIUM | LOW
+ * @returns {Object} type definition from TYPES
  */
-function getResources(availability, lastQueryTime) {
+function getType(availability) {
   if( !ALLOWED_LEVELS.includes(availability) ) {
     throw new Error('Invalid availability level: ' + availability);
   }
-
-  if (availability === 'ALWAYS') {
-    return STATES[0];
-  }
-  const currentTime = new Date().getTime();
-  const diff = currentTime - lastQueryTime;
-
-  if( SLEEP_AT[availability] && SLEEP_AT[availability] < diff) {
-    return {sleep: true};
-  }
-
-  let found = false;
-  for (let i = 0; i < STATES.length; i++) {
-    let state = STATES[i];
-
-    // If the state is not defined, return the previous state
-    if( found && !state.availableStates[availability] ) {
-      return STATES[i-1];
-    // we have not found the state yet.
-    } else if( !state.availableStates[availability] ) {
-      continue;
-    }
-    found = true;
-
-    if (state.availableStates[availability] > diff) {
-      return state;
-    }
-  }
-
-  return STATES[STATES.length-1];
+  return TYPES[availability];
 }
 
-async function getMaxPriority(availability) {
-  for (let i = 0; i < STATES.length; i++) {
-    let state = STATES[i];
+/**
+ * @function getInstanceState
+ * @description Determines whether a running instance should be active, idle, or sleeping
+ * based on the time since the last database event.
+ *
+ * Returns { action: 'active'|'idle'|'sleep', type } where type is the TYPES entry
+ * for the instance's availability level.
+ *
+ * @param {Object} ctx instance context
+ * @returns {Promise<{action: string, type: Object}>}
+ */
+async function getInstanceState(ctx) {
+  const type = getType(ctx.instance.availability);
 
-    if( state.availableStates[availability] ) {
-      return parseInt(state.name.split('-')[1]);
-    }
+  if( ctx.instance.availability === 'ALWAYS' ) {
+    return { action: 'active', type };
   }
 
-  throw new Error('No priority found for availability: ' + availability);
-}
-
-async function getInstanceResources(ctx, onStart) {
-
-  // TODO need start time of the instance
-  let e = await client.getLastDatabaseEvent(ctx.instance.instance_id);
+  const e = await client.getLastDatabaseEvent(ctx.instance.instance_id);
   if( !e ) {
-    logger.warn('No events found for instance', ctx.logSignal);
-    return STATES[1];
+    logger.warn('No events found for instance, treating as idle', ctx.logSignal);
+    return { action: 'idle', type };
   }
 
-  if( typeof e.timestamp === 'string' ) {
-    e.timestamp = new Date(e.timestamp);
-  }
+  const ts   = typeof e.timestamp === 'string' ? new Date(e.timestamp) : e.timestamp;
+  const diff = Date.now() - ts.getTime();
 
-  return getResources(ctx.instance.availability, e.timestamp.getTime());
+  if( type.sleepAfter && diff > type.sleepAfter ) {
+    return { action: 'sleep', type };
+  }
+  if( type.idleAfter && diff > type.idleAfter ) {
+    return { action: 'idle', type };
+  }
+  return { action: 'active', type };
 }
 
 export {
-  getInstanceResources, getResources, getMaxPriority,
-  STATES, ALLOWED_LEVELS, GENERAL_RESOURCES,
-  HIGH_RESOURCES, MEDIUM_RESOURCES, LOW_RESOURCES, XLOW_RESOURCES
+  getInstanceState, getType,
+  TYPES, ALLOWED_LEVELS,
 };

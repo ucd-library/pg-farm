@@ -75,11 +75,11 @@ describe('database', function () {
 
       await pgfarm([
         'database', 'update', DB_PATH,
-        '--title', `"${newTitle}"`,
+        '--title', newTitle,
       ]);
 
       const data = await apiGet(`/api/db/${DB_PATH}`);
-      const title = data.title || data.database?.title;
+      const title = data.title;
       assert.equal(title, newTitle);
     });
 

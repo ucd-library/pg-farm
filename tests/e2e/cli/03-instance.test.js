@@ -96,9 +96,7 @@ describe('instance', function () {
     it('pod reaches Ready state', async function () {
       this.timeout(150000);
       const pod = await waitForPodReady(HOSTNAME, { timeoutMs: 120000 });
-      console.log('Pod status conditions:', pod.status?.conditions);
       const ready = pod.status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
-      console.log('Ready condition:', ready);
       assert.ok(ready, 'pod Ready condition should be True');
     });
 
@@ -157,6 +155,18 @@ describe('instance', function () {
       assert.isTrue(gone, `StatefulSet ${HOSTNAME} still exists after stop`);
     });
 
+    after(async function () {
+      // Ensure instance is running for subsequent tests
+      this.timeout(60000);
+
+      let data = await pgfarmJson(['instance', 'get', INST_PATH]);
+      if (data.state !== 'SLEEP') {
+        await new Promise(r => setTimeout(r, 3000));
+        data = await pgfarmJson(['instance', 'get', INST_PATH]);
+      }
+      console.log('Instance state after stop test:', data.state);
+    });
+
   });
 
   // ── restart ───────────────────────────────────────────────────────────────
@@ -165,7 +175,13 @@ describe('instance', function () {
 
     before(async function () {
       this.timeout(60000);
-      await pgfarm(['instance', 'start', INST_PATH], { timeout: 60000 });
+      await pgfarmJson(['instance', 'start', INST_PATH], { timeout: 60000 });
+
+      let data = await pgfarmJson(['instance', 'get', INST_PATH]);
+      while( data.state !== 'RUN' ) {
+        await new Promise(r => setTimeout(r, 3000));
+        data = await pgfarmJson(['instance', 'get', INST_PATH]);
+      }
     });
 
     it('restart completes and API reports state RUN', async function () {

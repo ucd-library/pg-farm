@@ -164,9 +164,7 @@ export async function waitForPodReady(hostname, opts = {}) {
 
   while (Date.now() < deadline) {
     try {
-      console.log(`kubectl get pod ${podName} -n ${E2E_NAMESPACE} -o json`);
       const raw = await exec(`kubectl get pod ${podName} -n ${E2E_NAMESPACE} -o json`, { timeout: execTimeoutMs });
-      console.log('kubectl output:', raw);
       const pod = JSON.parse(raw.stdout);
       const conditions = pod.status?.conditions ?? [];
       const ready = conditions.find(c => c.type === 'Ready' && c.status === 'True');

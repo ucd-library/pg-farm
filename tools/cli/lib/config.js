@@ -52,8 +52,33 @@ function getParsedToken() {
   return null;
 }
 
+/**
+ * @description Check if the current user is logged in with a valid, non-expired token
+ * @returns {boolean}
+ */
+function isLoggedIn() {
+  let token = getParsedToken();
+  if( !token ) return false;
+  return token.expires.getTime() > Date.now();
+}
+
+/**
+ * @description Check if the current user is logged in and has the system admin role
+ * @returns {boolean}
+ */
+function isAdmin() {
+  let token = getParsedToken();
+  if( !token ) return false;
+  if( token.expires.getTime() <= Date.now() ) return false;
+  // Keycloak may expose roles as realmRoles (custom mapper) or realm_access.roles (standard)
+  let roles = token.realmRoles || (token.realm_access && token.realm_access.roles) || [];
+  return roles.includes('admin');
+}
+
 export {
-  save, 
+  save,
   config,
-  getParsedToken
+  getParsedToken,
+  isLoggedIn,
+  isAdmin
 };

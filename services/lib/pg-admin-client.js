@@ -471,7 +471,7 @@ class PgFarmAdminClient {
     `, [ctx.database.name, ctx.organization.name]);
 
     if( res.rows.length === 0 ) {
-      throw new Error('Database not found: '+ctx.fullDatabaseName);
+      throw new Error('Database not found: '+ctx.organization.name+'/'+ctx.database.name);
     }
 
     return res.rows[0];
@@ -893,6 +893,73 @@ class PgFarmAdminClient {
       `,
       params
     );
+  }
+
+  /**
+   * @method createServiceAccount
+   * @description Inserts a record into pgfarm.service_account linking the service account
+   * user to its parent user.
+   *
+   * @param {string} serviceAccountUsername
+   * @param {string} parentUsername
+   * @returns {Promise<Object>}
+   */
+  async createServiceAccount(serviceAccountUsername, parentUsername) {
+    return client.query(`
+      INSERT INTO ${this.schema}.service_account (user_id, parent_user_id)
+      VALUES (
+        ${this.schema}.ensure_user($1),
+        ${this.schema}.get_user_id($2)
+      )
+      ON CONFLICT (user_id) DO NOTHING
+    `, [serviceAccountUsername, parentUsername]);
+  }
+
+  /**
+   * @method getServiceAccountsForUser
+   * @description Returns all service accounts owned by the given parent user.
+   *
+   * @param {string} parentUsername
+   * @returns {Promise<Array>}
+   */
+  async getServiceAccountsForUser(parentUsername) {
+    const resp = await client.query(
+      `SELECT * FROM ${this.schema}.get_service_accounts_for_user($1)`,
+      [parentUsername]
+    );
+    return resp.rows;
+  }
+
+  /**
+   * @method getServiceAccountParent
+   * @description Returns the parent username for a given service account username.
+   *
+   * @param {string} serviceAccountUsername
+   * @returns {Promise<string|null>}
+   */
+  async getServiceAccountParent(serviceAccountUsername) {
+    const resp = await client.query(`
+      SELECT u.username
+      FROM ${this.schema}.service_account sa
+      JOIN ${this.schema}.user u ON u.user_id = sa.parent_user_id
+      WHERE sa.user_id = ${this.schema}.get_user_id($1)
+    `, [serviceAccountUsername]);
+    return resp.rows[0]?.username || null;
+  }
+
+  /**
+   * @method updateServiceAccountRotatedAt
+   * @description Sets last_rotated_at to now() for the given service account.
+   *
+   * @param {string} serviceAccountUsername
+   * @returns {Promise<void>}
+   */
+  async updateServiceAccountRotatedAt(serviceAccountUsername) {
+    await client.query(`
+      UPDATE ${this.schema}.service_account
+      SET last_rotated_at = now()
+      WHERE user_id = ${this.schema}.get_user_id($1)
+    `, [serviceAccountUsername]);
   }
 
 }

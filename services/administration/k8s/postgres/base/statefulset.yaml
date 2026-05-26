@@ -13,6 +13,7 @@ spec:
         pgfarm-type: database
         app:
     spec:
+      terminationGracePeriodSeconds: 60
       containers:
       - name: postgres
         image: pg
@@ -32,17 +33,38 @@ spec:
           requests:
             memory: "1Gi"
             cpu: "0.25"
+        lifecycle:
+          preStop:
+            exec:
+              command: ["pg_ctl", "stop", "-m", "fast", "-D", "/var/lib/postgresql/data/pgdata"]
+        resizePolicy:
+        - resourceName: cpu
+          restartPolicy: NotRequired
+        - resourceName: memory
+          restartPolicy: NotRequired
         ports:
         - containerPort: 5432
         volumeMounts:
-        - name: 
+        - name:
           mountPath: /var/lib/postgresql/data
         - name: pg-socket
           mountPath: /var/run/postgresql
       - name: pg-helper
-        image: 
+        image:
         args: ["npm", "run", "pg-helper"]
         imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+        resizePolicy:
+        - resourceName: cpu
+          restartPolicy: NotRequired
+        - resourceName: memory
+          restartPolicy: NotRequired
         ports:
         - containerPort: 3000
         env:

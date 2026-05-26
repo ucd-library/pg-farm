@@ -2,6 +2,7 @@ import {Command, Option} from 'commander';
 import instance from '../lib/instance.js';
 import {wrapAllCmds} from '../lib/global-opts.js';
 import print from '../lib/print.js';
+import {isAdmin} from '../lib/config.js';
 
 const program = new Command();
 
@@ -30,7 +31,7 @@ program.command('add-user <org/instance> <user>')
     instance.addUser(instanceName, user, opts);
   });
 
-  program.command('update-user <org/instance> <user>')
+program.command('update-user <org/instance> <user>')
   .description('Update user type '+print.dbAdminOnlyMsg())
   .addOption(new Option('-t, --type <type>', 'User type').choices(['USER', 'ADMIN']))
   .action((instanceName, user, opts) => {
@@ -58,59 +59,60 @@ program.command('restart <org/instance>')
 
 program.command('stop <org/instance>')
   .description('Manually stop an postgres instance '+print.dbAdminOnlyMsg())
-  // .option('-f, --force', 'Force stop the instance.  Required for ALWAYS availability instances.')
   .action((instanceName, opts) => {
     instance.stop(instanceName, opts);
   });
 
-program.command('create')
-  .description('Create a new instance PG Farm postgres instance '+print.pgFarmAdminOnlyMsg())
-  .requiredOption('-n, --name <name>', 'Instance name')
-  .requiredOption('-g, --organization <name>', 'Instance organization name')
-  .option('-a, --availability <availability>', 'Availability of the instance (ALWAYS, HIGH, MEDIUM, LOW)')
-  .action(options => {
-    instance.create(options);
-  });
+// System admin commands
+if( isAdmin() ) {
+  program.command('create')
+    .description('Create a new postgres instance')
+    .requiredOption('-n, --name <name>', 'Instance name')
+    .requiredOption('-g, --organization <name>', 'Instance organization name')
+    .option('-a, --availability <availability>', 'Availability of the instance (ALWAYS, HIGH, MEDIUM, LOW)')
+    .action(options => {
+      instance.create(options);
+    });
 
-program.command('backup <org/instance>')
-  .description('Backup postgres instance '+print.pgFarmAdminOnlyMsg())
-  .action(instanceName => {
-    instance.backup(instanceName);
-  });
+  program.command('backup <org/instance>')
+    .description('Backup postgres instance')
+    .action(instanceName => {
+      instance.backup(instanceName);
+    });
 
-program.command('archive <org/instance>')
-  .description('Archive postgres instance '+print.pgFarmAdminOnlyMsg())
-  .action(instanceName => {
-    instance.archive(instanceName);
-  });
+  program.command('archive <org/instance>')
+    .description('Archive postgres instance')
+    .action(instanceName => {
+      instance.archive(instanceName);
+    });
 
-program.command('restore <org/instance>')
-  .description('Restore postgres instance from archive '+print.pgFarmAdminOnlyMsg())
-  .action(instanceName => {
-    instance.restore(instanceName);
-  });
+  program.command('restore <org/instance>')
+    .description('Restore postgres instance from archive')
+    .action(instanceName => {
+      instance.restore(instanceName);
+    });
 
-program.command('resize <org/instance> <size>')
-  .description('Increase size postgres volume.  Size in GB '+print.pgFarmAdminOnlyMsg())
-  .action((instanceName, size) => {
-    instance.resize(instanceName, size);
-  });
+  program.command('resize <org/instance> <size>')
+    .description('Increase size postgres volume.  Size in GB')
+    .action((instanceName, size) => {
+      instance.resize(instanceName, size);
+    });
 
-program.command('priority <org/instance> <priority>')
-  .description('Increase priority of postgres instance '+print.pgFarmAdminOnlyMsg())
-  .option('-a, --apply', 'Apply the priority change to k8s (recommended)')
-  .action((instanceName, priority, opts) => {
-    instance.updatePriority(instanceName, priority, opts);
-  });
+  program.command('priority <org/instance> <priority>')
+    .description('Increase priority of postgres instance')
+    .option('-a, --apply', 'Apply the priority change to k8s (recommended)')
+    .action((instanceName, priority, opts) => {
+      instance.updatePriority(instanceName, priority, opts);
+    });
 
-program.command('sync-users <org/instance>')
-  .description('Sync postgres instance users '+print.pgFarmAdminOnlyMsg())
-  .option('-r, --rotate-passwords', 'Rotate passwords for all users')
-  .option('-h, --hard-reset', 'Reset the pgfarm-authenticator as well.  This will cause a quick reset of the PG Rest service.')
-  .action((instanceName, opts) => {
-    instance.syncUsers(instanceName, opts);
-  });
-
+  program.command('sync-users <org/instance>')
+    .description('Sync postgres instance users')
+    .option('-r, --rotate-passwords', 'Rotate passwords for all users')
+    .option('-h, --hard-reset', 'Reset the pgfarm-authenticator as well.  This will cause a quick reset of the PG Rest service.')
+    .action((instanceName, opts) => {
+      instance.syncUsers(instanceName, opts);
+    });
+}
 
 wrapAllCmds(program);
 program.parse(process.argv);

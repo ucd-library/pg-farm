@@ -6,6 +6,7 @@ import admin from './api/admin.js';
 import icon from './api/icon/icon.js';
 import contact from './api/contact.js';
 import user from './api/user.js';
+import serviceAccount from './api/service-account.js';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use('/instance', instance);
 router.use('/icon', icon);
 router.use('/contact', contact);
 router.use('/user', user);
+router.use('/service-account', serviceAccount);
 
 
 export default router;

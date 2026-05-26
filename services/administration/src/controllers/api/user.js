@@ -1,7 +1,7 @@
 import {Router} from 'express';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
-import {organization, user} from '../../../../models/index.js';
+import {organization, serviceAccount, user} from '../../../../models/index.js';
 import pgClient from '../../../../lib/pg-admin-client.js';
 
 const router = Router();
@@ -48,6 +48,15 @@ router.get('/me/db', keycloak.protect('logged-in'), async (req, res) => {
     });
 
     return res.json(resp);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+router.get('/me/service-accounts', keycloak.protect('logged-in'), async (req, res) => {
+  try {
+    const accounts = await serviceAccount.getForUser(req.user.username);
+    return res.json(accounts);
   } catch(e) {
     handleError(res, e);
   }
