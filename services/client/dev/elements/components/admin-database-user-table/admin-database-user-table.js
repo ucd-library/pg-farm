@@ -8,7 +8,7 @@ import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
-import blobUtils from '../../../utils/blobUtils.js';
+import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
 import { deleteUserConfirmation, removeSchemaAccess, renderServiceAccountRotationConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';

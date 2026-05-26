@@ -14,7 +14,6 @@ export function styles() {
       display: flex;
       justify-content: space-between;
       gap: 1.5rem;
-      margin-bottom: var(--spacer--large, 2rem);
       flex-wrap: wrap;
     }
     app-admin-database-user-single .heading h2 {
@@ -23,6 +22,11 @@ export function styles() {
     }
     app-admin-database-user-single section {
       margin-bottom: var(--spacer--large, 2rem);
+    }
+    app-admin-database-user-single .sa-owner {
+      color: var(--ucd-blue, #022851);
+      font-weight: 700;
+      margin-top: 1rem;
     }
   `;
 
@@ -40,15 +44,20 @@ export function render() {
       <div class='l-content'>
         <admin-database-wake .orgName=${this.orgName} .dbName=${this.dbName} @wake-up-successful=${() => this.AppStateModel.refresh()}></admin-database-wake>
         <div ?hidden=${this.dataCtl?.db?.instance?.state === 'SLEEP'}>
-          <div class='heading'>
-            <div class='flex flex--align-center gap--small flex--wrap'>
-              <h2>User: ${this.user?.data?.name}</h2>
-              <div class='badge' ?hidden=${!this.user?.isAdmin}>Admin</div>
+          <div class='u-space-mb--large'>
+            <div class='heading'>
+              <div class='flex flex--align-center gap--small flex--wrap'>
+                <h2>User: ${this.user?.name}</h2>
+                <div class='badge' ?hidden=${!this.user?.isAdmin}>Admin</div>
+                <div class='badge badge--blue' ?hidden=${!this.user?.isServiceAccount}>Service Account</div>
+              </div>
+              <div class='flex flex--align-center gap--small flex--wrap'>
+                <app-icon-button icon='fa.solid.rotate' ?hidden=${!this.user?.isOwnServiceAccount} @click=${() => this._showRotateServiceAccountPasswordModal()} title="Rotate Service Account Password"></app-icon-button>
+                <app-icon-button icon='fa.solid.trash' ?disabled=${this.user?.isServiceAccount} @click=${() => this._showDeleteUserModal()} title="Delete User"></app-icon-button>
+                <app-icon-button icon='fa.solid.pen' @click=${() => this._showEditUserModal()} title="Edit User"></app-icon-button>
+              </div>
             </div>
-            <div class='flex flex--align-center gap--small flex--wrap'>
-              <app-icon-button icon='fa.solid.trash' @click=${() => this._showDeleteUserModal()}></app-icon-button>
-              <app-icon-button icon='fa.solid.pen' @click=${() => this._showEditUserModal()}></app-icon-button>
-            </div>
+            <div ?hidden=${!this.user?.isServiceAccount} class='sa-owner'>Owned by: ${this.user?.serviceAccountOwnerName}</div>
           </div>
           <section ?hidden=${!this.user?.showContactSection}>
             <h3>Contact</h3>

@@ -6,8 +6,9 @@ import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
+import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
-import { deleteUserConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
+import { deleteUserConfirmation, renderServiceAccountRotationConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 import '@ucd-lib/pgfarm-client/elements/components/admin-instance-user-form/admin-instance-user-form.js';
 
@@ -22,7 +23,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       username: { type: String },
       user: { type: Object },
       schemaGrant: { type: Object },
-      tables: { type: Array },
+      tables: { type: Array }
     }
   }
 
@@ -46,7 +47,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       {name: 'schema', defaultValue: ''}
     ]);
 
-    this._injectModel('AppStateModel', 'DatabaseModel', 'InstanceModel');
+    this._injectModel('AppStateModel', 'DatabaseModel', 'InstanceModel', 'ServiceAccountModel', 'UserModel');
   }
 
   async _onAppStateUpdate(e){
@@ -68,6 +69,11 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
         ctlProp: 'db',
         errorMessage: 'Unable to load database'
       },
+      {
+        request: this.UserModel.getMe(),
+        ctlProp: 'currentUser',
+        errorMessage: 'Unable to load current user'
+      }
     ], {ignoreLoading: true});
     if ( !r ) return;
 
@@ -127,6 +133,7 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
   _setUser(data) {
     const user = {
       isAdmin: data?.pgFarmUser?.type === 'ADMIN',
+      isServiceAccount: !!data?.pgFarmUser?.serviceAccountId,
       displayName: `${data?.pgFarmUser?.firstName || ''} ${data?.pgFarmUser?.lastName || ''}`.trim(),
       databaseGrant: grantDefinitions.getGrant('DATABASE', data),
       data
@@ -135,8 +142,43 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
       .map(listing => [listing?.title, listing?.dept].filter(x => x).join(', '))
       .filter(x => x);
     user.showContactSection = user.displayName || user.positions.length ? true : false;
+    user.isServiceAccount = !!data?.pgFarmUser?.serviceAccountId;
+
+    let username = user?.data?.name || ''
+    if ( user.isServiceAccount && username.endsWith('-service-account') ) {
+      username = username.replace(/-service-account$/, '');
+    }
+    user.name = username;
+
+
+    user.isOwnServiceAccount = user.isServiceAccount && data?.pgFarmUser?.serviceAccountParentId == this.dataCtl?.currentUser?.userId;
+    if ( user.isServiceAccount ){
+      if ( user.isOwnServiceAccount ){
+        user.serviceAccountOwnerName = 'You';
+      } else {
+        user.serviceAccountOwnerName = 'Non-instance User';
+        const owner = this.dataCtl.users.find(u => u?.pgFarmUser?.id === data?.pgFarmUser?.serviceAccountParentId);
+        if ( owner ){
+          user.serviceAccountOwnerName = `${owner?.pgFarmUser?.firstName || ''} ${owner?.pgFarmUser?.lastName || ''}`.trim() || owner?.name || '';
+        }
+      }
+
+    }
 
     this.user = user;
+    console.log('selected user', this.user);
+  }
+
+  _showRotateServiceAccountPasswordModal() {
+    this.AppStateModel.showDialogModal({
+      title: 'Rotate Service Account Password',
+      actions: [
+          {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+          {text: 'Confirm Rotation', value: 'user-single-rotate-service-account-password', color: 'secondary'}
+      ],
+      content: renderServiceAccountRotationConfirmation(this.user.data),
+      data: {user: this.user}
+    });
   }
 
   _showDeleteUserModal(user) {
@@ -220,7 +262,24 @@ export default class AppAdminDatabaseUserSingle extends Mixin(LitElement)
   _onAppDialogAction(e){
     if ( e.action?.value === 'db-delete-user' ) {
       this.deleteUser();
+      return;
     }
+    if ( e.action?.value === 'user-single-rotate-service-account-password' ) {
+      this.rotateServiceAccountPassword();
+      return;
+    }
+  }
+
+  async rotateServiceAccountPassword() {
+    const r = await this.ServiceAccountModel.rotatePassword(this.user.data.name);
+    if ( r?.state === 'error' ){
+      this.AppStateModel.showToast({text: 'Error rotating service account password', type: 'error'});
+      return;
+    }
+
+    blobUtils.downloadJsonAsFile(r.payload, 'service-account.json');
+
+    this.AppStateModel.showToast({text: 'Service account password rotated successfully', type: 'success'});
   }
 
   async deleteUser() {

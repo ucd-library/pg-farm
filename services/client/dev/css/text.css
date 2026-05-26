@@ -28,6 +28,7 @@ a.bold-link:hover {
   font-size: var(--font-size--small, 0.875rem);
   display: inline-flex;
   padding: 0 .25rem;
+  line-height: 1.6;
 }
 .badge.badge--blue {
   background: var(--ucd-blue-40, #dbeaf7);
