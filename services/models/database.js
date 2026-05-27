@@ -477,7 +477,10 @@ class Database {
     let access = await pgInstClient.getDatabaseAccess(con, database.name);
     access = access.rows;
 
-    const userColumns = ['u.username', 'u.user_id', 'type', 'u.first_name', 'u.last_name', 'u.ucd_iam_payload'];
+    const userColumns = [
+      'u.username', 'u.user_id', 'type', 'u.first_name', 'u.last_name', 
+      'u.ucd_iam_payload', 'sa.parent_user_id', 'sa.service_account_id'
+    ];
     let pgFarmUsers = await client.getInstanceUsers(ctx.instance.instance_id, userColumns);
 
     let users = resp.rows.filter(row => !row.rolname.match(/^pg_/))
@@ -497,7 +500,9 @@ class Database {
             type : farmUser.type,
             firstName : farmUser.first_name,
             lastName : farmUser.last_name,
-            ucdPositions : ucdIamApi.getPositions(farmUser.ucd_iam_payload)
+            ucdPositions : ucdIamApi.getPositions(farmUser.ucd_iam_payload),
+            serviceAccountParentId : farmUser.parent_user_id,
+            serviceAccountId : farmUser.service_account_id
           };
         }
 

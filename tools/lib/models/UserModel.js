@@ -17,6 +17,10 @@ class UserModel extends BaseModel {
     return this.service.getMe();
   }
 
+  myServiceAccounts() {
+    return this.service.myServiceAccounts();
+  }
+
   myDatabases(org) {
     return this.service.myDatabases(org);
   }

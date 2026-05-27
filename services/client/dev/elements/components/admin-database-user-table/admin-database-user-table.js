@@ -4,14 +4,14 @@ import {render, styles, renderRmAccessForm} from "./admin-database-user-table.tp
 import {Mixin, MainDomElement} from '@ucd-lib/theme-elements/utils/mixins';
 import { LitCorkUtils } from '@ucd-lib/cork-app-utils';
 
-import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import TableController from '@ucd-lib/pgfarm-client/controllers/TableController.js';
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import AppComponentController from '@ucd-lib/pgfarm-client/controllers/AppComponentController.js';
+import blobUtils from '@ucd-lib/pgfarm-client/utils/blobUtils.js';
 
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
-import { deleteUserConfirmation, removeSchemaAccess } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
+import { deleteUserConfirmation, removeSchemaAccess, renderServiceAccountRotationConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 /**
  * @description Admin Database User Table
@@ -29,7 +29,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       bulkActions: {type: Array},
       selectedBulkAction: {type: String},
       rmFromObject: { type: Boolean },
-      instance: { type: String}
+      instance: { type: String},
+      hasServiceAccounts: {type: Boolean},
+      currentUser: {type: Object}
     }
   }
 
@@ -45,8 +47,9 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     this.selectedBulkAction = '';
     this.rmFromObject = 'schema';
     this.instance = '';
+    this.hasServiceAccounts = false;
+    this.currentUser = null;
 
-    this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
     this.queryCtl = new QueryParamsController(this, [
       {name: 'schema', defaultValue: ''}
@@ -57,18 +60,52 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       searchProps: ['user.name', 'user.pgFarmUser.firstName', 'user.pgFarmUser.lastName'],
       filters: [
         {id: 'db-access', cb: this._onDbAccessFilterChange},
-        {id: 'schema-access', cb: this._onSchemaAccessFilterChange}
+        {id: 'schema-access', cb: this._onSchemaAccessFilterChange},
+        {id: 'service-account', cb: this._applySaFilterChange, defaultValue: null}
       ]
     }
     this.tableCtl = new TableController(this, 'users', ctlOptions);
 
-    this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel');
+    this._injectModel('AppStateModel', 'InstanceModel', 'DatabaseModel', 'ServiceAccountModel');
   }
 
   async _onAppStateUpdate(e){
     if ( e.page !== this.compCtl.parentPageId ) return;
     await this.queryCtl.setFromLocation();
     this._setBulkActions();
+  }
+
+  /**
+   * @description Lit lifecycle method
+   * @param {*} props - The changed properties
+   */
+  willUpdate(props){
+    if ( props.has('users') ){
+      if ( this.users.find(user => user.user?.pgFarmUser?.type === 'SERVICE_ACCOUNT') ){
+        this.hasServiceAccounts = true;
+      }
+    }
+  }
+
+  /**
+   * @description Callback for when the service account filter toggle button is clicked
+   */
+  _onSaFilterToggleClick() {
+    const value = this.tableCtl.getFilterValue('service-account');
+    const newValue = value === true ? null : true;
+    this.tableCtl.setFilterValue('service-account', newValue);
+  }
+
+  /**
+   * @description Callback for applying the service account filter with the table controller.
+   * @param {Object} user - The user object from this.users array
+   * @param {Boolean|null} value - The value of the filter
+   * @returns {Boolean} - True if the user should be shown, false otherwise
+   */
+  _applySaFilterChange(user, value) {
+    if ( value === null ) return true;
+    const isSa = !!user.user?.pgFarmUser?.serviceAccountId;
+    return value ? isSa : !isSa;
   }
 
   /**
@@ -167,6 +204,19 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     });
   }
 
+  _showServiceAccountRotationConfirmation(user) {
+    this.AppStateModel.showDialogModal({
+        title: 'Rotate Service Account Password',
+        actions: [
+            {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+            {text: 'Confirm Rotation', value: 'user-table-rotate-service-account-password', color: 'secondary'}
+        ],
+        content: renderServiceAccountRotationConfirmation(user),
+        data: {user}
+    });
+
+  }
+
   /**
    * @description Shows the confirmation modal for deleting a user or users from the database
    * @param {Object|Array} user - The user object or array of user objects to delete
@@ -216,6 +266,22 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
       this.removeSchemaAccess(users, schema);
       return;
     }
+    if ( e.action?.value === 'user-table-rotate-service-account-password' ) {
+      const user = e.data.user;
+      this.rotateServiceAccountPassword(user);
+    }
+  }
+
+  async rotateServiceAccountPassword(user) {
+    const r = await this.ServiceAccountModel.rotatePassword(user.name);
+    if ( r?.state === 'error' ){
+      this.AppStateModel.showToast({text: 'Error rotating service account password', type: 'error'});
+      return;
+    }
+
+    blobUtils.downloadJsonAsFile(r.payload, 'service-account.json');
+
+    this.AppStateModel.showToast({text: 'Service account password rotated successfully', type: 'success'});
   }
 
   async removeInstanceAccess(username) {

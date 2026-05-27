@@ -11,18 +11,48 @@ class UserService extends BaseService {
     this.basePath = `${serviceUtils.host}/api/user`;
   }
 
-  async getMe() {
-    await this.request({
-      url : `${this.basePath}/me`,
-      fetchOptions: {
-        headers: serviceUtils.authHeader()
-      },
-      onLoading: request => this.store.onMeUpdate({request}),
-      onLoad: payload => this.store.onMeUpdate({payload: payload.body}),
-      onError: error => this.store.onMeUpdate({error})
-    });
+  async myServiceAccounts() {
+    const store = this.store.data.myServiceAccounts;
+    const id = 'myServiceAccounts';
 
-    return this.store.data.me.get('me');
+    await this.checkRequesting(
+      id, store,
+      () => this.request({
+        url : `${this.basePath}/me/service-accounts`,
+        fetchOptions: {
+          headers: serviceUtils.authHeader()
+        },
+        onUpdate : resp => this.store.set(
+          {id, ...resp},
+          store
+        ),
+        checkCached: () => store.get(id)
+      })
+    );
+
+    return store.get(id);
+  }
+
+  async getMe() {
+    const store = this.store.data.me;
+    const id = 'me';
+
+    await this.checkRequesting(
+      id, store,
+      () => this.request({
+        url : `${this.basePath}/me`,
+        fetchOptions: {
+          headers: serviceUtils.authHeader()
+        },
+        onUpdate : resp => this.store.set(
+          {id, ...resp},
+          store
+        ),
+        checkCached: () => store.get(id)
+      })
+    );
+
+    return store.get(id);
   }
 
   async myDatabases(org){

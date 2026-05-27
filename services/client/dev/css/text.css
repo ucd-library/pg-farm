@@ -21,13 +21,18 @@ a.bold-link:hover {
   color: var(--ucd-black-70, #4C4C4C);
   font-weight: 400;
 }
-.admin-badge {
+.badge {
   background: var(--ucd-black-20, #E5E5E5);
   font-weight: 700;
   color: var(--ucd-black-70, #4C4C4C);
   font-size: var(--font-size--small, 0.875rem);
   display: inline-flex;
   padding: 0 .25rem;
+  line-height: 1.6;
+}
+.badge.badge--blue {
+  background: var(--ucd-blue-40, #dbeaf7);
+  color: var(--ucd-blue, #022851);
 }
 .break-word {
   word-break: break-word;

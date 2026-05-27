@@ -46,7 +46,12 @@ export default class AppAdminUserProfile extends Mixin(LitElement)
         hostCallback: '_onOrgFetchSuccess',
         returnedResponse: 'request',
         errorMessage: 'Unable to load your organizations'
-      }
+      },
+      {
+        request: this.UserModel.myServiceAccounts(),
+        ctlProp: 'serviceAccounts',
+        errorMessage: 'Unable to load user service accounts'
+      },
 
     ], {ignoreLoading: true});
     if ( !r ) return;

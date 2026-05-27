@@ -1,3 +1,5 @@
+import { clearCache } from '@ucd-lib/cork-app-utils';
+
 const ID_ORDER = ['org', 'instance', 'db', 'schema', 'schemaTable', 'table', 'user', 'action', 'access'];
 
 class Utils {
@@ -16,7 +18,13 @@ class Utils {
 
     return id.join('/');
   }
+
+  clearCache(opts={}){
+    const defaultOpts = { skipModels: ['IconModel', 'AppStateModel'] };
+    clearCache({ ...defaultOpts, ...opts });
+  }
 }
+
 
 const utils = new Utils();
 export default utils;

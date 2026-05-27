@@ -3,6 +3,7 @@ import { html, css } from 'lit';
 import userUtils from '@ucd-lib/pgfarm-client/utils/user.js';
 import '@ucd-lib/pgfarm-client/elements/components/org-teaser/org-teaser.js';
 import '@ucd-lib/pgfarm-client/elements/components/app-no-results/app-no-results.js';
+import '@ucd-lib/pgfarm-client/elements/components/service-account-teaser/service-account-teaser.js';
 
 export function styles() {
   const elementStyles = css`
@@ -15,6 +16,7 @@ export function styles() {
 }
 
 export function render() {
+  const hasSa = this.dataCtl?.serviceAccounts?.length > 0;
 
 return html`
   <div class='page-header'>
@@ -38,6 +40,18 @@ return html`
       `)}
     </div>
     <app-no-results ?hidden=${this.totalOrgs} text="You are not a member of any organizations." hide-subtext></app-no-results>
+  </div>
+  <div class='l-container u-space-mt--large l-container--flush-with-page-header'>
+    <h2 class='primary ${hasSa ? 'u-space-mb': 'u-space-mb--large'}'>My Service Accounts</h2>
+    <p ?hidden=${!hasSa}>For more information about service accounts, see the <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a>.</p>
+    <div>
+      ${this.dataCtl?.serviceAccounts?.map(sa => html`
+        <service-account-teaser .data=${sa} class='u-space-mb--large'></service-account-teaser>
+      `)}
+    </div>
+    <app-no-results ?hidden=${hasSa} text="You do not own any service accounts.">
+      <div slot='subtext'>To learn, see the <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a>.</div>
+    </app-no-results>
   </div>
 
 `;}

@@ -10,7 +10,6 @@ class BlobUtils {
   }
 
   toDataUrl(buffer, mimeType) {
-    console.log('toDataUrl', buffer, mimeType);
 
     // convert json serialized buffer to base64 data URL
     if (Array.isArray(buffer.data)) {
@@ -34,6 +33,22 @@ class BlobUtils {
     }
     return '';
   }
+
+  /**
+   * @description Utility function to trigger a file download of JSON data.
+   * @param {*} data - JSON serializable data to be downloaded as a file
+   * @param {String} filename - The name of the file to be downloaded
+   */
+  downloadJsonAsFile(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  
 
 }
 

@@ -39,7 +39,7 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
       {name: 'schema', defaultValue: ''}
     ]);
 
-    this._injectModel('AppStateModel', 'DatabaseModel');
+    this._injectModel('AppStateModel', 'DatabaseModel', 'UserModel');
   }
 
   /**
@@ -83,6 +83,11 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
         request: this.DatabaseModel.getUserAccessOverview(this.orgName, this.dbName),
         ctlProp: 'userAccessOverview',
         errorMessage: 'Unable to load user access overview'
+      },
+      {
+        request: this.UserModel.getMe(),
+        ctlProp: 'currentUser',
+        errorMessage: 'Unable to load current user'
       }
     ], {ignoreLoading: true});
     if ( !r ) return;

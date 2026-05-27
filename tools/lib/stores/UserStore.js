@@ -10,20 +10,12 @@ class UserStore extends BaseStore {
       me: new LruStore({name: 'user.me'}),
       myDatabases: new LruStore({name: 'user.myDatabases'}),
       search: new LruStore({name: 'user.search'}),
+      myServiceAccounts: new LruStore({name: 'user.myServiceAccounts'})
     };
     this.events = {
-      USER_ME_UPDATE : 'user-me-update',
       USER_MY_DATABASES_UPDATE : 'user-my-databases-update',
       USER_SEARCH_UPDATE : 'user-search-update',
     };
-  }
-
-  onMeUpdate(payload) {
-    this._set(
-      {id: 'me', ...payload},
-      this.data.me,
-      this.events.USER_ME_UPDATE
-    );
   }
 
   onMyDatabasesUpdate(ido, payload) {
