@@ -146,7 +146,13 @@ class InstanceDatabaseContext {
         try {
           this.organization = await pgAdminClient.getOrganization(obj.organization);
         } catch(e) {
-          this.organization = {name : obj.organization};
+          if( typeof obj.organization === 'object') {
+            this.organization = obj.organization;
+          } else if( typeof obj.organization === 'string' ) {
+            this.organization = {name : obj.organization};
+          } else {
+            throw new Error('Invalid organization value in context update');
+          }
           this.notFound.organization = true;
         }
       }
@@ -159,8 +165,13 @@ class InstanceDatabaseContext {
           organization: {name: this.organization?.name}
         });
       } catch(e) {
-        console.warn('Failed to fetch database', obj.database, e);
-        this.database = {name : obj?.database?.name || obj.database};
+        if( typeof obj.database === 'object' ) {
+          this.database = obj.database;
+        } else if( typeof obj.database === 'string' ) {
+          this.database = {name : obj.database};
+        } else {
+          throw new Error('Invalid database value in context update');
+        }
         this.notFound.database = true;
       }
     }
@@ -173,23 +184,22 @@ class InstanceDatabaseContext {
           organization: {name: this.organization?.name}
         });
       } catch(e) {
-        this.instance = {name : obj.instance};
+        if( typeof obj.instance === 'object' ) {
+          this.instance = obj.instance;
+        } else if( typeof obj.instance === 'string' ) {
+          this.instance = {name : obj.instance};
+        } else {
+          throw new Error('Invalid instance value in context update');
+        }
         this.notFound.instance = true;
       }
     } else if( this.database ) {
-      console.log('Fetching instance for database', this.database);
       try {
-        console.log({
-          instance: {name: this.database.instance_name || this.database.instance_id},
-          organization: {name: this.organization?.name}
-        });
         this.instance = await pgAdminClient.getInstance({
           instance: {name: this.database.instance_name || this.database.instance_id},
           organization: {name: this.organization?.name}
         });
-        console.log('Fetched instance', this.instance);
       } catch(e) {
-        console.warn('Failed to fetch instance for database', this.database.name, e);
         this.notFound.instance = true;
       }
     }
