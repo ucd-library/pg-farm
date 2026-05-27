@@ -61,6 +61,7 @@ class InstanceDatabaseContext {
     this._instance = null;
     this._requestor = null;
     this.requestorRoles = null;
+    this.notFound = {};
 
     this.fullDatabaseName = null;
     this.logSignal = {};
@@ -132,6 +133,8 @@ class InstanceDatabaseContext {
   }
 
   async update(obj) {
+    this.notFound = {};
+
     if( obj.corkTraceId ) {
       this.corkTraceId = obj.corkTraceId;
     }
@@ -143,7 +146,14 @@ class InstanceDatabaseContext {
         try {
           this.organization = await pgAdminClient.getOrganization(obj.organization);
         } catch(e) {
-          this.organization = {name : obj.organization};
+          if( typeof obj.organization === 'object') {
+            this.organization = obj.organization;
+          } else if( typeof obj.organization === 'string' ) {
+            this.organization = {name : obj.organization};
+          } else {
+            throw new Error('Invalid organization value in context update');
+          }
+          this.notFound.organization = true;
         }
       }
     }
@@ -151,15 +161,22 @@ class InstanceDatabaseContext {
     if( obj.database ) {
       try {
         this.database = await pgAdminClient.getDatabase({
-          database: {name: obj.database},
-          organization: {name: this.organization?.name
-        }});
+          database: {name: obj?.database?.name || obj.database},
+          organization: {name: this.organization?.name}
+        });
       } catch(e) {
-        this.database = {name : obj.database};
+        if( typeof obj.database === 'object' ) {
+          this.database = obj.database;
+        } else if( typeof obj.database === 'string' ) {
+          this.database = {name : obj.database};
+        } else {
+          throw new Error('Invalid database value in context update');
+        }
+        this.notFound.database = true;
       }
     }
 
-    if( obj.instance ) {
+    if( obj.instance && (typeof obj.instance === 'string' || obj.instance.name) ) {
       obj.instance = modelUtils.getInstanceName(obj.instance);
       try {
         this.instance = await pgAdminClient.getInstance({
@@ -167,7 +184,14 @@ class InstanceDatabaseContext {
           organization: {name: this.organization?.name}
         });
       } catch(e) {
-        this.instance = {name : obj.instance};
+        if( typeof obj.instance === 'object' ) {
+          this.instance = obj.instance;
+        } else if( typeof obj.instance === 'string' ) {
+          this.instance = {name : obj.instance};
+        } else {
+          throw new Error('Invalid instance value in context update');
+        }
+        this.notFound.instance = true;
       }
     } else if( this.database ) {
       try {
@@ -175,7 +199,9 @@ class InstanceDatabaseContext {
           instance: {name: this.database.instance_name || this.database.instance_id},
           organization: {name: this.organization?.name}
         });
-      } catch(e) {}
+      } catch(e) {
+        this.notFound.instance = true;
+      }
     }
 
     if( obj.requestor ) {

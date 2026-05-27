@@ -4,7 +4,47 @@ import { promisify } from 'util';
 const exec = promisify(execCb);
 
 export const E2E_NAMESPACE = process.env.E2E_K8S_NAMESPACE || 'pgfarm-test';
-const SOURCE_NAMESPACE = 'pg-farm';
+const SOURCE_NAMESPACE = process.env.E2E_SOURCE_NAMESPACE || 'pg-farm';
+
+// Prevents the gke-gcloud-auth-plugin from opening a browser when credentials expire.
+const NO_PROMPT_ENV = { ...process.env, CLOUDSDK_CORE_DISABLE_PROMPTS: '1' };
+
+/**
+ * @function checkGkeContext
+ * @description Verifies that kubectl is installed and the current context points at
+ * the expected GKE cluster. Reads local kubeconfig only — no network calls, no auth
+ * attempts, no browser prompts. Exits the process with a clear error message if not,
+ * so the test run fails fast with actionable instructions.
+ *
+ * @param {string} expectedCluster - GKE cluster name to match (e.g. 'pgfarm-dev')
+ * @returns {Promise<void>}
+ */
+export async function checkGkeContext(expectedCluster, corkClusterName) {
+
+  // Check kubectl is available
+  try {
+    await exec('kubectl version --client -o json', { timeout: 5000 });
+  } catch(_) {
+    console.error('\n  Error: kubectl not found or not executable.');
+    console.error('  Run:  cork-kube init ' + corkClusterName);
+    console.error('  then re-run the tests.\n');
+    process.exit(1);
+  }
+
+  // Check the context cluster name (local kubeconfig read — no network, no auth)
+  let clusterName = '';
+  try {
+    const { stdout, stderr } = await exec("kubectl config current-context", { timeout: 5000 });
+    clusterName = stdout.trim();
+  } catch(_) {}
+
+  if( !clusterName.includes(expectedCluster) ) {
+    console.error(`\n  Error: kubectl context points at '${clusterName || '(none)'}' — expected '${expectedCluster}'.`);
+    console.error('  Run:  cork-kube init ' + corkClusterName);
+    console.error('  then re-run the tests.\n');
+    process.exit(1);
+  }
+}
 
 /**
  * Runs a kubectl command and returns stdout.
@@ -16,10 +56,10 @@ const SOURCE_NAMESPACE = 'pg-farm';
  */
 async function kubectl(cmd, opts = {}) {
   if (opts.stdin) {
-    const { stdout, stderr } = await exec(`echo '${JSON.stringify(opts.stdin).replace(/'/g, "'\\''")}' | kubectl ${cmd}`);
+    const { stdout } = await exec(`echo '${JSON.stringify(opts.stdin).replace(/'/g, "'\\''")}' | kubectl ${cmd}`, { env: NO_PROMPT_ENV });
     return stdout;
   }
-  const { stdout } = await exec(`kubectl ${cmd}`);
+  const { stdout } = await exec(`kubectl ${cmd}`, { env: NO_PROMPT_ENV });
   return stdout;
 }
 
@@ -32,7 +72,7 @@ async function kubectl(cmd, opts = {}) {
  */
 async function kubectlStdin(cmd, obj) {
   return new Promise((resolve, reject) => {
-    const proc = execCb(`kubectl ${cmd}`, { shell: '/bin/bash' }, (err, stdout, stderr) => {
+    const proc = execCb(`kubectl ${cmd}`, { shell: '/bin/bash', env: NO_PROMPT_ENV }, (err, stdout, stderr) => {
       if (err) return reject(err);
       resolve(stdout);
     });
@@ -49,15 +89,18 @@ async function kubectlStdin(cmd, obj) {
  * @returns {Promise<void>}
  */
 export async function setupNamespace() {
-  // Create namespace (no-op if it already exists)
-  await exec(`kubectl create namespace ${E2E_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -`);
+  const rt  = '--request-timeout=30s';
+  const eo  = { timeout: 35000, env: NO_PROMPT_ENV };
 
-  // Copy service-account secret from pg-farm namespace if not already present
+  // Create namespace (no-op if it already exists)
+  await exec(`kubectl create namespace ${E2E_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f - ${rt}`, eo);
+
+  // Copy service-account secret from source namespace if not already present
   try {
-    await exec(`kubectl get secret service-account -n ${E2E_NAMESPACE}`);
+    await exec(`kubectl get secret service-account -n ${E2E_NAMESPACE} ${rt}`, eo);
   } catch (_) {
     // Secret doesn't exist — copy from source namespace
-    const rawSecret = await exec(`kubectl get secret service-account -n ${SOURCE_NAMESPACE} -o json`);
+    const rawSecret = await exec(`kubectl get secret service-account -n ${SOURCE_NAMESPACE} -o json ${rt}`, eo);
     const secret = JSON.parse(rawSecret.stdout);
     delete secret.metadata.resourceVersion;
     delete secret.metadata.uid;
@@ -86,14 +129,14 @@ export async function teardownNamespace(opts = {}) {
     try {
       // --wait=false returns immediately; resources continue terminating in the background.
       // Waiting for full namespace deletion can block indefinitely if a resource gets stuck.
-      await exec(`kubectl delete namespace ${E2E_NAMESPACE} --ignore-not-found=true --wait=false`);
+      await exec(`kubectl delete namespace ${E2E_NAMESPACE} --ignore-not-found=true --wait=false`, { env: NO_PROMPT_ENV });
     } catch(e) {
       // ignore — namespace may already be gone
     }
   } else {
     // Just remove pgfarm-labelled workloads without nuking the namespace
     try {
-      await exec(`kubectl delete statefulsets,services -n ${E2E_NAMESPACE} --all --ignore-not-found=true`);
+      await exec(`kubectl delete statefulsets,services -n ${E2E_NAMESPACE} --all --ignore-not-found=true`, { env: NO_PROMPT_ENV });
     } catch(e) {}
   }
 

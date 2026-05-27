@@ -26,13 +26,15 @@ program.command('get-featured')
     database.getFeatured(orgName, cmd.optsWithGlobals());
   });
 
+program.command('get <org/database>')
+  .description('Fetch database metadata')
+  .action(async (name, opts, cmd) => {
+    database.get(name, cmd.optsWithGlobals());
+  });
+
 // Logged-in commands
 if( isLoggedIn() ) {
-  program.command('get <org/database>')
-    .description('Fetch database metadata')
-    .action(async (name, opts, cmd) => {
-      database.get(name, cmd.optsWithGlobals());
-    });
+
 
   program.command('link <org/database> <remoteOrg/remoteDatabase>')
     .option('-l, --local-schema <schema>', 'Schema to link to.  Defaults to the remote database name')
