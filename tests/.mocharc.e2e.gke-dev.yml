@@ -1,0 +1,6 @@
+spec: 'e2e/cli/**/*.test.js'
+require:
+  - helpers/e2e-env.gke-dev.cjs
+file: helpers/e2e-hooks.cli.gke-dev.js
+timeout: 180000
+exit: true

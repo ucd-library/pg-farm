@@ -110,7 +110,7 @@ class OrganizationModel {
     }
     ctx.organization.name = ctx.organization.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '-');
 
-    let exists = await this.exists(ctx.organization);
+    let exists = await this.exists(ctx);
     if( exists ) {
       throw new Error('Organization already exists: '+ctx.organization.name);
     }

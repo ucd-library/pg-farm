@@ -471,7 +471,7 @@ class PgFarmAdminClient {
     `, [ctx.database.name, ctx.organization.name]);
 
     if( res.rows.length === 0 ) {
-      throw new Error('Database not found: '+ctx.fullDatabaseName);
+      throw new Error('Database not found: '+ctx.organization.name+'/'+ctx.database.name);
     }
 
     return res.rows[0];

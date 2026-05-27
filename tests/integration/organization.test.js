@@ -163,25 +163,31 @@ describe('organization model', function () {
 
     it('creates an org with name and title', async function () {
       const { createContext } = await import('../../services/lib/context.js');
-      const ctx = await createContext({});
-      const result = await organization.create(ctx, { name: 'new-org', title: 'New Org' });
+      const ctx = await createContext({
+        organization: { name: 'new-org', title: 'New Org' }
+      });
+      const result = await organization.create(ctx, );
       assert.equal(result.name, 'new-org');
       assert.equal(result.title, 'New Org');
     });
 
     it('auto-generates name from title when name omitted', async function () {
       const { createContext } = await import('../../services/lib/context.js');
-      const ctx = await createContext({});
-      const result = await organization.create(ctx, { title: 'Auto Name Org' });
+      const ctx = await createContext({
+        organization: { title: 'Auto Name Org' }
+      });
+      const result = await organization.create(ctx, );
       assert.match(result.name, /auto-name-org/);
     });
 
     it('throws when org already exists', async function () {
       const { createContext } = await import('../../services/lib/context.js');
-      const ctx = await createContext({});
+      const ctx = await createContext({
+        organization: { name: 'new-org', title: 'Duplicate' }
+      });
       let threw = false;
       try {
-        await organization.create(ctx, { name: 'new-org', title: 'Duplicate' });
+        await organization.create(ctx);
       } catch (e) {
         threw = true;
       }

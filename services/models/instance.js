@@ -6,7 +6,7 @@ import logger from '../lib/logger.js';
 import modelUtils from './utils.js';
 import remoteExec from '../lib/pg-helper-remote-exec.js';
 import { getContext } from '../lib/context.js';
-import { getInstanceResources, getMaxPriority, GENERAL_RESOURCES } from '../lib/instance-resources.js';
+import { getInstanceState, getType } from '../lib/instance-resources.js';
 
 
 class Instance {
@@ -264,12 +264,12 @@ class Instance {
 
     let instance = ctx.instance;
 
-    // JM - perhaps we just add a now shutdown delay time after start.
-    let maxPriority = await getMaxPriority(instance.availability);
-    logger.info('Database startup called, setting max pod priority', {podPriority: String(maxPriority)}, ctx.logSignal);
-    await client.updateInstancePriority(ctx, maxPriority);
+    const type = getType(instance.availability);
+    logger.info('Database startup called, setting active priority', {podPriority: String(type.priorityValue)}, ctx.logSignal);
+    await client.updateInstancePriority(ctx, type.priorityValue);
 
     let applyResp = await this.apply(ctx);
+    await kubectl.applyPdb(instance.hostname, 1);
 
     if( opts.isRestoring ) {
       await this.setInstanceState(ctx, this.STATES.RESTORING);
@@ -336,12 +336,12 @@ class Instance {
     let hostname = instance.hostname;
 
     let templates = await modelUtils.getTemplate('postgres');
-    let priorityResources = await getInstanceResources(ctx);
+    const type = getType(instance.availability);
 
     // Postgres
     let k8sConfig = templates.find(t => t.kind === 'StatefulSet');
     k8sConfig.metadata.name = hostname;
-    
+
     let spec = k8sConfig.spec;
     spec.selector.matchLabels.app = hostname;
     spec.serviceName = hostname;
@@ -353,23 +353,25 @@ class Instance {
     let template = spec.template;
     template.metadata.labels.app = hostname;
 
-    // set the priority class name for the instance based on the instance priority
-    template.spec.priorityClassName = priorityResources.name;
+    template.spec.priorityClassName = type.priorityClass;
 
-    // main pg container
+    // main pg container — limits are sticky (never change while pod is ON);
+    // activeRequests are applied on start and restored by setActiveResources() on wake.
     let container = template.spec.containers[0];
     container.image = instanceImage;
     container.volumeMounts.find(i => i.mountPath == '/var/lib/postgresql/data').name = hostname+'-ps';
-    
-    // set the requests and limits for the container resources based on the instance priority
-    // container.resources = priorityResources.resources;
-    // above cause a pod restart but features are coming where this won't be the cause
-    // for now using general resources
-    container.resources = GENERAL_RESOURCES;
+    container.resources = {
+      limits   : type.limits,
+      requests : type.activeRequests,
+    };
 
     // helper container
     container = template.spec.containers[1];
     container.image = config.pgHelper.image;
+    container.resources = {
+      limits   : type.helperLimits,
+      requests : type.helperActiveRequests,
+    };
     container.env.push({
       name : 'PG_INSTANCE_NAME',
       value : instance.name
@@ -432,6 +434,8 @@ class Instance {
     logger.info('Stopping instance', hostname, ctx.logSignal);
     await this.setInstanceState(ctx, this.STATES.STOPPING);
 
+    await kubectl.deletePdb(hostname);
+
     let pgResult, pgServiceResult;
 
     try {
@@ -461,6 +465,56 @@ class Instance {
     }
 
     return  {pgResult, pgServiceResult};
+  }
+
+  /**
+   * @method setActiveResources
+   * @description Switch a running pod to active resource requests and protect it from
+   * voluntary eviction (PDB minAvailable=1). Called when a query arrives on an idle pod.
+   * Does not restart postgres — only request values and PDB are changed in-place.
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns {Promise}
+   */
+  async setActiveResources(ctx) {
+    ctx = getContext(ctx);
+    const instance = ctx.instance;
+    const type = getType(instance.availability);
+    const podName = `${instance.hostname}-0`;
+
+    logger.info('Waking instance to active resources', {podPriority: String(type.priorityValue)}, ctx.logSignal);
+
+    await kubectl.patchPodResources(podName, [
+      { name: 'postgres',  requests: type.activeRequests       },
+      { name: 'pg-helper', requests: type.helperActiveRequests },
+    ]);
+    await kubectl.applyPdb(instance.hostname, 1);
+    await client.updateInstancePriority(ctx, type.priorityValue);
+  }
+
+  /**
+   * @method setIdleResources
+   * @description Switch a running pod to floor resource requests and allow voluntary
+   * eviction (PDB minAvailable=0). Called by the sleep cron when the instance has been
+   * inactive for idleAfter ms. Does not restart postgres.
+   *
+   * @param {String|Object} ctx context object or id
+   * @returns {Promise}
+   */
+  async setIdleResources(ctx) {
+    ctx = getContext(ctx);
+    const instance = ctx.instance;
+    const type = getType(instance.availability);
+    const podName = `${instance.hostname}-0`;
+
+    logger.info('Setting instance to idle resources', {podPriority: '0'}, ctx.logSignal);
+
+    await kubectl.patchPodResources(podName, [
+      { name: 'postgres',  requests: type.idleRequests       },
+      { name: 'pg-helper', requests: type.helperIdleRequests },
+    ]);
+    await kubectl.applyPdb(instance.hostname, 0);
+    await client.updateInstancePriority(ctx, 0);
   }
 
   /**

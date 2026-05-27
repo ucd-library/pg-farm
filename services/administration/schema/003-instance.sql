@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS instance_name_idx ON pgfarm.instance(name);
 
 CREATE TABLE IF NOT EXISTS pgfarm.instance_state_history (
   instance_state_history_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id),
+  instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id) ON DELETE CASCADE,
   state instance_state NOT NULL,
   timestamp timestamp NOT NULL DEFAULT now()
 );
@@ -116,7 +116,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TABLE IF NOT EXISTS pgfarm.k8s_config_property (
   k8s_config_property_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id),
+  instance_id UUID NOT NULL REFERENCES pgfarm.instance(instance_id) ON DELETE CASCADE,
   name text NOT NULL,
   value text NOT NULL,
   UNIQUE(instance_id, name)

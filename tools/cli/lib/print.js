@@ -70,16 +70,18 @@ class Print {
   }
 
   database(db) {
+    let name = db.name || db?.database?.name || db?.database_name;
+
     if( db.organization ) {
-      console.log(`Name: ${db.organization.name}/${db.database.name}`);
+      console.log(`Name: ${db.organization.name}/${name}`);
     } else if( db.database ) {
-      console.log(`Name: _/${db.database.name}`);
+      console.log(`Name: _/${name}`);
     } else if( db.database_name ) {
-      console.log(`Name: ${db.organization_name || '_'}/${db.database_name}`);
+      console.log(`Name: ${db.organization_name || '_'}/${name}`);
     } else {
-      console.log(`Name: ${db.name}`);
+      console.log(`Name: ${name}`);
     }
-    console.log(`Title: ${db?.database.title || db.database_title}`);
+    console.log(`Title: ${db?.database?.title || db.database_title || ''}`);
   }
 
   dbSearch(result) {

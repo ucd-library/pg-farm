@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import pgFormat from 'pg-format';
-import { getInstanceResources  } from '../lib/instance-resources.js';
+import { getInstanceState } from '../lib/instance-resources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -175,6 +175,18 @@ class AdminModel {
    * @returns {Promise}
    */
   async stopInstance(iCtx, opts={}) {
+    let iid = iCtx?.instance?.instance_id;
+    if( !iid ) {
+      throw new Error('Instance id is required to stop instance');
+    }
+
+    // check if instance is already starting
+    if( this.instancesStarting[iid] ) {
+      logger.info('Instance is starting, waiting...', instance.hostname, iCtx.logSignal);
+      await this.instancesStarting[iid].promise;
+    }
+
+
     await this.models.instance.stop(iCtx, opts);
     let dbs = await client.getInstanceDatabases(iCtx);
     
@@ -329,10 +341,14 @@ class AdminModel {
 
   /**
    * @method sleepInstances
-   * @description Sleep instances that have been idle for too long.  Query
-   * all running instances.  Then check the last database event for each
-   * instance.  If the instance has been idle for longer than the availibility
-   * time, shut it down.
+   * @description Runs periodically to manage running instance resource states.
+   * For each running instance:
+   *   - If inactive longer than sleepAfter  → stop the pod entirely (SLEEP).
+   *   - If inactive longer than idleAfter   → switch to idle requests + PDB=0 (no restart).
+   * Active instances and ALWAYS instances are left untouched.
+   *
+   * @param {Object} ctx request context
+   * @returns {Promise<Array>} list of instances whose state changed
    */
   async sleepInstances(ctx) {
     ctx = getContext(ctx);
@@ -350,37 +366,27 @@ class AdminModel {
 
       let iCtx = ctx.clone();
       await iCtx.update({
-        instance: instance.instance_id,
-        organization: instance.organization_id
+        instance     : instance.instance_id,
+        organization : instance.organization_id
       });
 
-      let resources = await getInstanceResources(iCtx);
+      let { action, type } = await getInstanceState(iCtx);
 
-      if( resources.sleep ) {
-        logger.info('Instance has been idle for too long, shutting down', {podPriority: "0"}, iCtx.logSignal);
-        changed.push({instance, newState: 'SLEEP'});
+      if( action === 'sleep' ) {
+        logger.info('Instance exceeded sleep threshold, stopping pod', {podPriority: '0'}, iCtx.logSignal);
+        changed.push({ instance, newState: 'SLEEP' });
         await this.stopInstance(iCtx);
         continue;
       }
 
-      let newPriority = parseInt(resources.name.split('-')[1]);
-      if( newPriority !== instance.priority_state ) {
-        logger.info(`Instance priority has changed from ${instance.priority_state} to ${newPriority}, updating instance`, {podPriority: String(newPriority)}, iCtx.logSignal);
-        await client.updateInstancePriority(iCtx, newPriority);
-        await this.models.instance.apply(iCtx);
-
-        let query = await client.getLastDatabaseEvent(instance.instance_id);
-        changed.push({
-          instance,
-          newState : newPriority,
-          lastDatabaseEvent : {
-            event_type : query?.event_type,
-            timestamp : query?.timestamp
-          }
-        });
-      } else if( newPriority ) {
-        logger.info(`Instance priority is still ${newPriority}, no change`, {podPriority: String(newPriority)}, iCtx.logSignal);
+      if( action === 'idle' && instance.priority_state !== 0 ) {
+        logger.info('Instance exceeded idle threshold, reducing resources', {podPriority: '0'}, iCtx.logSignal);
+        await this.models.instance.setIdleResources(iCtx);
+        changed.push({ instance, newState: 'IDLE', type: type.priorityClass });
+        continue;
       }
+
+      logger.info('Instance resource state unchanged', {podPriority: String(instance.priority_state)}, iCtx.logSignal);
     }
 
     return changed;
@@ -448,6 +454,13 @@ class AdminModel {
         health.tcpStatus.instance?.isAlive &&
         dbRestTcpAlive &&
         !opts.force) {
+      // If the pod is running but was idled by the sleep cron, restore active resources
+      // in the background so the connection proceeds immediately without waiting.
+      if( instance.priority_state === 0 ) {
+        this.models.instance.setActiveResources(ctx).catch(err =>
+          logger.warn('Failed to restore active resources on wake', instance.hostname, err.message, ctx.logSignal)
+        );
+      }
       logger.info('Instance running and ports are alive', instance.hostname, ctx.logSignal);
       this.resolveStart(instance);
       return {starting: false};
@@ -533,6 +546,7 @@ class AdminModel {
 
   rejectStart(instance, e) {
     let id = instance.instance_id || instance.id;
+    console.log('rejecting start for instance', id);
     if( !this.instancesStarting[id] ) return;
 
     this.instancesStarting[id].reject(e);
@@ -541,6 +555,7 @@ class AdminModel {
 
   resolveStart(instance) {
     let id = instance.instance_id || instance.id;
+    console.log('resolving start for instance', id);
     if( !this.instancesStarting[id] ) return;
     this.instancesStarting[id].resolve(instance);
     delete this.instancesStarting[id];
