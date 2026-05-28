@@ -71,17 +71,16 @@ export default class AppDocs extends Mixin(LitElement)
     }
 
     if( cache[path] ) {
-      this.AppStateModel.hideLoading();
-      return Promise.resolve(cache[path]);
+      this.content = cache[path];
+    } else {
+      let resp = await fetch(`${this.ASSETS_BASE_URL}${path}.md`)
+      let text = await resp.text();
+
+      text = text.replaceAll(this.ASSETS_BASE_URL_TEMPLATE, this.ASSETS_BASE_URL);
+
+      this.content = text;
+      cache[path] = this.content;
     }
-
-    let resp = await fetch(`${this.ASSETS_BASE_URL}${path}.md`)
-    let text = await resp.text();
-
-    text = text.replaceAll(this.ASSETS_BASE_URL_TEMPLATE, this.ASSETS_BASE_URL);
-
-    this.content = text;
-    cache[path] = this.content;
 
     this.AppStateModel.hideLoading();
 

@@ -64,4 +64,4 @@ If you need to connect to PG Farm from a server, script, or automated pipeline â
 
 Service accounts are created by a PG Farm administrator on your behalf. Once created, you (the account owner) can rotate the password yourself at any time using the CLI.
 
-See [Service Account Authentication](__BASE__/docs/authenticate-service-account) for details on requesting an account, rotating your secret, storing it safely, and Python code examples for automatic token rotation with psycopg2.
+See [Service Account Authentication](/docs/authenticate-service-account) for details on requesting an account, rotating your secret, storing it safely, and Python code examples for automatic token rotation with psycopg2.
