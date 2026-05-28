@@ -96,7 +96,7 @@ return html`
         </div>
         <img class='thumbnail' ?hidden=${!this.imageUrl} src="${this.imageUrl}" alt='Preview'/>
       </div>
-      <label for="file-input">
+      <label>
         <div class='label'>${this.label}</div>
         <div class='label-subtext' ?hidden=${!this.labelSubtext}>${this.labelSubtext}</div>
         <div class='error' ?hidden=${!this.errorMessage}>${this.errorMessage}</div>

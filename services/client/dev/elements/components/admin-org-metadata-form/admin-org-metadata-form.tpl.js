@@ -68,8 +68,8 @@ return html`
       <label>Logo</label>
       <app-file-input
         @file-change=${e => this._onInput('logo', e.detail.dataUrl)}
-        label-subtext='JPG or PNG, 400px+ square recommended (max 10mb)'
-        .fileSizeLimit=${10 * 1024 * 1024}
+        label-subtext='JPG or PNG, 400px+ square recommended (max 100kb)'
+        .fileSizeLimit=${100 * 1024}
         .imageUrl=${blobUtils.toDataUrl(this.payload.logo, this.payload.logo_file_type)}>
       </app-file-input>
     </div>
