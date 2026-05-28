@@ -64,7 +64,7 @@ export default class AppFileInput extends LitElement {
 
   processFile(file){
     if (this.fileSizeLimit && file.size > this.fileSizeLimit) {
-      this.errorMessage = `File size exceeds ${this.fileSizeLimit / (1024 * 1024)}MB limit`;
+      this.errorMessage = `File size exceeds ${this.fileSizeLimit / 1024}KB limit`;
       return;
     }
     this.errorMessage = '';
