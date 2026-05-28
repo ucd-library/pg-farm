@@ -10,6 +10,7 @@ class BlobUtils {
   }
 
   toDataUrl(buffer, mimeType) {
+    if ( !buffer || !mimeType ) return '';
 
     // convert json serialized buffer to base64 data URL
     if (Array.isArray(buffer.data)) {

@@ -16,7 +16,7 @@ const app = express();
 app.use(logReqMiddleware(logger));
 
 app.use(cookieParser());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '500kb' }));
 app.use(keycloak.setUser);
 
 app.use('/.well-known', wellKnown);
