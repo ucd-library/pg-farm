@@ -83,10 +83,10 @@ describe('organization API', function () {
       assert.equal(res.body.name, 'api-org-test');
     });
 
-    it('returns 200 with stub object for unknown org (context fallback)', async function () {
+    it('returns 404 with stub object for unknown org (context fallback)', async function () {
       const res = await request(null).get('/api/organization/no-such-org-xyz');
-      assert.equal(res.status, 200);
-      assert.equal(res.body.name, 'no-such-org-xyz');
+      assert.equal(res.status, 404);
+      assert.equal(res.body.error, "Organization 'no-such-org-xyz' not found");
     });
 
   });
