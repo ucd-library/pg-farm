@@ -117,7 +117,7 @@ CREATE OR REPLACE FUNCTION get_database_id(name_or_id text, org_name_or_id text)
 
     IF org_name_or_id IS NULL THEN
       SELECT database_id INTO dbid FROM pgfarm.database
-      WHERE name = name_or_id OR database_id=try_cast_uuid(name_or_id);
+      WHERE (name = name_or_id OR database_id=try_cast_uuid(name_or_id)) AND organization_id IS NULL;
 
       IF dbid IS NULL THEN
         RAISE EXCEPTION 'Database not found: %', name_or_id;

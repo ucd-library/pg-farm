@@ -17,6 +17,20 @@ async function middleware(req, res, next) {
     instance
   });
 
+  if( req.method !== 'POST' ) {
+    if( organization && context.notFound.organization ) {
+      return res.status(404).json({error: `Organization '${organization}' not found`});
+    }
+
+    if( database && context.notFound.database ) {
+      return res.status(404).json({error: `Database '${database}' not found`});
+    }
+
+    if( instance && context.notFound.instance ) {
+      return res.status(404).json({error: `Instance '${instance}' not found`});
+    }
+  }
+
   req.context = context;
   res.context = context;
 
@@ -128,23 +142,26 @@ class InstanceDatabaseContext {
     context.instance = clone(this.instance);
     context.fullDatabaseName = this.fullDatabaseName;
     context.requestor = this.requestor;
+    context.notFound = clone(this.notFound);
     context.logSignal = clone(this.logSignal);
     return context;
   }
 
   async update(obj) {
-    this.notFound = {};
 
     if( obj.corkTraceId ) {
       this.corkTraceId = obj.corkTraceId;
     }
 
     if( obj.organization ) {
-      if( obj.organization === '_' ) {
+      if( obj.organization === '_' || obj.organization === null || obj.organization === undefined || obj.organization === 'null' ) {
         this.organization = {name : null};
       } else {
         try {
           this.organization = await pgAdminClient.getOrganization(obj.organization);
+          if( this.notFound.organization ) {
+            delete this.notFound.organization;
+          }
         } catch(e) {
           if( typeof obj.organization === 'object') {
             this.organization = obj.organization;
@@ -164,6 +181,9 @@ class InstanceDatabaseContext {
           database: {name: obj?.database?.name || obj.database},
           organization: {name: this.organization?.name}
         });
+        if( this.notFound.database ) {
+          delete this.notFound.database;
+        }
       } catch(e) {
         if( typeof obj.database === 'object' ) {
           this.database = obj.database;
@@ -183,6 +203,9 @@ class InstanceDatabaseContext {
           instance: {name: obj.instance},
           organization: {name: this.organization?.name}
         });
+        if( this.notFound.instance ) {
+          delete this.notFound.instance;
+        }
       } catch(e) {
         if( typeof obj.instance === 'object' ) {
           this.instance = obj.instance;
@@ -199,6 +222,9 @@ class InstanceDatabaseContext {
           instance: {name: this.database.instance_name || this.database.instance_id},
           organization: {name: this.organization?.name}
         });
+        if( this.notFound.instance ) {
+          delete this.notFound.instance;
+        }
       } catch(e) {
         this.notFound.instance = true;
       }

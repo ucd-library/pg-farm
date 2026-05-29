@@ -166,14 +166,7 @@ router.get('/:organization/:database',
   isInstanceAlive({useAliveFlag: true}),
   async (req, res) => {
   try {
-    if( req.context.notFound.database ) {
-      return res.status(404).json({error: 'Database not found'});
-    }
-    
     let {organization, database, instance} = req.context;
-    if( !database ) {
-      return res.status(404).json({error: 'Database not found'});
-    }
 
     let resp = {
       id : database.database_id,
