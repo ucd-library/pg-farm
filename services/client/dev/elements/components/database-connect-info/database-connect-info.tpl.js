@@ -64,7 +64,10 @@ return html`
     <div ?hidden=${this.connectionType !== 'http'}>
       <a href=${this.swaggerUrl} target="_blank">Open Database API Playground</a>
     </div>
-    <div ?hidden="${this.selectedUser == 'public'}">Access your PG Farm temporary access token (password) via the PG Farm command line interface or Desktop application</div>
+    <div ?hidden="${this.selectedUser == 'public'}">
+      Access your PG Farm temporary access token (password) via the PG Farm command line interface or Desktop application.
+      For more information, see the <a href="/docs/authenticate">login help documentation</a>.
+    </div>
   </div>
 
 `;}

@@ -5,3 +5,4 @@ import '../public/app-home.js';
 import '../public/app-organization.js';
 import '../public/app-organizations.js';
 import '../public/app-search.js';
+import '../docs/app-docs.js';

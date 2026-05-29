@@ -48,7 +48,7 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
   }
 
   async _initUser() {
-    this.user = await config.getUser();
+    this.user = (await config.getUser())?.user;
     if( this.user?.loggedIn ) {
       this.isLoggedIn = true;
       this.userTypes.unshift('you');

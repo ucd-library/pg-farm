@@ -43,14 +43,14 @@ return html`
   </div>
   <div class='l-container u-space-mt--large l-container--flush-with-page-header'>
     <h2 class='primary ${hasSa ? 'u-space-mb': 'u-space-mb--large'}'>My Service Accounts</h2>
-    <p ?hidden=${!hasSa}>For more information about service accounts, see the <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a>.</p>
+    <p ?hidden=${!hasSa}>For more information about service accounts, see the <a href="/docs/authenticate-service-account">service account documentation</a>.</p>
     <div>
       ${this.dataCtl?.serviceAccounts?.map(sa => html`
         <service-account-teaser .data=${sa} class='u-space-mb--large'></service-account-teaser>
       `)}
     </div>
     <app-no-results ?hidden=${hasSa} text="You do not own any service accounts.">
-      <div slot='subtext'>To learn, see the <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a>.</div>
+      <div slot='subtext'>To learn, see the <a href="/docs/authenticate-service-account">service account documentation</a>.</div>
     </app-no-results>
   </div>
 

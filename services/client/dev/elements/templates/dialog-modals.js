@@ -51,7 +51,7 @@ export function renderServiceAccountRotationConfirmation(user){
   return html`
     <p>Are you sure you want to generate a new password for service account <strong>${username}</strong>?</p>
     <p>To ensure there is no disruption to services, deploy your new secret before your access token expires.</p>
-    <p>See the <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a> for more information.</p>
+    <p>See the <a href="/docs/authenticate-service-account">service account documentation</a> for more information.</p>
     <p><strong>This action cannot be undone.</strong></p>
     `
 }
