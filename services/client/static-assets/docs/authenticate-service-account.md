@@ -8,7 +8,7 @@ This page explains how to use a **service account** to connect your application 
 - [Rotating a Password](#rotating-a-password)
 - [How It Works](#how-it-works)
 - [Getting a Token](#getting-a-token)
-- [Connecting with psycopg2](#connecting-with-psycopg2)
+- [Connecting with psycopg3](#connecting-with-psycopg3)
 - [Automatic Token Rotation](#automatic-token-rotation)
 
 ---
@@ -25,7 +25,7 @@ You use the secret to request a short-lived **token** (valid for 7 days). Your a
 
 ## Requesting a Service Account
 
-Contact a **PG Farm administrator** and provide:
+Contact a **PG Farm administrator** at pgfarm@ucdavis.edu and provide:
 
 - Your PG Farm username (the account that will own the service account)
 - A short name for the service account (e.g., `my-etl-pipeline`)
@@ -159,12 +159,12 @@ Use the value of `access_token` as your PostgreSQL password. The `expires_in` fi
 
 ---
 
-## Connecting with psycopg2
+## Connecting with psycopg3
 
 Install the required packages if you haven't already:
 
 ```bash
-pip install psycopg2-binary requests
+pip install "psycopg[binary]" requests
 ```
 
 A basic connection using credentials from environment variables:
@@ -172,7 +172,7 @@ A basic connection using credentials from environment variables:
 ```python
 import os
 import requests
-import psycopg2
+import psycopg
 
 PGFARM_URL = "https://pgfarm.library.ucdavis.edu"
 USERNAME = os.environ["PG_FARM_USERNAME"]
@@ -193,7 +193,7 @@ def get_token():
 
 token, _ = get_token()
 
-conn = psycopg2.connect(
+conn = psycopg.connect(
     host="pgfarm.library.ucdavis.edu",
     port=5432,
     user=USERNAME,
@@ -221,37 +221,47 @@ USERNAME, SECRET = read_credentials()
 
 ## Automatic Token Rotation
 
-Tokens are valid for 7 days. For long-running applications you should refresh the token before it expires and reconnect automatically on failure.
+Tokens are valid for 7 days. For long-running applications you should refresh the token before it expires. The class below maintains a pool of 3 connections and rotates the token every 5 days — giving a 2-day safety buffer — using a background timer. When the token is rotated, a fresh pool is opened before the old one is closed so in-flight queries are never interrupted.
 
-The class below handles both time-based token refresh and reconnection after a dropped connection:
+Install the required packages:
+
+```bash
+pip install "psycopg[binary]" psycopg_pool requests
+```
 
 ```python
 import os
 import time
+import threading
 import requests
-import psycopg2
+import psycopg
+from psycopg_pool import ConnectionPool
 
 PGFARM_URL = "https://pgfarm.library.ucdavis.edu"
 
-# Refresh the token this many seconds before it actually expires.
-TOKEN_REFRESH_BUFFER = 300  # 5 minutes
+# Rotate the token after 5 days; token lifetime is 7 days, leaving a 2-day buffer.
+TOKEN_ROTATE_AFTER = 5 * 24 * 3600
+
+POOL_SIZE = 3
 
 
-class PgFarmConnection:
+class PgFarmPool:
     """
-    Manages a psycopg2 connection to PG Farm with automatic token rotation.
+    psycopg3 connection pool for PG Farm with automatic token rotation.
 
-    Tokens are refreshed proactively before expiry and on connection failure,
-    so your application never has to handle authentication errors manually.
+    Opens a pool of `POOL_SIZE` connections on construction and schedules a
+    background token rotation every 5 days. On rotation, a new pool is
+    opened before the old one is closed so no queries are interrupted.
 
     Usage:
-        db = PgFarmConnection(
+        pool = PgFarmPool(
             username=os.environ["PG_FARM_USERNAME"],
             secret=os.environ["PG_FARM_SECRET"],
             dbname="your-org/your-database",
         )
-        rows = db.query("SELECT * FROM my_table WHERE id = %s", (42,))
-        db.close()
+        with pool.connection() as conn:
+            rows = conn.execute("SELECT * FROM my_table WHERE id = %s", (42,)).fetchall()
+        pool.close()
     """
 
     def __init__(self, username, secret, dbname,
@@ -262,8 +272,10 @@ class PgFarmConnection:
         self.host = host
         self.port = port
         self._token = None
-        self._token_expiry = 0   # unix timestamp after which the token is stale
-        self._conn = None
+        self._pool = None
+        self._lock = threading.Lock()
+        self._timer = None
+        self._open()
 
     def _fetch_token(self):
         """Request a fresh token from PG Farm."""
@@ -273,69 +285,89 @@ class PgFarmConnection:
             timeout=10,
         )
         resp.raise_for_status()
-        data = resp.json()
-        self._token = data["access_token"]
-        self._token_expiry = time.time() + data["expires_in"] - TOKEN_REFRESH_BUFFER
+        self._token = resp.json()["access_token"]
 
-    def _token_is_fresh(self):
-        return self._token is not None and time.time() < self._token_expiry
-
-    def _open(self):
-        """Open (or reopen) the database connection, refreshing the token if needed."""
-        if not self._token_is_fresh():
-            self._fetch_token()
-        self._conn = psycopg2.connect(
-            host=self.host,
-            port=self.port,
-            user=self.username,
-            password=self._token,
-            dbname=self.dbname,
-            sslmode="require",
+    def _conninfo(self):
+        """Build a libpq connection string with the current token as password."""
+        return (
+            f"host={self.host} port={self.port} dbname={self.dbname} "
+            f"user={self.username} password={self._token} sslmode=require"
         )
 
-    def query(self, sql, params=None):
-        """
-        Execute a query and return all rows.
+    def _open(self):
+        """Fetch a token and open the connection pool."""
+        self._fetch_token()
+        self._pool = ConnectionPool(
+            self._conninfo(),
+            min_size=POOL_SIZE,
+            max_size=POOL_SIZE,
+            open=True,
+        )
+        self._schedule_rotation()
 
-        On a connection or authentication error the token is refreshed and the
-        query is retried once before the exception is re-raised.
+    def _rotate(self):
+        """Replace the token and pool without interrupting in-flight queries."""
+        self._fetch_token()
+        new_pool = ConnectionPool(
+            self._conninfo(),
+            min_size=POOL_SIZE,
+            max_size=POOL_SIZE,
+            open=True,
+        )
+        with self._lock:
+            old_pool, self._pool = self._pool, new_pool
+        old_pool.close()
+        self._schedule_rotation()
+
+    def _schedule_rotation(self):
+        """Schedule the next token rotation TOKEN_ROTATE_AFTER seconds from now."""
+        if self._timer is not None:
+            self._timer.cancel()
+        self._timer = threading.Timer(TOKEN_ROTATE_AFTER, self._rotate)
+        self._timer.daemon = True
+        self._timer.start()
+
+    def connection(self):
         """
-        for attempt in range(2):
-            try:
-                if self._conn is None or self._conn.closed:
-                    self._open()
-                with self._conn.cursor() as cur:
-                    cur.execute(sql, params)
-                    return cur.fetchall()
-            except (psycopg2.OperationalError, psycopg2.InterfaceError):
-                if attempt == 0:
-                    # Force a fresh token and a new connection on next iteration.
-                    self._token_expiry = 0
-                    self._conn = None
-                else:
-                    raise
+        Return a context manager that yields a pooled psycopg connection.
+
+        The connection is automatically returned to the pool when the ``with``
+        block exits, whether normally or via an exception. The underlying
+        socket is kept alive for reuse — call ``close()`` only at shutdown.
+
+        :returns: psycopg_pool connection context manager
+        """
+        with self._lock:
+            pool = self._pool
+        return pool.connection()
 
     def close(self):
-        """Close the underlying connection."""
-        if self._conn and not self._conn.closed:
-            self._conn.close()
+        """Cancel the rotation timer and close the connection pool (call at shutdown only)."""
+        if self._timer is not None:
+            self._timer.cancel()
+        if self._pool is not None:
+            self._pool.close()
 ```
 
 ### Example usage
 
+Create the pool once at application startup and share it across requests. Each call to `pool.connection()` borrows a connection from the pool for the duration of the `with` block, then returns it automatically — no explicit close needed per request. On token rotation, the new pool handles incoming requests immediately while any connections already borrowed from the old pool finish their work and drain naturally; existing DB sessions are unaffected because the token is only needed when opening a new connection.
+
 ```python
-db = PgFarmConnection(
+# --- application startup ---
+pool = PgFarmPool(
     username=os.environ["PG_FARM_USERNAME"],
     secret=os.environ["PG_FARM_SECRET"],
     dbname="your-org/your-database",
 )
 
-try:
-    rows = db.query("SELECT id, name FROM public.my_table LIMIT 10")
-    for row in rows:
-        print(row)
-finally:
-    db.close()
+# --- per-request usage ---
+# Connection is returned to the pool automatically when the with block exits.
+with pool.connection() as conn:
+    rows = conn.execute("SELECT id, name FROM public.my_table LIMIT 10").fetchall()
+
+# --- application shutdown only ---
+pool.close()
 ```
 
 ### Using a file-stored secret
@@ -343,7 +375,7 @@ finally:
 ```python
 username, secret = read_credentials("~/my-etl-pipeline-service-account.json")
 
-db = PgFarmConnection(
+pool = PgFarmPool(
     username=username,
     secret=secret,
     dbname="your-org/your-database",
