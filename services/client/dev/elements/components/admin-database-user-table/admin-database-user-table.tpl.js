@@ -112,7 +112,7 @@ return html`
       </div>
     </div>
     <div class='alert' ?hidden=${ !(!this.hasServiceAccounts && this.tableCtl.getFilterValue('service-account')) }>
-      This database does not currently have any service accounts. To request a service account, see the  <a href="/static-assets/docs/authenticate-service-account.md">service account documentation</a>.
+      This database does not currently have any service accounts. To request a service account, see the  <a href="/docs/authenticate-service-account">service account documentation</a>.
     </div>
     ${_renderDesktopView.call(this)}
     ${_renderMobileView.call(this)}

@@ -48,6 +48,7 @@ export default class AppDocs extends Mixin(LitElement)
 
     requestAnimationFrame(() => {
       this._appendTextCopyButtons();
+      this._addIdToHeadings();
     });
   }
 
@@ -91,6 +92,13 @@ export default class AppDocs extends Mixin(LitElement)
     });
 
     return this.content;
+  }
+
+  _addIdToHeadings() {
+    this.querySelectorAll('#md h1, #md h2, #md h3').forEach((heading) => {
+      if (heading.id) return;
+      heading.id = heading.innerText.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+    });
   }
 
   /**
