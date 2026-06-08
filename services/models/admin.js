@@ -546,7 +546,6 @@ class AdminModel {
 
   rejectStart(instance, e) {
     let id = instance.instance_id || instance.id;
-    console.log('rejecting start for instance', id);
     if( !this.instancesStarting[id] ) return;
 
     this.instancesStarting[id].reject(e);
@@ -555,7 +554,6 @@ class AdminModel {
 
   resolveStart(instance) {
     let id = instance.instance_id || instance.id;
-    console.log('resolving start for instance', id);
     if( !this.instancesStarting[id] ) return;
     this.instancesStarting[id].resolve(instance);
     delete this.instancesStarting[id];

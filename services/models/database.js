@@ -131,7 +131,7 @@ class Database {
       pgRestOrgName = org.name+'-';
       opts.organization = org.name;
     }
-    opts.pgrest_hostname = `rest-${pgRestOrgName}${opts.name}`;
+    opts.pgrest_hostname = `rest-${pgRestOrgName}${opts.name}`.toLowerCase();
 
     try {
       logger.info('Creating database', ctx.logSignal);
