@@ -169,6 +169,7 @@ const config = {
   oidc : {
     tokenCacheTTL : env.OIDC_TOKEN_CACHE_TTL || 1000*60*5,
     baseUrl : env.OIDC_BASE_URL || 'https://auth.library.ucdavis.edu/realms/pg-farm',
+    adminProxyUrl : env.OIDC_ADMIN_PROXY_URL || '', // optional URL to proxy Keycloak admin API requests through (e.g. for k8s in-cluster access)
     clientId : env.OIDC_CLIENT_ID || '',
     secret : env.OIDC_SECRET || '',
     scopes : env.OIDC_SCOPES || 'identityProvider roles openid profile email',

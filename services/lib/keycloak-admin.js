@@ -7,7 +7,7 @@ import logger from './logger.js';
  * @returns {string}
  */
 function getAdminBaseUrl() {
-  return config.oidc.baseUrl.replace('/realms/', '/admin/realms/');
+  return (config.oidc.adminProxyUrl || config.oidc.baseUrl).replace('/realms/', '/admin/realms/');
 }
 
 class KeycloakAdmin {
@@ -15,6 +15,10 @@ class KeycloakAdmin {
   constructor() {
     this._adminToken = null;
     this._adminTokenExpires = 0;
+
+    if( config.oidc.adminProxyUrl ) {
+      logger.info('Using Keycloak admin API proxy at', config.oidc.adminProxyUrl);
+    }
   }
 
   /**
