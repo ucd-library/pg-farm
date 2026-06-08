@@ -60,6 +60,14 @@ class Auth {
         opts.file = path.join(process.cwd(), opts.file);
       }
       opts.secret = fs.readFileSync(opts.file, 'utf-8').trim();
+      if( opts.file.endsWith('.json') ) {
+        try {
+          opts.secret = JSON.parse(opts.secret).secret;
+        } catch(e) {
+          console.error('Failed to parse JSON file', e);
+          process.exit(1);
+        }
+      }
     } else if( opts.env ) {
       opts.secret = process.env[opts.env];
     }
@@ -68,11 +76,6 @@ class Auth {
       console.error('No secret provided');
       process.exit(1);
     }
-
-    console.log({
-        username: name,
-        secret: opts.secret
-      });
 
     let resp = await fetch(`${config.host}/auth/service-account/login`, {
       method: 'POST',
@@ -99,6 +102,8 @@ class Auth {
     saveConfig();
 
     this.updateService();
+
+    console.log('Login successful');
   }
 
   async getPemFile() {
