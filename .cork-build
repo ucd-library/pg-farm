@@ -5,6 +5,10 @@
     "pgfarm-service" : {
       "contextPath" : ".",
       "dockerfile" : "services/Dockerfile"
+    },
+    "gke-auth-proxy" : {
+      "contextPath" : "gke-auth-proxy",
+      "dockerfile" : "gke-auth-proxy/Dockerfile"
     }
   }
 }

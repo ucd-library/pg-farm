@@ -672,13 +672,8 @@ class Instance {
     let instance = ctx.instance;
     let pvcName = instance.hostname+'-ps-'+instance.hostname+'-0';
 
-    let currentConfig = await kubectl.get('pvc', pvcName);
-    currentConfig.spec.resources.requests.storage = size;
-
-    await kubectl.apply(currentConfig, {
-      stdin: true,
-      isJson: true
-    });
+    const patch = JSON.stringify({ spec: { resources: { requests: { storage: size } } } });
+    await kubectl.exec(`kubectl patch pvc ${pvcName} --type merge -p '${patch}'`);
   }
 
   getPodStatus(ctx) {
