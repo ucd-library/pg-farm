@@ -5,7 +5,7 @@ import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
 import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
 import {middleware as contextMiddleware} from '../../../../lib/context.js';
-import isInstanceAlive from '../middleware/instance-alive.js';
+import { isInstanceAlive } from '../middleware/instance-alive.js';
 
 const router = Router();
 
