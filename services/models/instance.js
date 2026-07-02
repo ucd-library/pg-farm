@@ -647,13 +647,20 @@ class Instance {
    * @method resizeVolume
    * @description Resize the volume for the instance.  This will update the k8s
    * config for the instance and then resize the volume in k8s.
-   * 
+   *
+   * StatefulSet.spec.volumeClaimTemplates is immutable, so the PVC itself is patched
+   * directly to trigger the actual disk resize.  The StatefulSet is then deleted with
+   * --cascade=orphan (leaving the running pod and PVC untouched) and reapplied so its
+   * spec reflects the new size.  Without this, the next call to apply() would fail
+   * trying to update the immutable volumeClaimTemplates field on the live StatefulSet.
+   *
    * @param {String|Object} ctx context object or id
-   * @param {Number} size integer size in GiB or string size with GiB suffix 
+   * @param {Number} size integer size in GiB or string size with GiB suffix
    */
   async resizeVolume(ctx, size) {
+    ctx = getContext(ctx);
     let customProps = await client.getInstanceConfig(ctx);
-    
+
     // convert size to Gi
     if( typeof size === 'number' ) {
       size = size+'Gi';
@@ -670,10 +677,15 @@ class Instance {
     await client.setInstanceConfig(ctx, 'volumeSize', size);
 
     let instance = ctx.instance;
-    let pvcName = instance.hostname+'-ps-'+instance.hostname+'-0';
+    let hostname = instance.hostname;
+    let pvcName = hostname+'-ps-'+hostname+'-0';
 
     const patch = JSON.stringify({ spec: { resources: { requests: { storage: size } } } });
     await kubectl.exec(`kubectl patch pvc ${pvcName} --type merge -p '${patch}'`);
+
+    logger.info('Recreating statefulset to pick up resized volume claim template', hostname, ctx.logSignal);
+    await kubectl.delete('statefulset', hostname, {cascade: 'orphan'});
+    await this.apply(ctx);
   }
 
   getPodStatus(ctx) {

@@ -153,9 +153,21 @@ class KubectlWrapper {
     return stdout;
   }
 
-  async delete(type, name) {
+  /**
+   * @method delete
+   * @description Delete a kubernetes resource.
+   *
+   * @param {String} type resource type (e.g. 'statefulset', 'service')
+   * @param {String} name resource name
+   * @param {Object} opts
+   * @param {String} opts.cascade cascade strategy to pass through (e.g. 'orphan' to delete
+   * the resource without deleting its dependents, such as a StatefulSet's pods/PVCs)
+   * @returns {Promise<String>}
+   */
+  async delete(type, name, opts={}) {
     await this.init();
-    return this.exec(`kubectl delete ${type} ${name}`);
+    let flags = opts.cascade ? ` --cascade=${opts.cascade}` : '';
+    return this.exec(`kubectl delete ${type} ${name}${flags}`);
   }
 
   /**
