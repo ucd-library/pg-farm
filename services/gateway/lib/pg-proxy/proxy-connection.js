@@ -1171,8 +1171,9 @@ class ProxyConnection {
 
     logger.info('Checking instance is up', this.getConnectionInfo());
 
+    let resp;
     try {
-      let resp = await admin.startInstance(this.ctx, {pgRest: false});
+      resp = await admin.startInstance(this.ctx, {pgRest: false});
     } catch (e) {
       logger.error('Error starting instance', this.getConnectionInfo(), e);
       await this.sendNotice(
