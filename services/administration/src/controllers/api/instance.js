@@ -4,7 +4,7 @@ import keycloak from '../../../../lib/keycloak.js';
 import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
 import remoteExec from '../../../../lib/pg-helper-remote-exec.js';
-import {middleware as contextMiddleware} from '../../../../lib/context.js';
+import {middleware as contextMiddleware, requireContext} from '../../../../lib/context.js';
 import isInstanceAlive from '../middleware/instance-alive.js';
 
 const router = Router();
@@ -142,6 +142,7 @@ router.delete('/:organization/:instance/user/:user',
 
 router.post('/:organization/:instance/stop',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   async (req, res) => {
   try {
@@ -155,6 +156,7 @@ router.post('/:organization/:instance/stop',
 
 router.post('/:organization/:instance/start',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   async (req, res) => {
   try {
@@ -173,6 +175,7 @@ router.post('/:organization/:instance/start',
 
 router.post('/:organization/:instance/restart',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   async (req, res) => {
   try {
@@ -197,6 +200,7 @@ router.patch('/:organization/:instance/priority/:priority',
 
 router.post('/:organization/:instance/backup',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -211,6 +215,7 @@ router.post('/:organization/:instance/backup',
 
 router.post('/:organization/:instance/sync-users',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -237,6 +242,7 @@ router.post('/:organization/:instance/sync-users',
 
 router.post('/:organization/:instance/archive',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -251,6 +257,7 @@ router.post('/:organization/:instance/archive',
 
 router.post('/:organization/:instance/restore',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   async (req, res) => {
   try {
@@ -275,6 +282,7 @@ router.post('/sleep',
 
 router.post('/:organization/:instance/resize',
   contextMiddleware,
+  requireContext('organization', 'instance'),
   keycloak.protect('admin'),
   async (req, res) => {
   try {

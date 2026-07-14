@@ -182,7 +182,7 @@ class AdminModel {
 
     // check if instance is already starting
     if( this.instancesStarting[iid] ) {
-      logger.info('Instance is starting, waiting...', instance.hostname, iCtx.logSignal);
+      logger.info('Instance is starting, waiting...', iCtx.instance.hostname, iCtx.logSignal);
       await this.instancesStarting[iid].promise;
     }
 

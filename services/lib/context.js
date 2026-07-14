@@ -290,4 +290,30 @@ function getContext(obj) {
   return store.get(obj);
 }
 
-export {middleware, getContext, createContext, store};
+/**
+ * @method requireContext
+ * @description express middleware factory that returns a 404 if any of the
+ * given context types were not found when the context was created.  Use after
+ * the context middleware on routes that operate on existing resources, where
+ * the method-based notFound check is skipped (eg POST action routes).
+ *
+ * @param {...String} types context types to require: 'organization', 'database' or 'instance'
+ *
+ * @returns {Function} express middleware
+ */
+function requireContext(...types) {
+  return (req, res, next) => {
+    for( let type of types ) {
+      if( !req.context?.notFound?.[type] ) continue;
+
+      let name = req.params[type] || req.query[type] || req.body?.[type] ||
+        req.context[type]?.name;
+      let label = type.charAt(0).toUpperCase() + type.slice(1);
+
+      return res.status(404).json({error: `${label} '${name}' not found`});
+    }
+    next();
+  };
+}
+
+export {middleware, getContext, createContext, requireContext, store};
