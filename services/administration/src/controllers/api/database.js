@@ -2,7 +2,7 @@ import {Router} from 'express';
 import {database, pgRest, instance, user, organization, admin} from '../../../../models/index.js';
 import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
-import {middleware as contextMiddleware} from '../../../../lib/context.js';
+import {middleware as contextMiddleware, requireContext} from '../../../../lib/context.js';
 import isInstanceAlive from '../middleware/instance-alive.js';
 
 const router = Router();
@@ -232,6 +232,7 @@ router.patch(
 /** Restart db pgrest instance **/
 router.post('/:organization/:database/api/restart',
   contextMiddleware,
+  requireContext('organization', 'database'),
   keycloak.protect('admin'),
   async (req, res) => {
   try {
@@ -244,6 +245,7 @@ router.post('/:organization/:database/api/restart',
 
 router.post('/:organization/:database/api/updated',
   contextMiddleware,
+  requireContext('organization', 'database'),
   keycloak.protect('instance-admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -257,6 +259,7 @@ router.post('/:organization/:database/api/updated',
 
 router.post('/:organization/:database/api/expose/:table',
   contextMiddleware,
+  requireContext('organization', 'database'),
   keycloak.protect('instance-admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -272,6 +275,7 @@ router.post('/:organization/:database/api/expose/:table',
 /** rerun db init **/
 router.post('/:organization/:database/init',
   contextMiddleware,
+  requireContext('organization', 'database'),
   keycloak.protect('admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -457,6 +461,7 @@ router.put('/:organization/:database/grant/:schema/:user/:permission',
 
 router.post('/:organization/:database/grant',
   contextMiddleware,
+  requireContext('organization', 'database'),
   keycloak.protect('instance-admin'),
   isInstanceAlive(),
   async (req, res) => {
@@ -519,6 +524,7 @@ router.delete('/:organization/:database/revoke/:schema/:user/:permission',
 
 router.post('/:organization/:database/revoke',
   contextMiddleware,
+  requireContext('organization', 'database'),
   keycloak.protect('instance-admin'),
   isInstanceAlive(),
   async (req, res) => {
