@@ -124,6 +124,44 @@ describe('instance API', function () {
     });
   }
 
+  // ── POST /:org/:instance/start (readiness gating) ─────────────────────────────
+  // regression test: the route must await resp.instance/resp.pgrest before
+  // responding when startInstance() reports {starting: true}, per its documented
+  // calling contract in services/models/admin.js.
+
+  describe('POST /:org/:instance/start (waits for readiness)', function () {
+
+    afterEach(function () {
+      if (adminModel.startInstance.restore) adminModel.startInstance.restore();
+    });
+
+    it('does not respond until resp.instance and resp.pgrest resolve', async function () {
+      let instanceReady = false;
+      let pgrestReady = false;
+
+      const instancePromise = new Promise(resolve => {
+        setTimeout(() => { instanceReady = true; resolve(); }, 50);
+      });
+      const pgrestPromise = new Promise(resolve => {
+        setTimeout(() => { pgrestReady = true; resolve(); }, 100);
+      });
+
+      sinon.stub(adminModel, 'startInstance').resolves({
+        starting: true,
+        instance: instancePromise,
+        pgrest: pgrestPromise,
+      });
+
+      const res = await request(users.admin)
+        .post('/api/instance/api-inst-org/inst-api-test/start');
+
+      assert.equal(res.status, 200);
+      assert.isTrue(instanceReady, 'response returned before resp.instance resolved');
+      assert.isTrue(pgrestReady, 'response returned before resp.pgrest resolved');
+    });
+
+  });
+
   // ── PATCH /:org/:instance/priority/:priority ──────────────────────────────────
 
   describe('PATCH /:org/:instance/priority/:priority', function () {

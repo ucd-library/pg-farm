@@ -162,11 +162,11 @@ router.post('/:organization/:instance/start',
   try {
     let force = req.query.force === 'true';
 
-    let resp = await model.startInstance(req.context, {
-      force,
-      waitForPgRest: true,
-      startPgRest: true
-    });
+    let resp = await model.startInstance(req.context, {force});
+    if( resp.starting ) {
+      await resp.instance;
+      await resp.pgrest;
+    }
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
