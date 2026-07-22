@@ -106,7 +106,7 @@ function _renderHeader(){
         style-modifiers="highlight">
         <svg slot="custom-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
         <a href='/me'>Manage Databases</a>
-        <a href='/docs/authenticate'>Login to Database</a>
+        <a href='/docs/home'>Documentation</a>
         <a href=${user.logoutPath}>Sign Out</a>
       </ucd-theme-quick-links>
       ` : html`
@@ -116,7 +116,7 @@ function _renderHeader(){
         style-modifiers="highlight">
         <svg slot="custom-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"/></svg>
         <a href=${user.loginPath}>Sign In</a>
-        <a href='/docs/authenticate'>Login to Database</a>
+        <a href='/docs/home'>Documentation</a>
       </ucd-theme-quick-links>
       `}
       
@@ -170,7 +170,7 @@ function _renderFooter(){
             <div class="footer-nav">
               <ul class="menu">
                 <!--<li><a href='/features'>Features</a></li>-->
-                <li><a href='#'>Documentation</a></li>
+                <li><a href='/docs/home'>Documentation</a></li>
                 <li><a href='#'>Support</a></li>
               </ul>
             </div>

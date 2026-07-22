@@ -7,6 +7,36 @@ import instanceModel from '../../../../models/instance.js'
  * If the instance is not alive, it responds with a 503 status code.
  */
 
+/**
+ * @function summarizePodStatus
+ * @description Reduce a raw kubectl pod status (conditions, container statuses, full event log,
+ * volume mounts, image digests, etc.) down to the fields a client needs to explain why an
+ * instance isn't responsive yet, without leaking internal k8s/cluster details.
+ *
+ * @param {Object} podStatus raw status from instanceModel.getPodStatus()
+ *
+ * @returns {Object} trimmed pod status summary
+ */
+function summarizePodStatus(podStatus) {
+  if( !podStatus ) return null;
+
+  let readyCondition = podStatus.conditions?.find(c => c.type === 'Ready');
+  let notReadyContainers = (podStatus.containerStatuses || [])
+    .filter(c => !c.ready)
+    .map(c => ({
+      name: c.name,
+      state: Object.keys(c.state || {})[0] || 'unknown',
+      reason: c.state?.waiting?.reason || c.state?.terminated?.reason || null
+    }));
+
+  return {
+    phase: podStatus.phase,
+    ready: readyCondition?.status === 'True',
+    reason: readyCondition?.message || readyCondition?.reason || null,
+    containersNotReady: notReadyContainers
+  };
+}
+
 function createMiddleware(opts={}) {
   async function isInstanceAlive(req, res, next) {
     if( opts.useAliveFlag === true && req.query.isAlive !== 'true' ) {
@@ -33,12 +63,13 @@ function createMiddleware(opts={}) {
 
     if( !isAlive ) {
       let ctx = req.context;
+      let podStatus = await instanceModel.getPodStatus(req.context);
       return res.status(503).json({
-        error: 'Instance is not responsive', 
+        error: 'Instance is not responsive',
         organization: ctx.organization.name,
         name: ctx.instance.name,
         state: ctx.instance.state,
-        podStatus: await instanceModel.getPodStatus(req.context)
+        podStatus: summarizePodStatus(podStatus)
       });
     }
 

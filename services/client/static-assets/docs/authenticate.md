@@ -65,3 +65,15 @@ If you need to connect to PG Farm from a server, script, or automated pipeline â
 Service accounts are created by a PG Farm administrator on your behalf. Once created, you (the account owner) can rotate the password yourself at any time using the CLI.
 
 See [Service Account Authentication](/docs/authenticate-service-account) for details on requesting an account, rotating your secret, storing it safely, and Python code examples for automatic token rotation with psycopg2.
+
+# Public Database Access
+
+For databases with public access enabled, you do not need to log in or obtain a temporary token. You can connect directly using the read-only public user account.
+
+See [Public User Account Access](/docs/public-user-account) for details on connecting with the public account and querying data using the `api` schema.
+
+# HTTP REST API Access (PostgREST)
+
+PG Farm automatically generates an HTTP REST API for exposed database views and tables. This allows you to query your database via standard HTTP requests using PostgREST.
+
+See [HTTP REST API Access](/docs/http-rest-api) for information on querying endpoints, querying syntax (filtering, ordering, limit/offset), and authentication options.

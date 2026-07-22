@@ -170,10 +170,14 @@ class BackupModel {
       await this.runPgRestore(hostname, database);
     }
 
-    let startResp = await this.models.admin.startInstance(instNameOrId, orgNameOrId);
-    if( startResp.starting ) {
-      await startResp.instance;
-      await startResp.pgrest;
+    try {
+      let startResp = await this.models.admin.startInstance(instNameOrId, orgNameOrId);
+      if( startResp.starting ) {
+        await startResp.instance;
+        await startResp.pgrest;
+      }
+    } catch(e) {
+      logger.error('Error starting instance after restore: ', e);
     }
   }
 

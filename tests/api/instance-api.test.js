@@ -1,12 +1,14 @@
 import { assert } from 'chai';
+import sinon from 'sinon';
 import { reset } from '../helpers/db.js';
 import { createOrg, createInstance, createInstanceUser } from '../helpers/fixtures.js';
 import { users } from '../helpers/auth.js';
 import { request } from '../helpers/app.js';
+import { admin as adminModel, instance as instanceModel } from '../../services/models/index.js';
 
 describe('instance API', function () {
 
-  let inst, instanceUser;
+  let inst, instanceUser, instanceAdmin;
 
   before(async function () {
     await reset();
@@ -16,6 +18,10 @@ describe('instance API', function () {
     instanceUser = await createInstanceUser('api-inst-org', 'inst-api-test', {
       username: 'api-inst-user',
       type: 'USER',
+    });
+    instanceAdmin = await createInstanceUser('api-inst-org', 'inst-api-test', {
+      username: 'api-inst-admin',
+      type: 'ADMIN',
     });
   });
 
@@ -59,6 +65,99 @@ describe('instance API', function () {
     it('returns 403 for anonymous user', async function () {
       const res = await request(null).get('/api/instance/api-inst-org/inst-api-test');
       assert.equal(res.status, 403);
+    });
+
+  });
+
+  // ── POST /:org/:instance/stop, /start, /restart ───────────────────────────────
+  // instance admins (not just site admins) must be allowed to call these
+
+  for (const action of ['stop', 'start', 'restart']) {
+    describe(`POST /:org/:instance/${action}`, function () {
+
+      // start/restart drive real k8s + pg-rest readiness waits that don't run in
+      // this test environment, so stub the model call to isolate the auth gate.
+      let modelStub;
+
+      beforeEach(function () {
+        if (action === 'start') {
+          modelStub = sinon.stub(adminModel, 'startInstance').resolves({});
+        } else if (action === 'restart') {
+          modelStub = sinon.stub(instanceModel, 'restart').resolves({});
+        }
+      });
+
+      afterEach(function () {
+        if (modelStub) modelStub.restore();
+      });
+
+      it('returns 200 for site admin', async function () {
+        const res = await request(users.admin)
+          .post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 200);
+      });
+
+      it('returns 200 for instance admin (not just site admin)', async function () {
+        const res = await request({
+          username: instanceAdmin.username,
+          preferred_username: instanceAdmin.username,
+          roles: [instanceAdmin.username],
+        }).post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 200);
+      });
+
+      it('returns 403 for a regular instance user', async function () {
+        const res = await request({
+          username: instanceUser.username,
+          preferred_username: instanceUser.username,
+          roles: [instanceUser.username],
+        }).post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 403);
+      });
+
+      it('returns 403 for anonymous user', async function () {
+        const res = await request(null)
+          .post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 403);
+      });
+
+    });
+  }
+
+  // ── POST /:org/:instance/start (readiness gating) ─────────────────────────────
+  // regression test: the route must await resp.instance/resp.pgrest before
+  // responding when startInstance() reports {starting: true}, per its documented
+  // calling contract in services/models/admin.js.
+
+  describe('POST /:org/:instance/start (waits for readiness)', function () {
+
+    afterEach(function () {
+      if (adminModel.startInstance.restore) adminModel.startInstance.restore();
+    });
+
+    it('does not respond until resp.instance and resp.pgrest resolve', async function () {
+      let instanceReady = false;
+      let pgrestReady = false;
+
+      const instancePromise = new Promise(resolve => {
+        setTimeout(() => { instanceReady = true; resolve(); }, 50);
+      });
+      const pgrestPromise = new Promise(resolve => {
+        setTimeout(() => { pgrestReady = true; resolve(); }, 100);
+      });
+
+      sinon.stub(adminModel, 'startInstance').resolves({
+        starting: true,
+        instance: instancePromise,
+        pgrest: pgrestPromise,
+      });
+
+      const res = await request(users.admin)
+        .post('/api/instance/api-inst-org/inst-api-test/start');
+
+      assert.equal(res.status, 200);
+      assert.isTrue(instanceReady, 'response returned before resp.instance resolved');
+      assert.isTrue(pgrestReady, 'response returned before resp.pgrest resolved');
     });
 
   });

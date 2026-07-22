@@ -62,11 +62,16 @@ return html`
       <pre><code>${unsafeHTML(this._exampleCode)}</code></pre>
     </div>
     <div ?hidden=${this.connectionType !== 'http'}>
-      <a href=${this.swaggerUrl} target="_blank">Open Database API Playground</a>
+      <a href=${this.swaggerUrl} target="_blank">Open Database API Playground</a> | 
+      <a href="/docs/http-rest-api">HTTP REST API Documentation</a>
     </div>
     <div ?hidden="${this.selectedUser == 'public'}">
       Access your PG Farm temporary access token (password) via the PG Farm command line interface or Desktop application.
       For more information, see the <a href="/docs/authenticate">login help documentation</a>.
+    </div>
+    <div ?hidden="${this.selectedUser != 'public'}">
+      The public user account provides read-only access to exposed database tables and views.
+      For more information, see the <a href="/docs/public-user-account">public access documentation</a>.
     </div>
   </div>
 

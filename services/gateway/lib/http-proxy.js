@@ -84,10 +84,17 @@ async function middleware(req, res) {
       res.status(503).send('Database is archived.  Please reachout to PG Farm support for assistance.');
       return;
     } else if( ctx.instance.state !== 'RUN' ) {
-      let startResp = await admin.startInstance(ctx);
-      if( startResp.starting ) {
-        await startResp.pgrest;
+      try {
+        let startResp = await admin.startInstance(ctx);
+        if( startResp.starting ) {
+          await startResp.pgrest;
+        }
+      } catch(e) {
+        logger.error('Error starting instance: ', e);
+        res.status(500).send('Error starting instance: '+e.message);
+        return;
       }
+      
     }
 
     client.updateDatabaseLastEvent(ctx.database.database_id, 'PGREST_REQUEST')

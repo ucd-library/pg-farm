@@ -1170,7 +1170,23 @@ class ProxyConnection {
     if( this.serverSocket?.readyState == 'open' ) return false;
 
     logger.info('Checking instance is up', this.getConnectionInfo());
-    let resp = await admin.startInstance(this.ctx, {pgRest: false});
+
+    let resp;
+    try {
+      resp = await admin.startInstance(this.ctx, {pgRest: false});
+    } catch (e) {
+      logger.error('Error starting instance', this.getConnectionInfo(), e);
+      await this.sendNotice(
+        this.NOTICE_SEVERITY.FATAL,
+        this.ERROR_CODES.CONNECTION_FAILURE,
+        `Error starting instance: ${e.message}`,
+        null,
+        'Please contact the PG Farm administrator.',
+        this.clientSocket
+      );
+      this.closeSockets();
+      return;
+    }
 
     if( resp.starting ) {
       await resp.instance;
