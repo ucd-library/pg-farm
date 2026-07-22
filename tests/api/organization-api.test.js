@@ -95,10 +95,15 @@ describe('organization API', function () {
 
   describe('GET /:org/users', function () {
 
-    it('returns 200 with array of users', async function () {
-      const res = await request(null).get('/api/organization/api-org-test/users');
+    it('returns 200 with array of users for an org admin', async function () {
+      const res = await request(users.admin).get('/api/organization/api-org-test/users');
       assert.equal(res.status, 200);
       assert.isArray(res.body);
+    });
+
+    it('returns 403 when not authenticated', async function () {
+      const res = await request(null).get('/api/organization/api-org-test/users');
+      assert.equal(res.status, 403);
     });
 
   });

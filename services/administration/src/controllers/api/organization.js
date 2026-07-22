@@ -54,6 +54,7 @@ router.get('/:organization',
 
 router.get('/:organization/users',
   contextMiddleware,
+  keycloak.protect('organization-admin'),
   async (req, res) => {
   try {
     let resp = await organization.getUsers(req.context);

@@ -1,12 +1,14 @@
 import { assert } from 'chai';
+import sinon from 'sinon';
 import { reset } from '../helpers/db.js';
 import { createOrg, createInstance, createInstanceUser } from '../helpers/fixtures.js';
 import { users } from '../helpers/auth.js';
 import { request } from '../helpers/app.js';
+import { admin as adminModel, instance as instanceModel } from '../../services/models/index.js';
 
 describe('instance API', function () {
 
-  let inst, instanceUser;
+  let inst, instanceUser, instanceAdmin;
 
   before(async function () {
     await reset();
@@ -16,6 +18,10 @@ describe('instance API', function () {
     instanceUser = await createInstanceUser('api-inst-org', 'inst-api-test', {
       username: 'api-inst-user',
       type: 'USER',
+    });
+    instanceAdmin = await createInstanceUser('api-inst-org', 'inst-api-test', {
+      username: 'api-inst-admin',
+      type: 'ADMIN',
     });
   });
 
@@ -62,6 +68,61 @@ describe('instance API', function () {
     });
 
   });
+
+  // ── POST /:org/:instance/stop, /start, /restart ───────────────────────────────
+  // instance admins (not just site admins) must be allowed to call these
+
+  for (const action of ['stop', 'start', 'restart']) {
+    describe(`POST /:org/:instance/${action}`, function () {
+
+      // start/restart drive real k8s + pg-rest readiness waits that don't run in
+      // this test environment, so stub the model call to isolate the auth gate.
+      let modelStub;
+
+      beforeEach(function () {
+        if (action === 'start') {
+          modelStub = sinon.stub(adminModel, 'startInstance').resolves({});
+        } else if (action === 'restart') {
+          modelStub = sinon.stub(instanceModel, 'restart').resolves({});
+        }
+      });
+
+      afterEach(function () {
+        if (modelStub) modelStub.restore();
+      });
+
+      it('returns 200 for site admin', async function () {
+        const res = await request(users.admin)
+          .post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 200);
+      });
+
+      it('returns 200 for instance admin (not just site admin)', async function () {
+        const res = await request({
+          username: instanceAdmin.username,
+          preferred_username: instanceAdmin.username,
+          roles: [instanceAdmin.username],
+        }).post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 200);
+      });
+
+      it('returns 403 for a regular instance user', async function () {
+        const res = await request({
+          username: instanceUser.username,
+          preferred_username: instanceUser.username,
+          roles: [instanceUser.username],
+        }).post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 403);
+      });
+
+      it('returns 403 for anonymous user', async function () {
+        const res = await request(null)
+          .post(`/api/instance/api-inst-org/inst-api-test/${action}`);
+        assert.equal(res.status, 403);
+      });
+
+    });
+  }
 
   // ── PATCH /:org/:instance/priority/:priority ──────────────────────────────────
 
