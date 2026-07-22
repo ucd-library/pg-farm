@@ -143,7 +143,7 @@ router.delete('/:organization/:instance/user/:user',
 router.post('/:organization/:instance/stop',
   contextMiddleware,
   requireContext('organization', 'instance'),
-  keycloak.protect('admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     let resp = await model.stopInstance(req.context);
@@ -157,16 +157,16 @@ router.post('/:organization/:instance/stop',
 router.post('/:organization/:instance/start',
   contextMiddleware,
   requireContext('organization', 'instance'),
-  keycloak.protect('admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     let force = req.query.force === 'true';
 
-    let resp = await model.startInstance(req.context, {
-      force,
-      waitForPgRest: true,
-      startPgRest: true
-    });
+    let resp = await model.startInstance(req.context, {force});
+    if( resp.starting ) {
+      await resp.instance;
+      await resp.pgrest;
+    }
     res.status(200).json({success: true});
   } catch(e) {
     handleError(res, e);
@@ -176,7 +176,7 @@ router.post('/:organization/:instance/start',
 router.post('/:organization/:instance/restart',
   contextMiddleware,
   requireContext('organization', 'instance'),
-  keycloak.protect('admin'),
+  keycloak.protect('instance-admin'),
   async (req, res) => {
   try {
     let resp = await instanceModel.restart(req.context);
