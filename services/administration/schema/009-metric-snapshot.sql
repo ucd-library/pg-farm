@@ -43,11 +43,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Part B: per-connection lifetime byte totals, written once at connection close for
--- ad-hoc per-session auditing (trend investigation lives in Prometheus, not here).
-ALTER TABLE pgfarm.connection ADD COLUMN IF NOT EXISTS bytes_ingress BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE pgfarm.connection ADD COLUMN IF NOT EXISTS bytes_egress BIGINT NOT NULL DEFAULT 0;
-
+-- Part B: bytes_ingress/bytes_egress columns and the connection_view update live in
+-- 006-connection.sql (they belong alongside pgfarm.connection's own definition).
 CREATE OR REPLACE FUNCTION pgfarm.update_connection_bytes(
     ses_id_in TEXT,
     bytes_ingress_in BIGINT,

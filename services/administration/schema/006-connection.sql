@@ -16,6 +16,11 @@ CREATE INDEX IF NOT EXISTS connection_user_id_idx ON pgfarm.connection(user_id);
 CREATE INDEX IF NOT EXISTS connection_opened_at_idx ON pgfarm.connection(opened_at);
 CREATE INDEX IF NOT EXISTS connection_closed_at_idx ON pgfarm.connection(closed_at);
 
+-- per-connection lifetime byte totals, written once at connection close for ad-hoc
+-- per-session auditing (trend investigation lives in Prometheus, not here).
+ALTER TABLE pgfarm.connection ADD COLUMN IF NOT EXISTS bytes_ingress BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE pgfarm.connection ADD COLUMN IF NOT EXISTS bytes_egress BIGINT NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS pgfarm.connection_event (
     connection_event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_id TEXT REFERENCES pgfarm.connection(session_id),

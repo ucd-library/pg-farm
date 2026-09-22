@@ -5,10 +5,12 @@ import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import metrics from '../../lib/metrics/index.js';
 import {createContext} from '../../lib/context.js';
+import {isMetricsRequestAllowed} from './metrics-cidr-allow.js';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 const swaggerUiRouteRegex = /^\/swagger-ui/;
-const adminRoutes = ['/api', '/auth', '/login', '/.well-known', '/metrics'];
+const metricsRouteRegex = /^\/metrics(\/|$)/;
+const adminRoutes = ['/api', '/auth', '/login', '/.well-known'];
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
 if( parseInt(config.gateway.http.targetPort) != 80 ) {
@@ -97,6 +99,11 @@ async function middleware(req, res) {
   } else if( path.match(/^\/api\/health(\/|$)/) ) {
     path = path.replace(/^\/api\/health/, '/health');
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
+  } else if( path.match(metricsRouteRegex) ) {
+    if( !isMetricsRequestAllowed(req.ip) ) {
+      return res.status(403).send('Forbidden');
+    }
+    host = 'http://'+config.admin.host+':'+config.admin.port;
   } else if( adminRoutes.some(route => path.startsWith(route)) ) {
     host = 'http://'+config.admin.host+':'+config.admin.port;
   } else if( swaggerUiMatch ) {
