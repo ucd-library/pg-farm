@@ -22,12 +22,6 @@
   "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.1",
-    "@google-cloud/opentelemetry-cloud-monitoring-exporter": "^0.17.0",
-    "@google-cloud/opentelemetry-resource-util": "^2.1.0",
-    "@opentelemetry/api": "^1.7.0",
-    "@opentelemetry/resources": "^1.21.0",
-    "@opentelemetry/sdk-metrics": "^1.21.0",
-    "@opentelemetry/sdk-node": "^0.48.0",
     "@ucd-lib/logger": "^0.0.6",
     "@ucd-lib/spa-router-middleware": "^0.2.3",
     "body-parser": "^1.20.2",
@@ -45,6 +39,7 @@
     "nodemailer": "^6.9.16",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
+    "prom-client": "^15.1.3",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

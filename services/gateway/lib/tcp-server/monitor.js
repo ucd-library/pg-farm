@@ -1,7 +1,5 @@
 import metrics from "../../../lib/metrics/index.js";
-import {ValueType} from '@opentelemetry/api';
 import logger from '../../../lib/logger.js';
-import config from '../../../lib/config.js';
 
 const SERVER_EVENTS = [
   'close',
@@ -26,8 +24,6 @@ const SOCKET_EVENTS = [
   'timeout'
 ];
 
-const metricRoot = 'pgfarm.tcp-proxy.';
-
 class ProxyMonitor {
 
   constructor(name, opts) {
@@ -45,65 +41,26 @@ class ProxyMonitor {
   }
 
   init() {
-    if( !config.metrics.enabled ) {
+    if( !metrics.enabled ) {
       return;
     }
 
-    const meter = metrics.meterProvider.getMeter('default');
-    
-    const tcpSocketConnections = meter.createObservableGauge(metricRoot+'connections',  {
-      description: 'Number of TCP connections, both incoming and outgoing are reported',
-      unit: '',
-      valueType: ValueType.INT,
+    this.connectionsGauge = new metrics.Gauge({
+      name: 'pgfarm_tcp_proxy_connections',
+      help: 'Number of TCP connections, both incoming and outgoing are reported',
+      labelNames: ['name', 'type'],
+      registers: [metrics.registry],
+      collect: async () => {
+        let count = await this.getConnections();
+        this.connectionsGauge.set({name: this.name, type: 'incoming'}, count);
+
+        count = 0;
+        this.socketsProperties.forEach(props => {
+          if( props.type === 'outgoing' ) count++;
+        });
+        this.connectionsGauge.set({name: this.name, type: 'outgoing'}, count);
+      }
     });
-    tcpSocketConnections.addCallback(async result => {
-      let count = await this.getConnections();
-      result.observe(count, {
-        name : this.name,
-        type: 'incoming'
-      });
-
-      count = 0;
-      this.socketsProperties.forEach(props => {
-        if( props.type === 'outgoing' ) count++;
-      });
-      result.observe(count, {
-        name : this.name,
-        type: 'outgoing'
-      });
-    });
-
-
-    // const serverEvents = meter.createObservableGauge(metricRoot+'server-events',  {
-    //   description: 'TCP server events',
-    //   unit: '',
-    //   valueType: ValueType.INT,
-    // });
-    // serverEvents.addCallback(async result => {
-    //   for( let event in this.data.serverEvents ) {
-    //     result.observe(this.data.serverEvents[event], {
-    //       name : this.name,
-    //       type: event
-    //     });
-    //     this.data.serverEvents[event] = 0;
-    //   }
-    // });
-
-    // const clientEvents = meter.createObservableGauge(metricRoot+'socket-events',  {
-    //   description: 'TCP proxy socket events',
-    //   unit: '',
-    //   valueType: ValueType.INT,
-    // });
-    // clientEvents.addCallback(async result => {
-    //   for( let key in this.data.socketEvents ) {
-    //     let [type, event] = key.split('-');
-    //     result.observe(this.data.socketEvents[key], {
-    //       name : this.name,
-    //       event, type
-    //     });
-    //     this.data.socketEvents[key] = 0;
-    //   }
-    // });
   }
 
   setSocketProperties(socket, props) {

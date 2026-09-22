@@ -1,17 +1,23 @@
-import os from 'os';
-// const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
+import os from 'os';
 const env = process.env;
 
-// https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/README.md#semantic-attributes-with-sdk-provided-default-value
+/**
+ * @function getAttributes
+ * @description Build the default Prometheus labels applied to every metric reported by
+ * this process. service_instance_id varies per pod/replica, which is what distinguishes
+ * rows once they land in the shared pgfarm.metric_snapshot table.
+ *
+ * @returns {Object}
+ */
 function getAttributes() {
   let serviceName = env.SERVICE_NAME || 'unknown';
   let serverUrl = process.env.APP_URL || 'http://localhost:3000';
 
   return {
-    "service.name": serviceName,
-    "service.version": env.PG_FARM_VERSION,
-    "service.namespace": 'pg-farm-'+new URL(serverUrl).hostname,
-    "service.instance.id": serviceName+'-'+os.hostname(),
+    service_name: serviceName,
+    service_version: env.PG_FARM_VERSION || '',
+    service_namespace: 'pg-farm-'+new URL(serverUrl).hostname,
+    service_instance_id: serviceName+'-'+os.hostname(),
   }
 }
 

@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import auth from './controllers/auth/index.js';
 import api from './controllers/api.js';
 import wellKnown from './controllers/well-known.js';
+import {getMetricsText} from './controllers/metrics.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import keycloak from '../../lib/keycloak.js';
@@ -20,6 +21,19 @@ app.use(bodyParser.json({ limit: '500kb' }));
 app.use(keycloak.setUser);
 
 app.use('/.well-known', wellKnown);
+
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', 'text/plain; version=0.0.4');
+    res.end(await getMetricsText());
+  } catch(e) {
+    res.status(500).send({
+      error : true,
+      message: e.message,
+      stack : e.stack
+    });
+  }
+});
 
 auth.register(app);
 

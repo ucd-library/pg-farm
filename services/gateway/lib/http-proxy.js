@@ -4,11 +4,12 @@ import client from '../../lib/pg-admin-client.js';
 import config from '../../lib/config.js';
 import logger from '../../lib/logger.js';
 import metrics from '../../lib/metrics/index.js';
-import {ValueType} from '@opentelemetry/api';
 import {createContext} from '../../lib/context.js';
+import {isMetricsRequestAllowed} from './metrics-cidr-allow.js';
 
 const dbRouteRegex = /^\/api\/query\/([-|\w]+)\/([-|\w]+)(\/|\?|$)/;
 const swaggerUiRouteRegex = /^\/swagger-ui/;
+const metricsRouteRegex = /^\/metrics(\/|$)/;
 const adminRoutes = ['/api', '/auth', '/login', '/.well-known'];
 
 let DEFAULT_HOST = 'http://'+config.gateway.http.targetHost;
@@ -16,10 +17,19 @@ if( parseInt(config.gateway.http.targetPort) != 80 ) {
   DEFAULT_HOST += ':'+config.gateway.http.targetPort;
 }
 
-const metricRoot = 'pgfarm.http-proxy.';
-
 let proxy;
-let pgRestQueryCount = 0; 
+
+// constructed once at module scope (not inside init(), which runs once per gateway
+// entry point - http.js and https.js both call it in the same process) since
+// prom-client throws on duplicate metric registration.
+let pgRestQueriesCounter;
+if( metrics.enabled ) {
+  pgRestQueriesCounter = new metrics.Counter({
+    name: 'pgfarm_http_proxy_pgrest_queries_total',
+    help: 'Number of PG Rest HTTP queries sent to a PG Farm database',
+    registers: [metrics.registry]
+  });
+}
 
 function init() {
   proxy = httpProxy.createProxyServer({
@@ -37,21 +47,6 @@ function init() {
       forwarded : req.ips
     });
     res.status(500).send('Internal server error');
-  });
-
-  if( !metrics.meterProvider ) {
-    return;
-  }
-
-  const meter = metrics.meterProvider.getMeter('default');
-  const pgRestQueries = meter.createObservableGauge(metricRoot+'pg-rest-query',  {
-    description: 'Number of PG Rest HTTP queries sent to a PG Farm database',
-    unit: '',
-    valueType: ValueType.INT,
-  });
-  pgRestQueries.addCallback(async result => {
-    result.observe(pgRestQueryCount);
-    pgRestQueryCount = 0;
   });
 }
 
@@ -100,10 +95,15 @@ async function middleware(req, res) {
     client.updateDatabaseLastEvent(ctx.database.database_id, 'PGREST_REQUEST')
       .catch(e => logger.error('Error updating database last event: ', e));
 
-    pgRestQueryCount++;
+    pgRestQueriesCounter?.inc();
   } else if( path.match(/^\/api\/health(\/|$)/) ) {
     path = path.replace(/^\/api\/health/, '/health');
     host = 'http://'+config.healthProbe.host+':'+config.healthProbe.port;
+  } else if( path.match(metricsRouteRegex) ) {
+    if( !isMetricsRequestAllowed(req.ip) ) {
+      return res.status(403).send('Forbidden');
+    }
+    host = 'http://'+config.admin.host+':'+config.admin.port;
   } else if( adminRoutes.some(route => path.startsWith(route)) ) {
     host = 'http://'+config.admin.host+':'+config.admin.port;
   } else if( swaggerUiMatch ) {
