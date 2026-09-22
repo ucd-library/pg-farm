@@ -62,6 +62,10 @@ class ProxyConnection {
     // user information from pg farm database
     this.pgFarmUser = null;
 
+    // bytes proxied in each direction for this connection, for GCP egress attribution
+    this.bytesIngress = 0; // client -> postgres
+    this.bytesEgress = 0;  // postgres -> client (billable GCP egress)
+
     // original startup message for replaying startup message on reconnect
     this.startUpMsg = null;
     this.startUpMsgSent = false;
@@ -1374,6 +1378,14 @@ class ProxyConnection {
    */
   writeAndWait(socket, data) {
     let isServerSocket = (socket === this.serverSocket);
+
+    let byteLength = Buffer.byteLength(data);
+    if( isServerSocket ) {
+      this.bytesIngress += byteLength;
+    } else {
+      this.bytesEgress += byteLength;
+    }
+    monitor.onBytes(isServerSocket ? 'ingress' : 'egress', byteLength, this.pgFarmUser);
 
     // determine which socket is being used
     // only required for debug logging

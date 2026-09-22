@@ -55,7 +55,9 @@ CREATE OR REPLACE VIEW pgfarm.connection_view AS
     d.name as database_name,
     i.name as instance_name,
     o.name as organization_name,
-    u.username as username
+    u.username as username,
+    c.bytes_ingress,
+    c.bytes_egress
   FROM pgfarm.connection c
   JOIN pgfarm.database d ON d.database_id = c.database_id
   JOIN pgfarm.instance i ON i.instance_id = d.instance_id

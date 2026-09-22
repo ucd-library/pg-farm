@@ -897,6 +897,72 @@ class PgFarmAdminClient {
   }
 
   /**
+   * @method upsertMetricSnapshot
+   * @description upsert a single metric value snapshot. Called periodically by every
+   * metrics-enabled process; read back by administration's /metrics route.
+   *
+   * @param {Object} args
+   * @param {String} args.serviceInstanceId unique id of the reporting process (service name + hostname)
+   * @param {String} args.name prometheus metric name
+   * @param {String} args.type prometheus metric type (counter, gauge, etc)
+   * @param {String} args.help prometheus HELP text for the metric
+   * @param {String} args.labelsKey canonical stringified labels, used as part of the upsert key
+   * @param {Object} args.labels prometheus labels for this metric value
+   * @param {Number} args.value current metric value
+   *
+   * @returns {Promise<Object>}
+   */
+  upsertMetricSnapshot(args={}) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.upsert_metric_snapshot($1, $2, $3, $4, $5, $6, $7)
+    `, [args.serviceInstanceId, args.name, args.type, args.help, args.labelsKey, args.labels, args.value]);
+  }
+
+  /**
+   * @method getMetricSnapshots
+   * @description get all current metric snapshots from every reporting process. Used to
+   * render administration's /metrics Prometheus page.
+   *
+   * @returns {Promise<Array>}
+   */
+  async getMetricSnapshots() {
+    let resp = await client.query(`SELECT * FROM ${this.schema}.metric_snapshot`);
+    return resp.rows;
+  }
+
+  /**
+   * @method purgeStaleMetricSnapshots
+   * @description delete metric snapshot rows that haven't been updated recently, ie the
+   * reporting process has crashed, been rescaled, or otherwise stopped pushing.
+   *
+   * @param {String} olderThan postgres interval string, eg '2 minutes'
+   * @returns {Promise<Object>}
+   */
+  purgeStaleMetricSnapshots(olderThan) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.purge_stale_metric_snapshots($1::interval)
+    `, [olderThan]);
+  }
+
+  /**
+   * @method updateConnectionBytes
+   * @description record the lifetime byte totals for a proxy connection. Written once at
+   * connection close.
+   *
+   * @param {Object} args
+   * @param {String} args.sessionId session ID of the connection
+   * @param {Number} args.bytesIngress bytes sent from client to postgres
+   * @param {Number} args.bytesEgress bytes sent from postgres to client
+   *
+   * @returns {Promise<Object>}
+   */
+  updateConnectionBytes(args={}) {
+    return client.query(`
+      SELECT * FROM ${this.schema}.update_connection_bytes($1, $2, $3)
+    `, [args.sessionId, args.bytesIngress, args.bytesEgress]);
+  }
+
+  /**
    * @method createServiceAccount
    * @description Inserts a record into pgfarm.service_account linking the service account
    * user to its parent user.

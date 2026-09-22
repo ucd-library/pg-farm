@@ -1,70 +1,34 @@
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { Resource } from '@opentelemetry/resources';
-import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import gcExport from './gc-export.js';
+import client from 'prom-client';
+import config from '../config.js';
 import resourceAttributes from './resource-attributes.js';
+import startMetricsPush from './push.js';
 
-const env = process.env;
+const enabled = config.metrics.enabled;
+let registry = null;
 
-let meterProvider = null;
+if( enabled ) {
+  console.log('Setting up prom-client metrics registry', resourceAttributes());
 
-function init() {
+  registry = new client.Registry();
+  registry.setDefaultLabels(resourceAttributes());
+  client.collectDefaultMetrics({register: registry});
 
-  if( env.METRICS_ENABLED !== 'true' ) {
-    console.log('Metrics disabled');
-    return;
-  }
-
-  console.log('Setting up node OpenTelemetry metrics', resourceAttributes());
-
-
-  // setup standard set of instrumentations
-
-  // setup GC reporting and metering
-  var traceExporter, metricExporter;
-  if( env.METRICS_EXPORT_GC === 'true' ) {
-    let exporters = gcExport();
-    if( exporters ) {
-      // traceExporter = exporters.traceExporter;
-      metricExporter = exporters.metricExporter;
-      meterProvider = exporters.meterProvider;
-    }
-  
-  // This option is mostly for debugging the telemetry
-  } 
-  // else if( env.FIN_METRICS_EXPORT_STDOUT === 'true' ) {
-  //   traceExporter = new ConsoleSpanExporter();
-  //   metricExporter = new ConsoleMetricExporter();
-  //   meterProvider = new MeterProvider({
-  //     resource: new Resource(resourceAttributes())
-  //   });
-  // }
-
-  if( !metricExporter ) {
-    return;
-  }
-
-  let serviceName = env.SERVICE_NAME || 'pgfarm';
-
-
-  const sdk = new NodeSDK({
-    metricReader: new PeriodicExportingMetricReader({
-      exportIntervalMillis: 15000,
-      exporter: metricExporter,
-    }),
-
-    instrumentations : [],
-    resource: new Resource(resourceAttributes()),
-    serviceName : serviceName
-  });
-  
-  sdk.start();
-
+  startMetricsPush(registry);
+} else {
+  console.log('Metrics disabled');
 }
 
-init();
-
+/**
+ * @description Shared prom-client metrics registry for this process. When metrics are
+ * disabled (METRICS_ENABLED !== 'true'), registry is null and callers should no-op before
+ * constructing any Counter/Gauge. Counters/Gauges should always be registered with
+ * {registers: [metrics.registry]} rather than the prom-client default global registry.
+ */
 const metrics = {
-  get meterProvider() { return meterProvider; }
+  get enabled() { return enabled; },
+  get registry() { return registry; },
+  Counter: client.Counter,
+  Gauge: client.Gauge
 }
+
 export default metrics;

@@ -1,17 +1,14 @@
 import keycloak from '../../../lib/keycloak.js';
 import metrics from '../../../lib/metrics/index.js';
 import client from '../../../lib/pg-admin-client.js';
-import {ValueType} from '@opentelemetry/api';
 import logger from '../../../lib/logger.js';
-
-const metricRoot = 'pgfarm.pg-proxy.';
 
 class ProxyMonitor {
 
   constructor() {
     this.data = {};
 
-    this.PROXY_EVENTS = { 
+    this.PROXY_EVENTS = {
       AUTHENTICATION_OK : 'authentication-ok',
       INSTANCE_START : 'instance-start',
       CREATE_SERVER_SOCKET : 'create-server-socket',
@@ -35,40 +32,37 @@ class ProxyMonitor {
 
     this.reset();
 
-    if( !metrics.meterProvider ) {
+    if( !metrics.enabled ) {
       return;
     }
 
-    const meter = metrics.meterProvider.getMeter('default');
-    const tcpSocketConnections = meter.createObservableGauge(metricRoot+'connections',  {
-      description: 'Number of TCP connections',
-      unit: '',
-      valueType: ValueType.INT,
-    });
-
-    tcpSocketConnections.addCallback(async result => {
-      for( let dbName in this.data.connections.client ) {
-        result.observe(this.data.connections.client[dbName], {
-          type: 'client', 
-          db: dbName
-        });
-      }
-      for( let dbName in this.data.connections.server ) {
-        result.observe(this.data.connections.server[dbName], {
-          type: 'server', 
-          db: dbName
-        });
+    this.connectionsGauge = new metrics.Gauge({
+      name: 'pgfarm_proxy_connections',
+      help: 'Number of TCP connections, both incoming and outgoing are reported',
+      labelNames: ['type', 'database'],
+      registers: [metrics.registry],
+      collect: () => {
+        for( let dbName in this.data.connections?.client || {} ) {
+          this.connectionsGauge.set({type: 'client', database: dbName}, this.data.connections.client[dbName]);
+        }
+        for( let dbName in this.data.connections?.server || {} ) {
+          this.connectionsGauge.set({type: 'server', database: dbName}, this.data.connections.server[dbName]);
+        }
       }
     });
 
-    const queryCount = meter.createObservableGauge(metricRoot+'queries',  {
-      description: 'Queries sent to a PG Farm database',
-      unit: '',
-      valueType: ValueType.INT,
+    this.queriesCounter = new metrics.Counter({
+      name: 'pgfarm_proxy_queries_total',
+      help: 'Queries sent to a PG Farm database',
+      labelNames: ['database'],
+      registers: [metrics.registry]
     });
-    queryCount.addCallback(async result => {
-      result.observe(this.data.queryCount);
-      this.data.queryCount = 0;
+
+    this.bytesCounter = new metrics.Counter({
+      name: 'pgfarm_proxy_bytes_total',
+      help: 'Bytes proxied between clients and PG Farm databases',
+      labelNames: ['direction', 'organization', 'database'],
+      registers: [metrics.registry]
     });
   }
 
@@ -89,6 +83,25 @@ class ProxyMonitor {
       .catch(e => logger.error('Error updating database last event: ', e));
 
     this.data.queryCount++;
+    this.queriesCounter?.inc({database: databaseId});
+  }
+
+  /**
+   * @method onBytes
+   * @description record bytes proxied in a single direction for a connection, called from
+   * ProxyConnection.writeAndWait for every write in either direction.
+   *
+   * @param {String} direction 'ingress' (client -> postgres) or 'egress' (postgres -> client)
+   * @param {Number} byteLength number of bytes written
+   * @param {Object} pgFarmUser resolved pgfarm user/database info for the connection, may be
+   * null/undefined before authentication completes
+   */
+  onBytes(direction, byteLength, pgFarmUser) {
+    this.bytesCounter?.inc({
+      direction,
+      organization: pgFarmUser?.organization_name || 'unknown',
+      database: pgFarmUser?.database_name || 'unknown'
+    }, byteLength);
   }
 
   onInstanceStart(data) {
@@ -124,6 +137,16 @@ class ProxyMonitor {
       logger.error('Error logging client disconnect to pg-admin database:', e);
     }
 
+    try {
+      await client.updateConnectionBytes({
+        sessionId: proxyConnection.sessionId,
+        bytesIngress: proxyConnection.bytesIngress,
+        bytesEgress: proxyConnection.bytesEgress
+      });
+    } catch(e) {
+      logger.error('Error updating connection byte totals: ', e);
+    }
+
     this.logProxyConnectionEvent(proxyConnection, this.PROXY_EVENTS.CLIENT_CLOSE, proxyConnection.pgFarmUser?.username);
   }
 
@@ -137,8 +160,8 @@ class ProxyMonitor {
         proxyConnection.sessionId, event, message
       );
     } catch(e) {
-      logger.error('Error logging proxy event to pg: ', 
-        {sessionId: proxyConnection.sessionId, event, message}, 
+      logger.error('Error logging proxy event to pg: ',
+        {sessionId: proxyConnection.sessionId, event, message},
         e
       );
     }

@@ -74,8 +74,6 @@ spec:
           value : "/etc/google/service-account.json"
         # - name: METRICS_ENABLED
         #   value: "true"
-        # - name: METRICS_EXPORT_GC
-        #   value: "true"
         - name: SERVICE_NAME
           value: "pg-helper"
         volumeMounts:
