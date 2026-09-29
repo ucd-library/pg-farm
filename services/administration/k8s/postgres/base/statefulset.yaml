@@ -17,7 +17,7 @@ spec:
       containers:
       - name: postgres
         image: pg
-        args: ["-c", "max_connections=100"]
+        args: ["-c", "max_connections=100", "-c", "shared_preload_libraries=pg_stat_statements,pg_cron"]
         imagePullPolicy: IfNotPresent
         env:
         - name: PGDATA
