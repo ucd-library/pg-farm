@@ -161,6 +161,22 @@ class Instances {
     console.log(`Started instance restore: ${instance}`);
   }
 
+  async backupStatus(instance, opts={}) {
+    instance = formatInstName(instance);
+    let params = opts.limit ? '?'+new URLSearchParams({limit: opts.limit}) : '';
+    let resp = await fetch(`${config.host}/api/instance/${instance}/backup${params}`, {
+      method: 'GET',
+      headers: headers()
+    });
+
+    if( resp.status !== 200 ) {
+      console.error(resp.status, 'Unable to fetch backup status', await resp.text());
+      return;
+    }
+
+    print.display(await resp.json(), opts.output);
+  }
+
   async resize(instance, size) {
     instance = formatInstName(instance);
 

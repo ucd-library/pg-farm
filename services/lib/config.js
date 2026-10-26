@@ -161,8 +161,9 @@ const config = {
   backup : {
     cron : env.BACKUP_CRON || '0 0 * * *',
     bucket : env.BACKUP_BUCKET || 'app-database-backups',
-    autoBackupEnabled : env.AUTO_BACKUP_ENABLED === 'true', // mostly used by admin database
-    autoBackupName : env.AUTO_BACKUP_NAME || 'pgfarm-admin-db',
+    // scratch dir for downloading a backup file before pg_restore runs against it; backed by
+    // an emptyDir volume (not a PVC) so it costs nothing while idle, see k8s statefulset
+    scratchDir : env.BACKUP_SCRATCH_DIR || '/scratch',
   },
 
   // Keycloak configuration
@@ -220,7 +221,8 @@ const config = {
       get USER_TOKEN() { return config.adminDb.schema+'.user_token' },
       get INSTANCE_USER() { return config.adminDb.schema+'.instance_user' },
       get INSTANCE_CONFIG() { return config.adminDb.schema+'.k8s_config_property' },
-      get SERVICE_ACCOUNT() { return config.adminDb.schema+'.service_account' }
+      get SERVICE_ACCOUNT() { return config.adminDb.schema+'.service_account' },
+      get BACKUP_LOG() { return config.adminDb.schema+'.backup_log' }
     },
     views : {
       get INSTANCE() { return config.adminDb.schema+'.instance_view' },

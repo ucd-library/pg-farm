@@ -213,6 +213,20 @@ router.post('/:organization/:instance/backup',
   }
 });
 
+router.get('/:organization/:instance/backup',
+  contextMiddleware,
+  requireContext('organization', 'instance'),
+  keycloak.protect('admin'),
+  async (req, res) => {
+  try {
+    let limit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    let log = await client.getBackupLog(req.context.instance.instance_id, limit);
+    res.status(200).json(log);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
 router.post('/:organization/:instance/sync-users',
   contextMiddleware,
   requireContext('organization', 'instance'),

@@ -246,6 +246,30 @@ class PgFarmAdminClient {
     return res.rows;
   }
 
+  /**
+   * @method getAllInstances
+   * @description Like getInstances, but ignores the default page size and returns every
+   * matching row by paging internally. Use whenever "all instances matching a filter" is
+   * actually required - getInstances alone silently truncates to opts.limit (default 10).
+   *
+   * @param {Object} opts same filter options as getInstances (state, organization)
+   *
+   * @returns {Promise<Array>}
+   */
+  async getAllInstances(opts={}) {
+    const pageSize = 100;
+    let all = [], offset = 0;
+
+    while( true ) {
+      let page = await this.getInstances({...opts, limit: pageSize, offset});
+      all.push(...page);
+      if( page.length < pageSize ) break;
+      offset += pageSize;
+    }
+
+    return all;
+  }
+
   async getLastDatabaseEvent(instId) {
     let res = await client.query(`
       SELECT * FROM ${config.adminDb.views.DATABASE_EVENT}
@@ -1029,6 +1053,63 @@ class PgFarmAdminClient {
       RETURNING last_rotated_at
     `, [serviceAccountUsername]);
     return resp.rows[0]?.last_rotated_at;
+  }
+
+  /**
+   * @method startBackupLog
+   * @description Insert a RUNNING backup_log row for an instance operation.
+   *
+   * @param {String} instanceId instance uuid
+   * @param {String} operation one of 'backup', 'restore', 'archive'
+   *
+   * @returns {Promise<String>} the new backup_log_id
+   */
+  async startBackupLog(instanceId, operation) {
+    let resp = await client.query(`
+      INSERT INTO ${config.adminDb.tables.BACKUP_LOG} (instance_id, operation)
+      VALUES ($1, $2)
+      RETURNING backup_log_id
+    `, [instanceId, operation]);
+
+    return resp.rows[0].backup_log_id;
+  }
+
+  /**
+   * @method finishBackupLog
+   * @description Mark a backup_log row SUCCESS or FAILED.
+   *
+   * @param {String} backupLogId id returned from startBackupLog
+   * @param {String} status 'SUCCESS' or 'FAILED'
+   * @param {String} error optional error message, set when status is FAILED
+   *
+   * @returns {Promise<Object>}
+   */
+  finishBackupLog(backupLogId, status, error=null) {
+    return client.query(`
+      UPDATE ${config.adminDb.tables.BACKUP_LOG}
+      SET status = $2, error = $3, finished_at = now()
+      WHERE backup_log_id = $1
+    `, [backupLogId, status, error]);
+  }
+
+  /**
+   * @method getBackupLog
+   * @description Get recent backup/restore/archive history for an instance.
+   *
+   * @param {String} instanceId instance uuid
+   * @param {Number} limit max rows to return, default 10
+   *
+   * @returns {Promise<Array>}
+   */
+  async getBackupLog(instanceId, limit=10) {
+    let resp = await client.query(`
+      SELECT * FROM ${config.adminDb.tables.BACKUP_LOG}
+      WHERE instance_id = $1
+      ORDER BY started_at DESC
+      LIMIT $2
+    `, [instanceId, limit]);
+
+    return resp.rows;
   }
 
 }

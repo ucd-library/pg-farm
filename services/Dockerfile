@@ -1,7 +1,7 @@
 # install postgrest
 FROM postgrest/postgrest:v12.0.2 AS postgrest
 
-FROM node:20
+FROM node:24
 
 
 

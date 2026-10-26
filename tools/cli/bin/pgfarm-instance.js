@@ -90,6 +90,13 @@ if( isAdmin() ) {
       instance.restore(instanceName);
     });
 
+  program.command('backup-status <org/instance>')
+    .description('Show recent backup/restore/archive history for a postgres instance')
+    .option('-l, --limit <limit>', 'Limit the number of results. Default is 10')
+    .action((instanceName, opts, cmd) => {
+      instance.backupStatus(instanceName, cmd.optsWithGlobals());
+    });
+
   program.command('resize <org/instance> <size>')
     .description('Increase size postgres volume.  Size in GB')
     .action((instanceName, size) => {

@@ -207,6 +207,50 @@ availability and reports status back to the platform.
 **PG Helper** is a background daemon that handles scheduled tasks including
 automated database backups to Google Cloud Storage.
 
+## Backups
+
+A nightly cron job (`BACKUP_CRON`, default `0 0 * * *`) in the administration
+service backs up every running instance: each database is dumped with
+`pg_dump -Fc` and streamed directly to GCS via `gsutil cp -` (no local file,
+no dependency on GCS-FUSE's write buffering, so this scales to large
+databases). Restoring downloads the dump to a scratch `emptyDir` on the
+instance pod, runs `pg_restore`, then deletes the local copy immediately.
+
+Every backup/restore/archive run is recorded in `pgfarm.backup_log`; check an
+instance's history with:
+
+```
+pgfarm-instance backup-status <org/instance>
+```
+
+**Writing to a bucket in a different GCP project.** Backups go to
+`BACKUP_BUCKET` (default `app-database-backups`) by default, but a single
+organization can override this with its `backup_bucket` column to target a
+bucket owned by another GCP project. GCS bucket names are globally unique, so
+no other code change is needed — the external project's owner just needs to
+grant this app's service account (`pgfarm-app@pgfarm-419213.iam.gserviceaccount.com`)
+`roles/storage.objectAdmin` (or split `objectCreator`/`objectViewer`) scoped
+to their bucket. `backup_bucket` is intentionally left out of the self-service
+organization metadata API (`PATCH /organization/:organization`) — it's a
+system-admin-only setting for now, applied directly against the admin DB.
+
+**Retention** is handled at the bucket level rather than in application code.
+Enable Object Versioning and a lifecycle rule on any backup bucket, eg:
+
+```
+gsutil versioning set on gs://app-database-backups
+gsutil lifecycle set lifecycle.json gs://app-database-backups
+```
+
+where `lifecycle.json` sets a `numNewerVersions`/`daysSinceNoncurrentTime`
+rule to prune older versions.
+
+**Not covered by this system:** the pg-farm control-plane/admin database
+itself (the catalog of organizations/instances/users) is not backed up by
+any of the above — it must be backed up at the infrastructure level (eg a
+scheduled disk snapshot or managed-DB backup), which lives in the deployment
+repo, not here.
+
 ## Scale-to-Zero
 
 PG Farm tracks query activity per database using connection and query counters.

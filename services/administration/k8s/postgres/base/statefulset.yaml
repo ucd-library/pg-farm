@@ -57,9 +57,14 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+            # scratch space for downloading a backup file during restore, see /scratch
+            # mount below. Sized for the largest expected single-database dump -
+            # adjust per overlay if a larger DB needs more room.
+            ephemeral-storage: "100Gi"
           requests:
             memory: "256Mi"
             cpu: "200m"
+            ephemeral-storage: "100Gi"
         resizePolicy:
         - resourceName: cpu
           restartPolicy: NotRequired
@@ -80,13 +85,21 @@ spec:
         - name: pg-socket
           mountPath: /var/run/postgresql
         - name: service-account
-          mountPath: /etc/google        
+          mountPath: /etc/google
+        - name: scratch
+          mountPath: /scratch
       volumes:
       - name: pg-socket
         emptyDir: {}
       - name: service-account
         secret:
           secretName: service-account
+      # Ephemeral, not a PVC: only holds data for the lifetime of a restore (downloaded
+      # then deleted immediately after pg_restore completes), so it costs nothing while
+      # idle. sizeLimit should match the ephemeral-storage resource above.
+      - name: scratch
+        emptyDir:
+          sizeLimit: 100Gi
 
   volumeClaimTemplates:
   - metadata:

@@ -235,7 +235,7 @@ class AdminModel {
    * @returns {Promise}
    **/
   async archiveInstance(ctx) {
-    await this.models.instance.remoteArchive(ctx);
+    await this.models.backup.remoteArchive(ctx);
   }
 
   /**
@@ -355,7 +355,7 @@ class AdminModel {
 
     logger.info('Sleeping instances', ctx.logSignal);
 
-    let active = await client.getInstances({state: this.models.instance.STATES.RUN});
+    let active = await client.getAllInstances({state: this.models.instance.STATES.RUN});
 
     let changed = [];
 
