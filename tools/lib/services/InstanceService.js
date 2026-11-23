@@ -139,6 +139,69 @@ class InstanceService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  /**
+   * @method getPublicUser
+   * @description Get the public user status and permission summary for an instance
+   *
+   * @param {String} org organization name
+   * @param {String} instance instance name
+   *
+   * @returns {Promise<Object>}
+   */
+  async getPublicUser(org, instance) {
+    let ido = {org, instance, action: 'public-user-get'};
+    let id = payload.getKey(ido);
+
+    await this.request({
+      url: `${this.basePath}/${org}/${instance}/public-user`,
+      fetchOptions: {
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onPublicUserUpdate(ido, {request}),
+      onLoad: payload => this.store.onPublicUserUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onPublicUserUpdate(ido, {error})
+    });
+
+    return this.store.data.publicUser.get(id);
+  }
+
+  /**
+   * @method setPublicUser
+   * @description Enable or disable (remove) the public user for an instance
+   *
+   * @param {String} org organization name
+   * @param {String} instance instance name
+   * @param {Boolean} enabled true to enable, false to disable
+   * @param {Object} opts
+   * @param {Boolean} opts.dryRun optional.  if true, only return the planned changes
+   *
+   * @returns {Promise<Object>}
+   */
+  async setPublicUser(org, instance, enabled, opts={}) {
+    let action = (enabled ? 'public-user-enable' : 'public-user-disable')+(opts.dryRun ? '-dry-run' : '');
+    let ido = {org, instance, action};
+    let id = payload.getKey(ido);
+
+    let qs = {};
+    if( opts.dryRun ) qs.dryRun = 'true';
+
+    await this.request({
+      url: `${this.basePath}/${org}/${instance}/public-user`,
+      qs,
+      fetchOptions: {
+        method : enabled ? 'PUT' : 'DELETE',
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onPublicUserActionUpdate(ido, {request}),
+      onLoad: payload => this.store.onPublicUserActionUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onPublicUserActionUpdate(ido, {error})
+    });
+
+    return this.store.data.publicUserActions.get(id);
+  }
+
   async start(org, instance, opts) {
     let id = payload.getKey({org, instance});
 

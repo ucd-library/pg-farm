@@ -70,7 +70,7 @@ if( isLoggedIn() ) {
       database.exposeTableToApi(dbName, table, cmd.optsWithGlobals());
     });
 
-  program.command('update-api-cache <org/database> <schema.table>')
+  program.command('update-api-cache <org/database>')
     .description('Update the PostgREST API cache for an database'+print.dbAdminOnlyMsg())
     .action((dbName, opts, cmd) => {
       database.updateApiCache(dbName, cmd.optsWithGlobals());

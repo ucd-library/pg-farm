@@ -714,6 +714,101 @@ class PgFarmAdminClient {
     );
   }
 
+  /**
+   * @method isPublicUserEnabled
+   * @description Check if the public user is enabled for an instance.  The public user is
+   * enabled if, and only if, an instance_user row of type PUBLIC exists for the instance.
+   *
+   * @param {String} instanceId instance id
+   *
+   * @returns {Promise<Boolean>}
+   */
+  async isPublicUserEnabled(instanceId) {
+    let resp = await client.query(`
+      SELECT EXISTS(
+        SELECT 1 FROM ${config.adminDb.tables.INSTANCE_USER}
+        WHERE instance_id = $1 AND type = 'PUBLIC'
+      ) AS enabled`,
+      [instanceId]
+    );
+    return resp.rows[0]?.enabled === true;
+  }
+
+  /**
+   * @method getPublicLoginActivity
+   * @description Get public user SQL login activity (via the gateway) for an instance.
+   * Note: anonymous PostgREST API traffic is not recorded here.
+   *
+   * @param {String} instanceId instance id
+   *
+   * @returns {Promise<Object>} {lastLogin, count30d}
+   */
+  async getPublicLoginActivity(instanceId) {
+    let resp = await client.query(`
+      SELECT
+        max(c.opened_at) AS last_login,
+        (count(*) FILTER (WHERE c.opened_at > now() - interval '30 days'))::int AS count_30d
+      FROM ${this.schema}.connection c
+      JOIN ${config.adminDb.tables.DATABASE} d ON d.database_id = c.database_id
+      JOIN ${config.adminDb.tables.USER} u ON u.user_id = c.user_id
+      WHERE d.instance_id = $1 AND u.username = $2`,
+      [instanceId, config.pgInstance.publicRole.username]
+    );
+    let row = resp.rows[0] || {};
+    return {
+      lastLogin : row.last_login || null,
+      count30d : row.count_30d || 0
+    };
+  }
+
+  /**
+   * @method getPublicUserReport
+   * @description Get a report of all instances, whether the public user is enabled
+   * and public user SQL login activity (via the gateway).
+   *
+   * @returns {Promise<Array<Object>>}
+   */
+  async getPublicUserReport() {
+    let resp = await client.query(`
+      WITH pub AS (
+        SELECT iu.instance_id FROM ${config.adminDb.tables.INSTANCE_USER} iu
+        WHERE iu.type = 'PUBLIC'
+      ),
+      logins AS (
+        SELECT d.instance_id,
+          max(c.opened_at) AS last_login,
+          (count(*) FILTER (WHERE c.opened_at > now() - interval '30 days'))::int AS count_30d
+        FROM ${this.schema}.connection c
+        JOIN ${config.adminDb.tables.DATABASE} d ON d.database_id = c.database_id
+        JOIN ${config.adminDb.tables.USER} u ON u.user_id = c.user_id
+        WHERE u.username = $1
+        GROUP BY d.instance_id
+      ),
+      dbs AS (
+        SELECT instance_id, array_agg(name ORDER BY name) AS databases
+        FROM ${config.adminDb.tables.DATABASE}
+        GROUP BY instance_id
+      )
+      SELECT
+        i.instance_id,
+        i.name AS instance_name,
+        i.state,
+        o.name AS organization_name,
+        (pub.instance_id IS NOT NULL) AS public_user_enabled,
+        COALESCE(dbs.databases, ARRAY[]::text[]) AS databases,
+        logins.last_login,
+        COALESCE(logins.count_30d, 0) AS count_30d
+      FROM ${config.adminDb.tables.INSTANCE} i
+      LEFT JOIN ${config.adminDb.tables.ORGANIZATION} o ON o.organization_id = i.organization_id
+      LEFT JOIN pub ON pub.instance_id = i.instance_id
+      LEFT JOIN logins ON logins.instance_id = i.instance_id
+      LEFT JOIN dbs ON dbs.instance_id = i.instance_id
+      ORDER BY o.name, i.name`,
+      [config.pgInstance.publicRole.username]
+    );
+    return resp.rows;
+  }
+
   async getDatabases(opts={}) {
     let username = opts.username || config.pgInstance.publicRole.username;
     const params = [username];

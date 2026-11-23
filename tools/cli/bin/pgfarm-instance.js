@@ -42,6 +42,15 @@ program.command('delete-user <org/instance> <user>')
     instance.deleteUser(instanceName, user, opts);
   });
 
+program.command('public-user <action> <org/instance>')
+  .description('Show status of, enable or disable (remove) the instance public user. '+
+    'Action: status, enable or disable. Disabling removes all public user permissions '+print.dbAdminOnlyMsg())
+  .option('--dry-run', 'Show the public user permissions and planned changes without making any changes')
+  .option('-y, --yes', 'Skip the confirmation prompt')
+  .action((action, instanceName, opts) => {
+    instance.publicUser(action, instanceName, opts);
+  });
+
 program.command('start <org/instance>')
   .description('Manually start an postgres instance '+print.dbAdminOnlyMsg())
   .option('-f, --force', 'Force start the instance. This will reapply k8s config.')

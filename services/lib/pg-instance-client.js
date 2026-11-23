@@ -357,6 +357,188 @@ class PGInstance {
   }
 
   /**
+   * @method listConnectableDatabases
+   * @description List all non-template databases on the instance that accept connections.
+   * Includes the 'postgres' database and any databases not registered in the pgfarm
+   * admin database.  Role cleanup (DROP OWNED) must be run in every one of these.
+   *
+   * @param {Object} connection connection object (any database on the instance)
+   *
+   * @returns {Promise<Array<String>>} database names
+   */
+  async listConnectableDatabases(connection) {
+    let query = `SELECT datname FROM pg_database WHERE datallowconn AND NOT datistemplate ORDER BY datname`;
+    let resp = await this.query(connection, query);
+    return resp.rows.map(row => row.datname);
+  }
+
+  /**
+   * @method roleExists
+   * @description Check if a role exists on the instance (roles are cluster-wide)
+   *
+   * @param {Object} connection connection object
+   * @param {String} roleName role name
+   *
+   * @returns {Promise<Boolean>}
+   */
+  async roleExists(connection, roleName) {
+    let query = pgFormat(`SELECT 1 FROM pg_roles WHERE rolname = %L`, roleName);
+    let resp = await this.query(connection, query);
+    return resp.rows.length > 0;
+  }
+
+  /**
+   * @method getRoleDirectPrivileges
+   * @description Get the privileges granted DIRECTLY to a role in the connection's database.
+   * Only grants where the role is the grantee are returned (via aclexplode).  Grants inherited
+   * through role membership or the PUBLIC pseudo-role are not included, as these are not
+   * removed by DROP OWNED.  If the role does not exist, empty results are returned.
+   *
+   * @param {Object} connection connection object for the database to inspect
+   * @param {String} roleName role name
+   *
+   * @returns {Promise<Object>} {relations: [{schema_name, name, relkind, privileges, column_level}],
+   * schemas: [{schema_name, privileges}], defaultAclCount: Number, databasePrivileges: Array<String>}
+   */
+  async getRoleDirectPrivileges(connection, roleName) {
+    let relQuery = pgFormat(`
+      WITH r AS (SELECT oid FROM pg_roles WHERE rolname = %L),
+      rel AS (
+        SELECT n.nspname AS schema_name, c.relname AS name, c.relkind::text AS relkind,
+          a.privilege_type, false AS is_column
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        CROSS JOIN LATERAL aclexplode(c.relacl) a
+        JOIN r ON a.grantee = r.oid
+        WHERE c.relkind IN ('r','v','m','f','p')
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+          AND n.nspname NOT LIKE 'pg_toast%%'
+      ),
+      col AS (
+        SELECT n.nspname AS schema_name, c.relname AS name, c.relkind::text AS relkind,
+          a.privilege_type, true AS is_column
+        FROM pg_attribute att
+        JOIN pg_class c ON c.oid = att.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        CROSS JOIN LATERAL aclexplode(att.attacl) a
+        JOIN r ON a.grantee = r.oid
+        WHERE att.attacl IS NOT NULL AND NOT att.attisdropped
+          AND c.relkind IN ('r','v','m','f','p')
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+      )
+      SELECT schema_name, name, relkind,
+        array_agg(DISTINCT privilege_type ORDER BY privilege_type) AS privileges,
+        bool_and(is_column) AS column_level
+      FROM (SELECT * FROM rel UNION ALL SELECT * FROM col) x
+      GROUP BY schema_name, name, relkind
+      ORDER BY schema_name, name`, roleName);
+
+    let schemaQuery = pgFormat(`
+      WITH r AS (SELECT oid FROM pg_roles WHERE rolname = %L)
+      SELECT n.nspname AS schema_name,
+        array_agg(DISTINCT a.privilege_type ORDER BY a.privilege_type) AS privileges
+      FROM pg_namespace n
+      CROSS JOIN LATERAL aclexplode(n.nspacl) a
+      JOIN r ON a.grantee = r.oid
+      WHERE n.nspname NOT LIKE 'pg_%%' AND n.nspname <> 'information_schema'
+      GROUP BY n.nspname
+      ORDER BY n.nspname`, roleName);
+
+    let defaultAclQuery = pgFormat(`
+      WITH r AS (SELECT oid FROM pg_roles WHERE rolname = %L)
+      SELECT count(*)::int AS count
+      FROM pg_default_acl d
+      CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+      JOIN r ON a.grantee = r.oid`, roleName);
+
+    let dbQuery = pgFormat(`
+      WITH r AS (SELECT oid FROM pg_roles WHERE rolname = %L)
+      SELECT array_agg(DISTINCT a.privilege_type ORDER BY a.privilege_type) AS privileges
+      FROM pg_database d
+      CROSS JOIN LATERAL aclexplode(d.datacl) a
+      JOIN r ON a.grantee = r.oid
+      WHERE d.datname = current_database()`, roleName);
+
+    let relations = await this.query(connection, relQuery);
+    let schemas = await this.query(connection, schemaQuery);
+    let defaultAcl = await this.query(connection, defaultAclQuery);
+    let dbPrivs = await this.query(connection, dbQuery);
+
+    return {
+      relations : relations.rows,
+      schemas : schemas.rows,
+      defaultAclCount : defaultAcl.rows[0]?.count || 0,
+      databasePrivileges : dbPrivs.rows[0]?.privileges || []
+    };
+  }
+
+  /**
+   * @method terminateRoleSessions
+   * @description Terminate all active backend sessions for a role
+   *
+   * @param {Object} connection connection object
+   * @param {String} roleName role name
+   *
+   * @returns {Promise<Number>} number of sessions terminated
+   */
+  async terminateRoleSessions(connection, roleName) {
+    let query = pgFormat(`
+      SELECT pg_terminate_backend(pid) AS terminated
+      FROM pg_stat_activity
+      WHERE usename = %L AND pid <> pg_backend_pid()`, roleName);
+    let resp = await this.query(connection, query);
+    return resp.rows.length;
+  }
+
+  /**
+   * @method dropOwnedByRole
+   * @description Reassign objects owned by the role to the admin role, then drop all
+   * remaining privileges (grants, default privileges, user mappings) for the role in
+   * the connection's database.  Must be run in every database on the instance before
+   * the role can be dropped.
+   *
+   * @param {Object} connection connection object for the database to clean
+   * @param {String} roleName role name
+   *
+   * @returns {Promise}
+   */
+  async dropOwnedByRole(connection, roleName) {
+    let query = pgFormat(`REASSIGN OWNED BY %I TO %I; DROP OWNED BY %I;`,
+      roleName, config.pgInstance.adminRole, roleName);
+    return this.query(connection, query);
+  }
+
+  /**
+   * @method dropRoleIfExists
+   * @description Drop a role if it exists.  DROP OWNED must have been run in every
+   * database first.
+   *
+   * @param {Object} connection connection object
+   * @param {String} roleName role name
+   *
+   * @returns {Promise}
+   */
+  dropRoleIfExists(connection, roleName) {
+    let query = pgFormat(`DROP ROLE IF EXISTS %I`, roleName);
+    return this.query(connection, query);
+  }
+
+  /**
+   * @method schemaExists
+   * @description Check if a schema exists in the connection's database
+   *
+   * @param {Object} connection connection object
+   * @param {String} schemaName schema name
+   *
+   * @returns {Promise<Boolean>}
+   */
+  async schemaExists(connection, schemaName) {
+    let query = pgFormat(`SELECT 1 FROM pg_namespace WHERE nspname = %L`, schemaName);
+    let resp = await this.query(connection, query);
+    return resp.rows.length > 0;
+  }
+
+  /**
    * @method listSchema
    *
    * @description List all schemas in the database
@@ -511,10 +693,12 @@ class PGInstance {
     GROUP BY n.nspname
 ),
 usage_check AS (
+    -- LEFT JOIN on pg_roles so this does not throw if the public role does not exist
     SELECT
         n.nspname AS schema_name,
-        has_schema_privilege(%L, n.nspname, 'USAGE') AS is_public
+        COALESCE(has_schema_privilege(pr.oid, n.oid, 'USAGE'), false) AS is_public
     FROM pg_namespace n
+    LEFT JOIN pg_roles pr ON pr.rolname = %L
     WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
 )
 SELECT

@@ -36,8 +36,8 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
     this.db = {};
     this.connectionType = 'python';
     
-    this.selectedUser = 'public';
-    this.userTypes = ['public'];
+    this.selectedUser = '';
+    this.userTypes = [];
     this.isLoggedIn = false; 
     this._initUser();
 
@@ -51,13 +51,39 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
     this.user = (await config.getUser())?.user;
     if( this.user?.loggedIn ) {
       this.isLoggedIn = true;
-      this.userTypes.unshift('you');
-      this.selectedUser = 'you';
+    }
+    this._setUserTypes();
+  }
+
+  /**
+   * @description Is the public user enabled for this database's instance
+   * @returns {Boolean}
+   */
+  get publicUserEnabled() {
+    return this.db?.instance?.publicUserEnabled === true;
+  }
+
+  /**
+   * @description Set the available user types based on login state and whether the
+   * public user is enabled for the database's instance.  Logged in users default to
+   * their own account.  The public option is only shown if the public user is enabled.
+   */
+  _setUserTypes() {
+    const userTypes = [];
+    if ( this.isLoggedIn ) userTypes.push('you');
+    if ( this.publicUserEnabled ) userTypes.push('public');
+    this.userTypes = userTypes;
+
+    if ( !userTypes.includes(this.selectedUser) ) {
+      this.selectedUser = userTypes[0] || '';
     }
   }
 
-
   willUpdate(props){
+    if ( props.has('db') ) {
+      this._setUserTypes();
+    }
+
     if ( props.has('db') || props.has('selectedUser') ) {
       this.setExampleOptions();
       this.setExampleCode();
@@ -77,7 +103,7 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
 
     if ( this.selectedUser === 'you' ) {
       opts.user = this.user.preferred_username;
-    } else {
+    } else if ( this.selectedUser === 'public' && this.publicUserEnabled ) {
       opts.user = window.APP_CONFIG.publicUser.username;
       opts.password = window.APP_CONFIG.publicUser.password;
     }
@@ -94,7 +120,7 @@ export default class DatabaseConnectInfo  extends Mixin(LitElement)
   }
 
   setExampleCode(){
-    if( !this.connectionType ) {
+    if( !this.connectionType || !this.selectedUser ) {
       this._exampleCode = '';
       return;
     }

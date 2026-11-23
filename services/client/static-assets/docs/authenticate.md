@@ -68,7 +68,7 @@ See [Service Account Authentication](/docs/authenticate-service-account) for det
 
 # Public Database Access
 
-For databases with public access enabled, you do not need to log in or obtain a temporary token. You can connect directly using the read-only public user account.
+For databases with public access enabled, you do not need to log in or obtain a temporary token. You can connect directly using the read-only public user account. Public access is disabled by default and must be enabled by a database administrator.
 
 See [Public User Account Access](/docs/public-user-account) for details on connecting with the public account and querying data using the `api` schema.
 

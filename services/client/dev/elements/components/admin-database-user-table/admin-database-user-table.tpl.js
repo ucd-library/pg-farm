@@ -276,6 +276,7 @@ function _renderUserName(row){
         </div>
         <div class='badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'ADMIN'}>Admin</div>
         <div class='badge badge--blue' ?hidden=${!isServiceAccount}>Service Account</div>
+        <div class='badge' ?hidden=${row.item?.user?.pgFarmUser?.type !== 'PUBLIC'}>Public</div>
       </div>
       <div class='caption' ?hidden=${!name}>${name}</div>
       <div ?hidden=${!serviceAccountOwnerName} class='service-account-details'>

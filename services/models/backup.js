@@ -170,6 +170,17 @@ class BackupModel {
       await this.runPgRestore(hostname, database);
     }
 
+    // the roles dump may contain a public role (and grants) from before the public user
+    // was disabled, or be missing it if it was enabled after the backup.  Make the
+    // restored role state match the admin database.  Use the unix socket as the
+    // instance is in the RESTORING state.
+    try {
+      let action = await this.models.publicUser.reconcile(ctx, {useSocket: true});
+      logger.info(`Public user reconcile after restore for ${hostname}: ${action}`);
+    } catch(e) {
+      logger.error('Error reconciling public user after restore: ', e);
+    }
+
     try {
       let startResp = await this.models.admin.startInstance(instNameOrId, orgNameOrId);
       if( startResp.starting ) {

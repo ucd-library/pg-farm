@@ -48,7 +48,7 @@ return html`
             `)}
         </select>
       </div>
-      <div class='field-container' ?hidden=${this.userTypes.length === 1}>
+      <div class='field-container' ?hidden=${this.userTypes.length <= 1}>
         <label for=${this.idGen.get('user')}>User</label>
         <select id=${this.idGen.get('user')} @input=${e => this.selectedUser = e.target.value}>
           <option value='' ?selected=${this.connectionType === ''} disabled>Choose a user</option>
@@ -62,10 +62,17 @@ return html`
       <pre><code>${unsafeHTML(this._exampleCode)}</code></pre>
     </div>
     <div ?hidden=${this.connectionType !== 'http'}>
-      <a href=${this.swaggerUrl} target="_blank">Open Database API Playground</a> | 
+      <span ?hidden=${!this.publicUserEnabled}>
+        <a href=${this.swaggerUrl} target="_blank">Open Database API Playground</a> | 
+      </span>
       <a href="/docs/http-rest-api">HTTP REST API Documentation</a>
     </div>
-    <div ?hidden="${this.selectedUser == 'public'}">
+    <div ?hidden=${this.userTypes.length > 0}>
+      This database does not allow public access.
+      <a href='${window.APP_CONFIG?.loginPath || '/login'}?redirect=${window.location}&set-cookie=true'>Log in</a> to see connection information.
+      For more information, see the <a href="/docs/authenticate">login help documentation</a>.
+    </div>
+    <div ?hidden="${this.selectedUser != 'you'}">
       Access your PG Farm temporary access token (password) via the PG Farm command line interface or Desktop application.
       For more information, see the <a href="/docs/authenticate">login help documentation</a>.
     </div>

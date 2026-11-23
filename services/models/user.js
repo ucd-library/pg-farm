@@ -37,10 +37,13 @@ class User {
    * provided, a random password will be generated.
    * @param {Boolean} user.noinherit optional.  Defaults to false.
    * @param {String} user.parent optional.  Parent user.  Only used for 'SERVICE_ACCOUNT' type
+   * @param {Object} opts
+   * @param {Boolean} opts.allowReserved optional.  Must be true to create the reserved public user.
+   * The public user should only be created via the publicUser model enable() method.
    *
    * @returns {Promise}
    */
-  async create(ctx, user) {
+  async create(ctx, user, opts={}) {
     ctx = getContext(ctx);
 
     if( typeof user === 'string' ) {
@@ -48,6 +51,10 @@ class User {
     }
     if( !user.username ) {
       throw new Error('Username is required');
+    }
+
+    if( user.username === config.pgInstance.publicRole.username && opts.allowReserved !== true ) {
+      throw new Error(this.publicUserReservedMessage());
     }
 
     if( !user.type ) user.type = 'USER';
@@ -111,6 +118,17 @@ class User {
     await pgInstClient.createOrUpdatePgUser(con, user);
 
     await client.setInstanceUserPassword(ctx, user.username, user.password);
+  }
+
+  /**
+   * @method publicUserReservedMessage
+   * @description Error message used when the reserved public user is directly created or deleted
+   *
+   * @returns {String}
+   */
+  publicUserReservedMessage() {
+    return `The ${config.pgInstance.publicRole.username} user is reserved. `+
+      `Use the public user enable/disable endpoints (pgfarm instance public-user) instead.`;
   }
 
   /**
@@ -202,6 +220,10 @@ class User {
    */
   async delete(ctx, username) {
     ctx = getContext(ctx);
+
+    if( username === config.pgInstance.publicRole.username ) {
+      throw new Error(this.publicUserReservedMessage());
+    }
 
     // get instance connection information
     let con = await this.models.instance.getConnection(ctx);

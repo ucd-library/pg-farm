@@ -114,6 +114,48 @@ export async function setupNamespace() {
   await exec(`kubectl config set-context --current --namespace=${E2E_NAMESPACE}`);
 }
 
+// Only k8s resources whose names match this are ever deleted by deleteE2EInstanceResources.
+// pg farm names instance resources inst-<org>-<instance> and PostgREST resources
+// rest-<org>-<database>, and all e2e orgs are named e2e-*.
+const E2E_RESOURCE_NAME_RE = /^(inst|rest)-e2e-[a-z0-9-]+$/;
+
+/**
+ * @function deleteE2EInstanceResources
+ * @description Delete the k8s resources (statefulsets, deployments, services and
+ * persistent volume claims) for e2e test instances in the e2e namespace.  The admin db
+ * reset only removes rows; without this, a re-created e2e instance re-attaches to the
+ * old PVC and keeps stale postgres data (ex: a postgres password that no longer matches
+ * the admin db).
+ *
+ * Only resources whose names match E2E_RESOURCE_NAME_RE are deleted.  Statefulsets are
+ * deleted (and waited on) before their PVCs so the volumes are released.
+ *
+ * @param {Object} opts
+ * @param {String} opts.namespace defaults to E2E_NAMESPACE
+ *
+ * @returns {Promise<String[]>} names of the deleted resources, ex: ['pvc/inst-e2e-...']
+ */
+export async function deleteE2EInstanceResources(opts = {}) {
+  const namespace = opts.namespace || E2E_NAMESPACE;
+  const deleted = [];
+
+  // order matters: workloads first so the PVCs are no longer mounted
+  const kinds = ['statefulset', 'deployment', 'service', 'pvc'];
+
+  for (const kind of kinds) {
+    const out = await kubectl(`get ${kind} -n ${namespace} -o name`);
+    const names = out.split('\n')
+      .map(l => l.trim().split('/').pop())
+      .filter(n => n && E2E_RESOURCE_NAME_RE.test(n));
+    if (!names.length) continue;
+
+    await kubectl(`delete ${kind} -n ${namespace} --ignore-not-found=true --wait=true --timeout=120s ${names.join(' ')}`);
+    names.forEach(n => deleted.push(`${kind}/${n}`));
+  }
+
+  return deleted;
+}
+
 /**
  * Removes all resources in the pgfarm-test namespace and restores the kubectl
  * context default namespace to its prior value.

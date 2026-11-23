@@ -7,6 +7,7 @@ import PageDataController from '@ucd-lib/pgfarm-client/controllers/PageDataContr
 import QueryParamsController from '@ucd-lib/pgfarm-client/controllers/QueryParamsController.js';
 import IdGenerator from '@ucd-lib/pgfarm-client/utils/IdGenerator.js';
 import { grantDefinitions } from '@ucd-lib/pgfarm-client/utils/service-lib.js';
+import { publicUserDisableConfirmation, publicUserEnableConfirmation } from '@ucd-lib/pgfarm-client/elements/templates/dialog-modals.js';
 
 import '@ucd-lib/pgfarm-client/elements/components/admin-instance-user-form/admin-instance-user-form.js';
 
@@ -18,7 +19,8 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
       pageId: { type: String, attribute: 'page-id' },
       orgName: { type: String},
       dbName: { type: String},
-      users: { type: Array }
+      users: { type: Array },
+      publicUserUpdating: { type: Boolean }
     }
   }
 
@@ -32,6 +34,7 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
     this.orgName = '';
     this.dbName = '';
     this.users = [];
+    this.publicUserUpdating = false;
 
     this.dataCtl = new PageDataController(this);
     this.idGen = new IdGenerator({randomPrefix: true});
@@ -39,7 +42,10 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
       {name: 'schema', defaultValue: ''}
     ]);
 
-    this._injectModel('AppStateModel', 'DatabaseModel', 'UserModel');
+    this._injectModel('AppStateModel', 'DatabaseModel', 'UserModel', 'InstanceModel');
+
+    // dialog modal calls actionCallback with the modal as 'this'
+    this._onPublicUserModalAction = this._onPublicUserModalAction.bind(this);
   }
 
   /**
@@ -155,6 +161,105 @@ export default class AppAdminDatabaseUsers extends Mixin(LitElement)
         </admin-instance-user-form>`,
       actionCallback: this._onAddUserModalAction
     });
+  }
+
+  /**
+   * @description Is the instance public user enabled
+   * @returns {Boolean}
+   */
+  get publicUserEnabled() {
+    return this.dataCtl?.db?.instance?.publicUserEnabled === true;
+  }
+
+  /**
+   * @description Click handler for the public user checkbox.  Prevents the checkbox from
+   * changing and opens a confirmation dialog.  The checkbox reflects the server state after
+   * the change is confirmed and the page is refreshed.
+   * @param {Event} e - click event
+   */
+  async _onPublicUserToggleClick(e) {
+    e.preventDefault();
+    if ( this.publicUserUpdating ) return;
+    const instanceName = this.dataCtl?.db?.instance?.name;
+    const username = window.APP_CONFIG?.publicUser?.username || 'pgfarm-public';
+
+    if ( this.publicUserEnabled ) {
+      // get the current permission summary so we can show what will be removed
+      this.publicUserUpdating = true;
+      this.AppStateModel.showLoading();
+      const r = await this.InstanceModel.disablePublicUser(this.orgName, instanceName, {dryRun: true});
+      this.AppStateModel.hideLoading();
+      this.publicUserUpdating = false;
+      if ( r.state === 'error' ) {
+        this.AppStateModel.showError({
+          message: 'Unable to load public user permissions',
+          error: r.error
+        });
+        return;
+      }
+
+      this.AppStateModel.showDialogModal({
+        title: 'Disable Public User',
+        actions: [
+          {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+          {text: 'Disable Public User', value: 'db-disable-public-user', color: 'secondary', disableOnLoading: true}
+        ],
+        content: publicUserDisableConfirmation(r.payload?.summary, instanceName),
+        actionCallback: this._onPublicUserModalAction
+      });
+      return;
+    }
+
+    this.AppStateModel.showDialogModal({
+      title: 'Enable Public User',
+      actions: [
+        {text: 'Cancel', value: 'dismiss', invert: true, color: 'secondary'},
+        {text: 'Enable Public User', value: 'db-enable-public-user', color: 'secondary', disableOnLoading: true}
+      ],
+      content: publicUserEnableConfirmation(instanceName, username),
+      actionCallback: this._onPublicUserModalAction
+    });
+  }
+
+  /**
+   * @description Callback for the enable/disable public user dialog actions
+   * @param {String} action - dialog action value
+   * @param {Object} modalEle - dialog modal element
+   */
+  async _onPublicUserModalAction(action, modalEle) {
+    if ( action !== 'db-disable-public-user' && action !== 'db-enable-public-user' ) return;
+    const enable = action === 'db-enable-public-user';
+    const instanceName = this.dataCtl?.db?.instance?.name;
+
+    modalEle._loading = true;
+    this.publicUserUpdating = true;
+    const r = enable ?
+      await this.InstanceModel.enablePublicUser(this.orgName, instanceName) :
+      await this.InstanceModel.disablePublicUser(this.orgName, instanceName);
+    modalEle._loading = false;
+    this.publicUserUpdating = false;
+
+    if ( r.state === 'error' ) {
+      this.AppStateModel.showError({
+        message: `Unable to ${enable ? 'enable' : 'disable'} public user`,
+        error: r.error
+      });
+      return;
+    }
+
+    if ( r.payload?.errors?.length ) {
+      this.AppStateModel.showError({
+        message: `Public user ${enable ? 'enabled' : 'disabled'} with errors: ` +
+          r.payload.errors.map(e => `${e.database ? e.database + ' ' : ''}${e.step}: ${e.message}`).join('; ')
+      });
+    } else {
+      this.AppStateModel.showToast({
+        text: `Public user has been ${enable ? 'enabled' : 'disabled'} for instance ${instanceName}`,
+        type: 'success',
+        showOnPageLoad: true
+      });
+    }
+    this.AppStateModel.refresh();
   }
 
   async _onAddUserModalAction(action, modalEle) {

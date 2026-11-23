@@ -128,6 +128,28 @@ DB access.
 
 ---
 
+## Public User Tests
+
+The public user (`pgfarm-public`) is disabled by default and toggled per instance.
+Coverage:
+
+| File | What it covers |
+|---|---|
+| `unit/role-privilege-summary.test.js` | READ/WRITE/OTHER classification and summary counts |
+| `unit/cli-public-user-print.test.js` | CLI warning/summary output, non-TTY confirmation refusal |
+| `integration/public-user.test.js` | enabled flag, login activity, report, reserved-name guards, `initInstanceDb` default off, PostgREST anon role config, disable ordering |
+| `integration/public-user-sql.test.js` | Real SQL against the test container: enable, grants, summary (direct grants only), session termination, DROP OWNED/DROP ROLE, re-enable, reconcile |
+| `api/public-user-api.test.js` | Route auth gates, dry run, `publicUserEnabled` flags, admin report |
+| `gateway/http-proxy-public-user.test.js` | Anonymous PostgREST 401 without waking instances, OPTIONS passthrough |
+| `gateway/pg-proxy-public-user.test.js` | Gateway rejects public logins when disabled |
+| `e2e/cli/08-public-user.test.js` | `pgfarm instance public-user` status/enable/disable/--dry-run on a live stack |
+
+`integration/public-user-sql.test.js` creates the `pgfarm-public` and
+`pgfarm-authenticator` roles in the test container (roles are cluster-wide) and
+drops them in `after()`. It refuses to run if `pgfarm-public` already exists.
+
+---
+
 ## Environment Variable Reference
 
 | Variable | Local default | GKE dev default | Description |
