@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import PG from 'pg';
 import { getAdminDbConfig } from './e2e-setup.js';
+import { deleteE2EInstanceResources } from './k8s.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -125,8 +126,15 @@ export async function stop() {
  * live pgfarm admin database.  Connects via the port configured in
  * E2E_ADMIN_DB_PORT (default 30544 for local-dev).
  *
- * Deletion is ordered to respect foreign-key constraints:
- *   databases → instances → organizations
+ * Deletion is ordered to respect foreign-key constraints (most of the
+ * dependent tables do not cascade):
+ *   connection events → connections → database last events / featured →
+ *   databases → pg rest config / instance users → instances →
+ *   organization roles / featured → organizations
+ *
+ * After the admin db rows are removed, the k8s resources (including PVCs) for e2e
+ * instances are deleted so re-created instances start from an empty data directory.
+ * Rows are removed first so the health service will not try to restart the instances.
  *
  * @returns {Promise<void>}
  */
@@ -134,27 +142,40 @@ export async function resetE2EData() {
   const client = new PG.Client({ ...getAdminDbConfig(), connectionTimeoutMillis: 8000 });
   await client.connect();
 
+  const orgIds = `SELECT organization_id FROM pgfarm.organization WHERE name LIKE 'e2e-%'`;
+  const instIds = `SELECT instance_id FROM pgfarm.instance WHERE organization_id IN (${orgIds})`;
+  const dbIds = `SELECT database_id FROM pgfarm.database WHERE instance_id IN (${instIds}) OR organization_id IN (${orgIds})`;
+
+  const statements = [
+    `DELETE FROM pgfarm.connection_event WHERE session_id IN (
+       SELECT session_id FROM pgfarm.connection WHERE database_id IN (${dbIds}))`,
+    `DELETE FROM pgfarm.connection WHERE database_id IN (${dbIds})`,
+    `DELETE FROM pgfarm.database_last_event WHERE database_id IN (${dbIds})`,
+    `DELETE FROM pgfarm.database_featured WHERE database_id IN (${dbIds}) OR organization_id IN (${orgIds})`,
+    `DELETE FROM pgfarm.database WHERE database_id IN (${dbIds})`,
+    `DELETE FROM pgfarm.pg_rest_config WHERE instance_id IN (${instIds})`,
+    `DELETE FROM pgfarm.instance_user WHERE instance_id IN (${instIds})`,
+    `DELETE FROM pgfarm.instance WHERE instance_id IN (${instIds})`,
+    `DELETE FROM pgfarm.organization_role WHERE organization_id IN (${orgIds})`,
+    `DELETE FROM pgfarm.organization WHERE name LIKE 'e2e-%'`,
+  ];
+
   try {
-    await client.query(`
-      DELETE FROM pgfarm.database
-      WHERE instance_id IN (
-        SELECT instance_id FROM pgfarm.instance
-        WHERE organization_id IN (
-          SELECT organization_id FROM pgfarm.organization WHERE name LIKE 'e2e-%'
-        )
-      )
-    `);
-
-    await client.query(`
-      DELETE FROM pgfarm.instance
-      WHERE organization_id IN (
-        SELECT organization_id FROM pgfarm.organization WHERE name LIKE 'e2e-%'
-      )
-    `);
-
-    await client.query(`DELETE FROM pgfarm.organization WHERE name LIKE 'e2e-%'`);
+    await client.query('BEGIN');
+    for (const sql of statements) {
+      await client.query(sql);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
   } finally {
     await client.end();
+  }
+
+  const deleted = await deleteE2EInstanceResources();
+  if (deleted.length) {
+    console.log(`  Deleted e2e k8s resources: ${deleted.join(', ')}`);
   }
 }
 

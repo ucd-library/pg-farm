@@ -74,6 +74,37 @@ class AdminService extends BaseService {
     return this.store.data.actions.get(id);
   }
 
+  /**
+   * @method publicUserReport
+   * @description Get the public user report for all instances
+   *
+   * @param {Object} opts
+   * @param {Boolean} opts.details optional.  include permission summary counts for running instances
+   *
+   * @returns {Promise<Object>}
+   */
+  async publicUserReport(opts={}) {
+    let ido = {action: 'public-user-report'+(opts.details ? '-details' : '')};
+    let id = payload.getKey(ido);
+
+    let qs = {};
+    if( opts.details ) qs.details = 'true';
+
+    await this.request({
+      url: `${this.basePath}/public-user-report`,
+      qs,
+      fetchOptions: {
+        headers: serviceUtils.authHeader()
+      },
+      json: true,
+      onLoading: request => this.store.onPublicUserReportUpdate(ido, {request}),
+      onLoad: payload => this.store.onPublicUserReportUpdate(ido, {payload: payload.body}),
+      onError: error => this.store.onPublicUserReportUpdate(ido, {error})
+    });
+
+    return this.store.data.actions.get(id);
+  }
+
   async updateUcdIamProfile(user) {
     let ido = {action: 'update-ucd-iam-profile', user};
     let id = payload.getKey(ido);

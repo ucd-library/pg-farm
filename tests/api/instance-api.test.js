@@ -50,6 +50,34 @@ describe('instance API', function () {
 
   });
 
+  // ── POST / (create) ───────────────────────────────────────────────────────────
+
+  describe('POST / (create)', function () {
+
+    afterEach(function () {
+      sinon.restore();
+    });
+
+    it('returns 403 for non-admin', async function () {
+      const res = await request(null)
+        .post('/api/instance')
+        .send({ name: 'new-inst', organization: 'api-inst-org' });
+      assert.equal(res.status, 403);
+    });
+
+    it('calls instance.create and returns 201 with the result (regression: route body was missing)', async function () {
+      const create = sinon.stub(instanceModel, 'create').resolves({ instance_id: 'abc', name: 'inst-new-inst' });
+      const res = await request(users.admin)
+        .post('/api/instance')
+        .send({ name: 'new-inst', organization: 'api-inst-org' });
+      assert.equal(res.status, 201);
+      assert.equal(res.body.name, 'inst-new-inst');
+      assert.isTrue(create.calledOnce);
+      assert.equal(create.firstCall.args[1].name, 'new-inst');
+    });
+
+  });
+
   // ── GET /:org/:instance ───────────────────────────────────────────────────────
 
   describe('GET /:org/:instance', function () {

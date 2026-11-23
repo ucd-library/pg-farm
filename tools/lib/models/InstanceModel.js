@@ -109,6 +109,72 @@ class InstanceModel extends BaseModel {
     return this.service.syncUsers(org, instance, opts);
   }
 
+  /**
+   * @method getPublicUser
+   * @description Get the public user status and permission summary for an instance.
+   * The summary lists tables/views the public user has READ or WRITE access to.
+   *
+   * @param {String} org organization name
+   * @param {String} instance instance name
+   *
+   * @returns {Promise<Object>}
+   */
+  getPublicUser(org, instance) {
+    instance = this.formatName(instance);
+    return this.service.getPublicUser(org, instance);
+  }
+
+  /**
+   * @method enablePublicUser
+   * @description Enable the public user for an instance
+   *
+   * @param {String} org organization name
+   * @param {String} instance instance name
+   * @param {Object} opts
+   * @param {Boolean} opts.dryRun optional.  if true, only return the planned changes
+   *
+   * @returns {Promise<Object>}
+   */
+  async enablePublicUser(org, instance, opts={}) {
+    instance = this.formatName(instance);
+    const r = await this.service.setPublicUser(org, instance, true, opts);
+    if( r.state === 'loaded' && !opts.dryRun ) {
+      this._purgeAfterPublicUserChange();
+    }
+    return r;
+  }
+
+  /**
+   * @method disablePublicUser
+   * @description Disable (remove) the public user for an instance.  This removes
+   * all of the public user's permissions.
+   *
+   * @param {String} org organization name
+   * @param {String} instance instance name
+   * @param {Object} opts
+   * @param {Boolean} opts.dryRun optional.  if true, only return the permission summary and planned changes
+   *
+   * @returns {Promise<Object>}
+   */
+  async disablePublicUser(org, instance, opts={}) {
+    instance = this.formatName(instance);
+    const r = await this.service.setPublicUser(org, instance, false, opts);
+    if( r.state === 'loaded' && !opts.dryRun ) {
+      this._purgeAfterPublicUserChange();
+    }
+    return r;
+  }
+
+  /**
+   * @method _purgeAfterPublicUserChange
+   * @description Purge cached instance and database data after the public user is toggled
+   */
+  _purgeAfterPublicUserChange() {
+    this.store.data.get.purge();
+    this.store.data.publicUser.purge();
+    this.DatabaseModel.purgeCache('public');
+  }
+
 }
 
 const model = new InstanceModel();

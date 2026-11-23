@@ -4,6 +4,7 @@ import keycloak from '../../../../lib/keycloak.js';
 import handleError from '../handle-errors.js';
 import {middleware as contextMiddleware, requireContext} from '../../../../lib/context.js';
 import isInstanceAlive from '../middleware/instance-alive.js';
+import pgClient from '../../../../lib/pg-admin-client.js';
 
 const router = Router();
 
@@ -168,6 +169,11 @@ router.get('/:organization/:database',
   try {
     let {organization, database, instance} = req.context;
 
+    let publicUserEnabled = false;
+    if( instance?.instance_id ) {
+      publicUserEnabled = await pgClient.isPublicUserEnabled(instance.instance_id);
+    }
+
     let resp = {
       id : database.database_id,
       name : database.name,
@@ -186,7 +192,8 @@ router.get('/:organization/:database',
       instance : {
         name : instance?.name,
         state : instance?.state,
-        id : instance?.instance_id
+        id : instance?.instance_id,
+        publicUserEnabled
       }
     };
 

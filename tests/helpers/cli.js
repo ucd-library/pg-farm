@@ -39,7 +39,8 @@ export async function pgfarm(args, opts = {}) {
       };
     }
     throw new Error(
-      `pgfarm ${args.join(' ')} failed (exit ${err.code}):\n${err.stderr || err.message}`
+      `pgfarm ${args.join(' ')} failed (exit ${err.code}):\n${err.stderr || err.message}` +
+      (err.stdout ? `\nstdout:\n${err.stdout}` : '')
     );
   }
 }

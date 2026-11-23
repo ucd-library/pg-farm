@@ -102,9 +102,37 @@ class KubectlWrapper {
     return stdout.trim();
   }
 
-  async restart(type, name) {
+  /**
+   * @method restart
+   * @description Rollout restart a k8s resource.  kubectl refuses a restart when one was
+   * already triggered for the same resource within the past second (the restartedAt
+   * annotation has second precision), which happens when callers restart back to back
+   * (ex: public user enable then disable).  Wait and retry in that case so the newest
+   * restart always happens (pods from the earlier restart may have read stale config).
+   *
+   * @param {String} type resource type, ex: deployment
+   * @param {String} name resource name
+   * @param {Object} opts
+   * @param {Number} opts.retries number of retries for the 'within the past second' error. default 3
+   *
+   * @returns {Promise<Object>} exec result
+   */
+  async restart(type, name, opts={}) {
     await this.init();
-    return this.exec(`kubectl rollout restart ${type} ${name}`);
+    let retries = opts.retries ?? 3;
+
+    for( let i = 0; ; i++ ) {
+      try {
+        return await this.exec(`kubectl rollout restart ${type} ${name}`);
+      } catch(e) {
+        let msg = (e.message || '') + (e.stderr || '');
+        if( i >= retries || !msg.includes('within the past second') ) {
+          throw e;
+        }
+        logger.info(`Restart of ${type} ${name} already triggered within the past second, retrying`);
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      }
+    }
   }
 
   /**

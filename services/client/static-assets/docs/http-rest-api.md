@@ -40,6 +40,8 @@ For databases where public access is enabled:
 - Any exposed table or view under the `api` schema can be queried **anonymously** (without providing any authentication header).
 - Anonymous requests automatically run with the permissions of the read-only [public user account](/docs/public-user-account) (`pgfarm-public`).
 
+Public access is **disabled by default**. If the public user account is not enabled for a database's instance, anonymous requests are rejected with a `401` response, and you must use [authenticated access](#authenticated-access-jwt-bearer-tokens).
+
 ### Example
 ```bash
 curl "https://pgfarm.library.ucdavis.edu/api/query/library/weather-stats/weather-readings?limit=5"

@@ -1,5 +1,6 @@
 import {Router} from 'express';
-import {admin as model, instance as instanceModel, backup, database} from '../../../../models/index.js';
+import {admin as model, instance as instanceModel, backup, database, publicUser} from '../../../../models/index.js';
+import config from '../../../../lib/config.js';
 import keycloak from '../../../../lib/keycloak.js';
 import client from '../../../../lib/pg-admin-client.js';
 import handleError from '../handle-errors.js';
@@ -45,6 +46,8 @@ router.get('/:organization/:instance',
         updated_at: d.updated_at
       }));
 
+    resp.publicUserEnabled = await client.isPublicUserEnabled(resp.instance_id);
+
     let lastEvent = await client.getLastDatabaseEvent(resp.instance_id);
     if( lastEvent ) {
       resp.lastDatabaseEvent = {
@@ -70,6 +73,7 @@ router.post('/',
   keycloak.protect('admin'),
   async (req, res) => {
   try {
+    let result = await instanceModel.create(req.context, req.body);
     res.status(201).json(result);
   } catch(e) {
     handleError(res, e);
@@ -85,6 +89,10 @@ router.put('/:organization/:instance/user/:user',
   try {
     let user = req.params.user;
     let parent = req.query.parent;
+
+    if( user === config.pgInstance.publicRole.username ) {
+      return res.status(400).json({message: reservedPublicUserMessage()});
+    }
 
     // do not let api create special users, for now
     let type = req.query.type || 'USER';
@@ -129,6 +137,10 @@ router.delete('/:organization/:instance/user/:user',
   try {
     let user = req.params.user;
 
+    if( user === config.pgInstance.publicRole.username ) {
+      return res.status(400).json({message: reservedPublicUserMessage()});
+    }
+
     if( user === (req.user.username || req.user.preferred_username) ) {
       throw new Error('Cannot delete yourself');
     }
@@ -137,6 +149,66 @@ router.delete('/:organization/:instance/user/:user',
     res.status(204).json({success});
   } catch(e) {
     handleError(res, e);
+  }
+});
+
+/**
+ * @function reservedPublicUserMessage
+ * @description Error message for attempts to add/remove the reserved public user
+ * through the generic user routes.
+ *
+ * @returns {String}
+ */
+function reservedPublicUserMessage() {
+  return `The ${config.pgInstance.publicRole.username} user is reserved. `+
+    `Use the /public-user endpoint (pgfarm instance public-user) to enable or disable it.`;
+}
+
+/** Public user status and permission summary **/
+router.get('/:organization/:instance/public-user',
+  contextMiddleware,
+  requireContext('organization', 'instance'),
+  keycloak.protect('instance-admin'),
+  async (req, res) => {
+  try {
+    let summary = await publicUser.getPermissionSummary(req.context);
+    res.json(summary);
+  } catch(e) {
+    handleError(res, e);
+  }
+});
+
+/** Enable public user.  ?dryRun=true returns planned steps only **/
+router.put('/:organization/:instance/public-user',
+  contextMiddleware,
+  requireContext('organization', 'instance'),
+  keycloak.protect('instance-admin'),
+  isInstanceAlive(),
+  async (req, res) => {
+  try {
+    let result = await publicUser.enable(req.context, {
+      dryRun : req.query.dryRun === 'true'
+    });
+    res.json(result);
+  } catch(e) {
+    handleError(res, e, e.result);
+  }
+});
+
+/** Disable (remove) public user.  ?dryRun=true returns permission summary and planned steps only **/
+router.delete('/:organization/:instance/public-user',
+  contextMiddleware,
+  requireContext('organization', 'instance'),
+  keycloak.protect('instance-admin'),
+  isInstanceAlive(),
+  async (req, res) => {
+  try {
+    let result = await publicUser.disable(req.context, {
+      dryRun : req.query.dryRun === 'true'
+    });
+    res.json(result);
+  } catch(e) {
+    handleError(res, e, e.result);
   }
 });
 

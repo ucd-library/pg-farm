@@ -18,7 +18,7 @@ class Database {
    *
    * @param {String|Object} ctx context object or id
    * @param {Object} opts
-   * @param {String} opts.database optional.  Defaults to ctx.database.name
+   * @param {String|Object} opts.database optional.  Database name or object with name property.  Defaults to ctx.database.name
    * @param {String} opts.username optional.  Defaults to 'postgres'
    * @param {Boolean} opts.useSocket optional.  If true, returns a connection object for a unix socket
    *
@@ -31,18 +31,20 @@ class Database {
       opts.username = 'postgres';
     }
 
+    // opts.database may be a database name string or an object with a name property
     let db;
     if( opts.database ) {
-      db = {name: opts.database.name};
+      db = {name: typeof opts.database === 'string' ? opts.database : opts.database.name};
     } else {
       db = ctx.database
     }
+    let dbName = db?.name || db?.database_name;
 
     if( opts.useSocket ) {
       return {
         host : '/var/run/postgresql',
         user : opts.username,
-        database : db.name || db.database_name
+        database : dbName
       }
     }
 
@@ -56,8 +58,8 @@ class Database {
         return {
           host : instance.hostname,
           port : instance.port,
-          user : username,
-          database : db.name,
+          user : opts.username,
+          database : dbName,
           password : config.pgInstance.adminInitPassword
         }
       }
@@ -68,7 +70,9 @@ class Database {
       host : user.instance_hostname,
       port : user.instance_port,
       user : user.username,
-      database : user.database_name,
+      // prefer the requested database.  user.database_name is an arbitrary database
+      // on the instance when the instance has multiple databases.
+      database : dbName || user.database_name,
       password : user.password
     };
   }
@@ -284,6 +288,15 @@ class Database {
   async link(localOrg, localDb, remoteDb, remoteOrg, opts={}) {
     localDb = await this.get(localDb, localOrg);
     remoteDb = await this.get(remoteDb, remoteOrg);
+
+    // FDW user mappings connect to the remote database as the public user
+    if( !opts.remoteRole ) {
+      let remotePublicEnabled = await client.isPublicUserEnabled(remoteDb.instance_id);
+      if( !remotePublicEnabled ) {
+        throw new Error(`Remote database ${remoteOrg ? remoteOrg+'/' : ''}${remoteDb.name || remoteDb.database_name} `+
+          `has the public user disabled; linking requires the remote public user to be enabled`);
+      }
+    }
 
     // logger.info('Linking database', db.database_name, 'to organization', org.name);
     let con = await this.models.database.getConnection(

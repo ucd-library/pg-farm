@@ -12,8 +12,17 @@ class AdminStore extends BaseStore {
     this.events = {
       CONNECTIONS_UPDATE : 'admin-connections-update',
       CONNECTION_LOG_UPDATE : 'admin-connection-log-update',
-      UCD_IAM_PROFILE_UPDATE : 'admin-ucd-iam-profile-update'
+      UCD_IAM_PROFILE_UPDATE : 'admin-ucd-iam-profile-update',
+      PUBLIC_USER_REPORT_UPDATE : 'admin-public-user-report-update'
     };
+  }
+
+  onPublicUserReportUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.actions,
+      this.events.PUBLIC_USER_REPORT_UPDATE
+    );
   }
 
   onConnectionsUpdate(ido, payload) {

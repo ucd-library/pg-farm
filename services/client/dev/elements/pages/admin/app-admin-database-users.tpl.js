@@ -26,6 +26,18 @@ export function styles() {
       justify-content: flex-end;
       width: 100%;
     }
+    app-admin-database-users .public-user-panel {
+      margin-bottom: var(--spacer--large, 2rem);
+      padding: 1rem;
+      border: 1px solid var(--ucd-blue-60, #B0D0ED);
+      background-color: var(--ucd-blue-10, #F7FAFD);
+    }
+    app-admin-database-users .public-user-panel ul.checkbox {
+      margin-bottom: .5rem;
+    }
+    app-admin-database-users .public-user-panel .caption {
+      margin: 0;
+    }
     @media (min-width: 480px) {
       app-admin-database-users .add-user-container {
         width: auto;
@@ -47,6 +59,26 @@ export function render() {
       <div class='l-content'>
         <admin-database-wake .orgName=${this.orgName} .dbName=${this.dbName} @wake-up-successful=${() => this.AppStateModel.refresh()}></admin-database-wake>
         <div ?hidden=${this.dataCtl?.db?.instance?.state === 'SLEEP'}>
+          <div class='public-user-panel'>
+            <ul class="list--reset checkbox">
+              <li>
+                <input
+                  id=${this.idGen.get('public-user')}
+                  type='checkbox'
+                  .checked=${this.publicUserEnabled}
+                  ?disabled=${this.publicUserUpdating || !db}
+                  @click=${this._onPublicUserToggleClick} />
+                <label for=${this.idGen.get('public-user')}>
+                  Enable public user account (<code>${window.APP_CONFIG?.publicUser?.username || 'pgfarm-public'}</code>)
+                </label>
+              </li>
+            </ul>
+            <p class='caption'>
+              The public user lets anyone connect with shared, publicly documented credentials and enables anonymous REST API access.
+              This setting applies to <strong>all databases</strong> on instance <strong>${db?.instance?.name || ''}</strong>.
+              Disabling it removes all of the public user's permissions.
+            </p>
+          </div>
           <div class='heading'>
             <div class='flex flex--align-center gap--small flex--wrap'>
               <h2>Users:</h2>

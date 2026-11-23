@@ -81,5 +81,14 @@ program.command('update-user-iam-profile')
     process.exit(0);
   });
 
+program.command('public-user-report')
+  .description('List all instances with public user enabled state and public SQL login activity')
+  .option('-d, --details', 'Include public user permission counts for running instances (sleeping instances are not woken)')
+  .action(async (opts) => {
+    let resp = await adminModel.publicUserReport({details: opts.details === true});
+    print.display(resp, opts.output, print.publicUserReport);
+    process.exit(resp.error ? 1 : 0);
+  });
+
 wrapAllCmds(program);
 program.parse(process.argv);

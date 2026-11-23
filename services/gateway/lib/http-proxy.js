@@ -73,6 +73,23 @@ async function middleware(req, res) {
     // let db = await database.get(dbName, orgName);
     host = 'http://'+ctx.database.pgrest_hostname+':'+config.pgRest.port;
 
+    // anonymous requests are only allowed if the public user (PostgREST anon role)
+    // is enabled for the instance.  Reject early so we don't wake a sleeping instance
+    // just to have PostgREST return a 401.  CORS preflight (OPTIONS) requests never
+    // include the Authorization header, so they are always passed through.
+    if( req.method !== 'OPTIONS' && !req.headers.authorization ) {
+      let publicEnabled = await client.isPublicUserEnabled(ctx.instance.instance_id);
+      if( !publicEnabled ) {
+        res.status(401).json({
+          code : 'PGFARM401',
+          message : 'Anonymous access is disabled for this database. Provide a bearer token in the Authorization header.',
+          details : null,
+          hint : 'See /docs/http-rest-api for authentication details'
+        });
+        return;
+      }
+    }
+
     // if the instance is marked as RUN in the db but is actually down,
     // it's up the the health service to start it.
     if( ctx.instance.state === 'ARCHIVE' ) {

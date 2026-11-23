@@ -226,7 +226,7 @@ class DatabaseModel extends BaseModel {
   }
 
   exposeTableToApi(org, db, table) {
-    return this.service.exposeTableToApi(org, db);
+    return this.service.exposeTableToApi(org, db, table);
   }
 
   updateApiCache(org, db, table) {

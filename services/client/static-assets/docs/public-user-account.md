@@ -8,6 +8,7 @@ This page explains how to use the read-only public user account (`pgfarm-public`
 - [HTTP REST API Access](#http-rest-api-access)
 - [Listing Available Tables](#listing-available-tables)
 - [Exposing Tables (For Database Owners/Administrators)](#exposing-tables-for-database-ownersadministrators)
+- [Enabling or Disabling the Public User (For Database Administrators)](#enabling-or-disabling-the-public-user-for-database-administrators)
 
 ---
 
@@ -16,6 +17,8 @@ This page explains how to use the read-only public user account (`pgfarm-public`
 For PG Farm databases where public access is enabled, a read-only public user account is provided. This allows anyone to connect to and query the database without needing a UC Davis CAS login or a temporary service account token.
 
 The public user account is limited to **read-only (`SELECT`) access** and can only access tables or views explicitly exposed inside the `api` schema.
+
+The public user account is **disabled by default**. A database administrator must enable it for the database's instance before public access is available. If the public user is not enabled, the database's connection information page will not show public connection details and you will need to [log in](/docs/authenticate) to connect.
 
 ---
 
@@ -134,3 +137,25 @@ SELECT * FROM sensor_data.readings;
   SELECT timestamp, temperature, humidity FROM sensor_data.readings;
   ```
 - **Stability:** You can change or migrate internal schemas/tables behind the scenes without breaking queries from public users, as long as the view definition in `api` remains stable.
+
+---
+
+## Enabling or Disabling the Public User (For Database Administrators)
+
+The public user is managed per **instance**, so the setting applies to every database on the instance. It is disabled by default for new databases.
+
+- **Web application:** On the database's **Users** admin page, check or uncheck **Enable public user account**.
+- **Command line:**
+  ```bash
+  # show whether the public user is enabled and which tables/views it can read or write
+  pgfarm instance public-user status [organization]/[instance]
+
+  # preview what disabling will remove, without making changes
+  pgfarm instance public-user disable [organization]/[instance] --dry-run
+
+  # enable or disable (prompts for confirmation unless --yes is provided)
+  pgfarm instance public-user enable [organization]/[instance]
+  pgfarm instance public-user disable [organization]/[instance]
+  ```
+
+**Disabling the public user removes it, along with all of its permissions, from every database on the instance.** Both the web application and the command line show the tables and views the public user can currently read or write before you confirm. Disabling also turns off anonymous HTTP REST API access and breaks any database links that rely on the public user. Re-enabling the public user creates a fresh account with access to the `api` schema only. Previously removed permissions are **not** restored.

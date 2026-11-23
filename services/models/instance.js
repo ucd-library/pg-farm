@@ -148,7 +148,10 @@ class Instance {
 
   /**
    * @method initInstanceDb
-   * @description Initialize the database pgfarm public user and postgres user
+   * @description Initialize the instance postgres user.  The public user is NOT created
+   * by default.  If the public user has been enabled for the instance (see the publicUser
+   * model), its role and password are refreshed.  If it is disabled, any stray public role
+   * on the instance is removed.
    * 
    * @param {String|Object} ctx context object or id 
    */
@@ -163,15 +166,21 @@ class Instance {
       logger.warn(`Failed to create postgres user for on instance`, {e}, ctx.logSignal);
     }
 
-    // add public user
+    // public user is off by default.  only refresh it if it has been enabled
     try {
-      logger.info('Ensuring public user', 
-        config.pgInstance.publicRole.username,
-        ctx.logSignal
-      )
-      await this.models.user.create(ctx, config.pgInstance.publicRole.username);
+      let publicEnabled = await this.models.publicUser.isEnabled(ctx);
+      if( publicEnabled ) {
+        logger.info('Public user enabled, ensuring public user', 
+          config.pgInstance.publicRole.username,
+          ctx.logSignal
+        );
+        await this.models.user.create(ctx, config.pgInstance.publicRole.username, {allowReserved: true});
+      } else {
+        logger.info('Public user disabled, reconciling public role', ctx.logSignal);
+        await this.models.publicUser.reconcile(ctx);
+      }
     } catch(e) {
-      logger.warn(`Failed to create public user`,  config.pgInstance.publicRole.username, {e}, ctx.logSignal);
+      logger.warn(`Failed to ensure public user state`,  config.pgInstance.publicRole.username, {e}, ctx.logSignal);
     }
   }
 

@@ -8,6 +8,8 @@ class Print {
     this.orgUsers = this.orgUsers.bind(this);
     this.instances = this.instances.bind(this);
     this.dbUsers = this.dbUsers.bind(this);
+    this.publicUserSummary = this.publicUserSummary.bind(this);
+    this.publicUserReport = this.publicUserReport.bind(this);
   }
 
 
@@ -186,6 +188,148 @@ class Print {
 
   connections(connections) {
 
+  }
+
+  /**
+   * @method publicUserSummary
+   * @description Print the public user status and the tables/views the public user
+   * has direct READ or WRITE permissions on, per database.
+   *
+   * @param {Object} summary public user summary from the api
+   */
+  publicUserSummary(summary) {
+    let instName = (summary.organization ? summary.organization+'/' : '')+summary.instance;
+    let status = summary.enabled ? colors.green('ENABLED') : colors.yellow('DISABLED');
+
+    console.log(`Public user: ${summary.username}`);
+    console.log(`Instance: ${instName} (${summary.instanceState})`);
+    console.log(`Status: ${status}`);
+    console.log(`Anonymous PostgREST API access: ${summary.pgRestAnonymous ? 'on' : 'off'}`);
+
+    let logins = summary.recentLogins || {};
+    let last = logins.lastLogin ? new Date(logins.lastLogin).toISOString() : 'never';
+    console.log(`Last public SQL login (gateway): ${last}, logins in last 30 days: ${logins.count30d || 0}`);
+    console.log(colors.gray('  Note: anonymous PostgREST API requests are not tracked in login activity.'));
+
+    if( !summary.instanceRunning ) {
+      console.log(colors.yellow(`Instance is not running (${summary.instanceState}), permissions not available. Start the instance to see permissions.`));
+      return;
+    }
+
+    if( summary.roleExists === false ) {
+      console.log('Postgres role does not exist on the instance, no permissions.');
+      return;
+    }
+
+    console.log();
+    this.publicUserPermissions(summary);
+  }
+
+  /**
+   * @method publicUserPermissions
+   * @description Print the per database READ/WRITE table/view permission lists for the public user
+   *
+   * @param {Object} summary public user summary from the api
+   */
+  publicUserPermissions(summary) {
+    let databases = summary.databases || [];
+    let counts = summary.counts || {read: 0, write: 0, other: 0};
+
+    console.log(`Public user permissions (direct grants) across ${databases.length} database(s): `+
+      `${counts.write} table/view(s) with WRITE, ${counts.read} with READ`+
+      (counts.other ? `, ${counts.other} with other privileges` : ''));
+
+    if( !databases.length ) {
+      console.log('  No table or view permissions found.');
+    }
+
+    for( let db of databases ) {
+      console.log(`  Database: ${db.database}`);
+
+      let write = db.tables.filter(t => t.access === 'WRITE');
+      let read = db.tables.filter(t => t.access === 'READ');
+      let other = db.tables.filter(t => t.access === 'OTHER');
+
+      this._printTableList('WRITE', write);
+      this._printTableList('READ', read);
+      if( other.length ) this._printTableList('OTHER', other);
+
+      if( db.schemas.length ) {
+        console.log(`    Schemas: ${db.schemas.map(s => s.name+' ('+s.privileges.join(', ')+')').join(', ')}`);
+      }
+      if( db.databasePrivileges.length ) {
+        console.log(`    Database privileges: ${db.databasePrivileges.join(', ')}`);
+      }
+      if( db.defaultPrivilegeCount ) {
+        console.log(`    Default privilege entries: ${db.defaultPrivilegeCount}`);
+      }
+    }
+
+    if( summary.errors?.length ) {
+      console.log(colors.red('  Errors reading permissions:'));
+      summary.errors.forEach(e => console.log(colors.red(`    ${e.database}: ${e.message}`)));
+    }
+  }
+
+  /**
+   * @method _printTableList
+   * @description print a labeled list of tables/views
+   *
+   * @param {String} label access label
+   * @param {Array<Object>} tables
+   */
+  _printTableList(label, tables) {
+    console.log(`    ${label} (${tables.length}):`);
+    tables.forEach(t => {
+      let extra = t.columnLevel ? ', column level' : '';
+      console.log(`      - ${t.schema}.${t.name} (${t.type}${extra})`);
+    });
+  }
+
+  /**
+   * @method publicUserSteps
+   * @description Print the planned or performed steps for a public user enable/disable
+   *
+   * @param {Array<String>} steps
+   * @param {String} label
+   */
+  publicUserSteps(steps=[], label='Steps') {
+    console.log(`${label}:`);
+    steps.forEach((step, i) => console.log(`  ${i+1}. ${step}`));
+  }
+
+  /**
+   * @method publicUserReport
+   * @description Print the admin public user report
+   *
+   * @param {Array<Object>} rows
+   */
+  publicUserReport(rows=[]) {
+    let enabled = rows.filter(r => r.publicUserEnabled);
+    console.log(`${enabled.length} of ${rows.length} instance(s) have the public user enabled`);
+    console.log(colors.gray('Note: login activity is public SQL logins via the gateway only. Anonymous PostgREST API requests are not tracked.'));
+    console.log();
+
+    for( let row of rows ) {
+      let name = (row.organization ? row.organization+'/' : '_/')+row.instance;
+      let status = row.publicUserEnabled ? colors.green('ENABLED') : colors.gray('disabled');
+      let last = row.lastPublicLogin ? new Date(row.lastPublicLogin).toISOString() : 'never';
+      console.log(`${name} [${row.state}] ${status}`);
+      console.log(`  Databases: ${(row.databases || []).join(', ') || 'none'}`);
+      if( row.publicUserEnabled ) {
+        console.log(`  Last public SQL login: ${last}, last 30 days: ${row.publicLogins30d}`);
+      }
+      if( row.summary ) {
+        if( row.summary.skipped ) {
+          console.log(colors.yellow(`  Permissions: skipped (${row.summary.skipped})`));
+        } else if( row.summary.error ) {
+          console.log(colors.red(`  Permissions: error (${row.summary.error})`));
+        } else {
+          let c = row.summary.counts || {};
+          console.log(`  Permissions: ${c.write || 0} WRITE, ${c.read || 0} READ table/view(s)`);
+        }
+      }
+    }
   }
 
 }

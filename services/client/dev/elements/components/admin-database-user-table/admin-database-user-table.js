@@ -348,7 +348,7 @@ export default class AdminDatabaseUserTable extends Mixin(LitElement)
     const r = await this.DatabaseModel.bulkRevokeAccess(this.compCtl.orgName, this.compCtl.dbName, grants);
     if ( r.state === 'error' ){
       this.AppStateModel.showError({
-        message: 'Unable to delete user' + usernames.length > 1 ? 's' : '',
+        message: 'Unable to delete user' + (usernames.length > 1 ? 's' : ''),
         error: r.error
       });
       return;

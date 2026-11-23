@@ -21,6 +21,8 @@ class InstanceStore extends BaseStore {
       resize : new LruStore({name: 'instance.resize'}),
       actions : new LruStore({name: 'instance.actions'}),
       syncUsers : new LruStore({name: 'instance.syncUsers'}),
+      publicUser : new LruStore({name: 'instance.publicUser'}),
+      publicUserActions : new LruStore({name: 'instance.publicUserActions'}),
     };
 
     this.events = {
@@ -39,6 +41,8 @@ class InstanceStore extends BaseStore {
       INSTANCE_RESIZE_UPDATE : 'instance-resize-update',
       INSTANCE_PRIORITY_UPDATE : 'instance-priority-update',
       INSTANCE_SYNC_USERS_UPDATE : 'instance-sync-users-update',
+      INSTANCE_PUBLIC_USER_UPDATE : 'instance-public-user-update',
+      INSTANCE_PUBLIC_USER_ACTION_UPDATE : 'instance-public-user-action-update',
     };
   }
 
@@ -159,6 +163,22 @@ class InstanceStore extends BaseStore {
       payloadUtils.generate(ido, payload),
       this.data.syncUsers,
       this.events.INSTANCE_SYNC_USERS_UPDATE
+    );
+  }
+
+  onPublicUserUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.publicUser,
+      this.events.INSTANCE_PUBLIC_USER_UPDATE
+    );
+  }
+
+  onPublicUserActionUpdate(ido, payload) {
+    this._set(
+      payloadUtils.generate(ido, payload),
+      this.data.publicUserActions,
+      this.events.INSTANCE_PUBLIC_USER_ACTION_UPDATE
     );
   }
 
